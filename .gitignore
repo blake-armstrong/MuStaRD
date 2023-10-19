@@ -1,0 +1,9 @@
+bak
+build
+dist
+*.egg-info
+test
+__pychache__
+*.dcd
+*.xyz
+*restart*
