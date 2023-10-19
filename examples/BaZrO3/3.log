@@ -1,0 +1,831 @@
+LAMMPS (8 Feb 2023)
+WARNING: Using I/O redirection is unreliable with parallel runs. Better to use the -in switch to read input files. (src/lammps.cpp:531)
+OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (src/comm.cpp:98)
+  using 1 OpenMP thread(s) per MPI task
+units metal
+atom_style full
+boundary p p p
+read_data /tmp/26fbbb9e264846f1a0f65a9bd5f68e1d
+Reading data file ...
+  triclinic box = (0 0 0) to (25.335 25.134 25.264) with tilt (0 0 0)
+  2 by 1 by 2 MPI processor grid
+  reading atoms ...
+  1081 atoms
+  reading velocities ...
+  1081 velocities
+  scanning bonds ...
+  1 = max bonds/atom
+  reading bonds ...
+  1 bonds
+Finding 1-2 1-3 1-4 neighbors ...
+  special bond factors lj:    0        0        0       
+  special bond factors coul:  0        0        0       
+     1 = max # of 1-2 neighbors
+     0 = max # of 1-3 neighbors
+     0 = max # of 1-4 neighbors
+     1 = max # of special neighbors
+  special bonds CPU = 0.000 seconds
+  read_data CPU = 0.006 seconds
+include _ff.lmp
+##############################################################################################
+#### Atoms' types - mass - charge
+##############################################################################################
+#@ 7   atom types
+
+variable Ba  equal 1
+variable Zr  equal 2
+variable  Y  equal 3
+variable O1  equal 4
+variable O2  equal 5
+variable O3  equal 6
+variable H1  equal 7
+
+##############################################################################################
+#### Atoms' masses
+##############################################################################################
+
+mass  ${Ba}   137.327
+mass  1   137.327
+mass  ${Zr}    91.224
+mass  2    91.224
+mass  ${Y}     88.910
+mass  3     88.910
+mass  ${O1}    15.996
+mass  4    15.996
+mass  ${O2}    15.996
+mass  5    15.996
+mass  ${O3}    15.996
+mass  6    15.996
+mass  ${H1}     1.010
+mass  7     1.010
+
+##############################################################################################
+#### Atoms' charges
+##############################################################################################
+
+set type ${Ba}  charge    0.000000
+set type 1  charge    0.000000
+Setting atom values ...
+  216 settings made for charge
+set type ${Zr}  charge    0.000000
+set type 2  charge    0.000000
+Setting atom values ...
+  216 settings made for charge
+set type ${Y}   charge    0.000000
+set type 3   charge    0.000000
+Setting atom values ...
+  0 settings made for charge
+set type ${O1}  charge    0.000000
+set type 4  charge    0.000000
+Setting atom values ...
+  1 settings made for charge
+set type ${O2}  charge    0.000000
+set type 5  charge    0.000000
+Setting atom values ...
+  647 settings made for charge
+set type ${O3}  charge    0.000000
+set type 6  charge    0.000000
+Setting atom values ...
+  0 settings made for charge
+set type ${H1}  charge    0.000000
+set type 7  charge    0.000000
+Setting atom values ...
+  1 settings made for charge
+
+##############################################################################################
+#### Covalent bonds parameters
+##############################################################################################
+#@  1   bond types
+
+bond_style harmonic
+#@ O1 - H1
+bond_coeff   1      23.008000      0.985357
+
+##############################################################################################
+# Pair potentials
+##############################################################################################
+
+variable rmin  equal  8.
+variable rmax  equal 10.
+
+pair_style hybrid/overlay buck/mdf ${rmin} ${rmax} lennard/mdf ${rmin} ${rmax}  coul/cut ${rmax}
+pair_style hybrid/overlay buck/mdf 8 ${rmax} lennard/mdf ${rmin} ${rmax}  coul/cut ${rmax}
+pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf ${rmin} ${rmax}  coul/cut ${rmax}
+pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf 8 ${rmax}  coul/cut ${rmax}
+pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf 8 10  coul/cut ${rmax}
+pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf 8 10  coul/cut 10
+
+##############################################################################################
+# Buckingham interaction potentials
+pair_coeff  ${Ba}  ${O1}  buck/mdf   688.21662   0.392014   0.000
+pair_coeff  1  ${O1}  buck/mdf   688.21662   0.392014   0.000
+pair_coeff  1  4  buck/mdf   688.21662   0.392014   0.000
+pair_coeff  ${Ba}  ${O2}  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  1  ${O2}  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  1  5  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  ${Ba}  ${O3}  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  1  ${O3}  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  1  6  buck/mdf   972.19945   0.392014   0.000
+
+pair_coeff  ${Y}   ${O1}  buck/mdf   2972.3808   0.267317   0.000
+pair_coeff  3   ${O1}  buck/mdf   2972.3808   0.267317   0.000
+pair_coeff  3   4  buck/mdf   2972.3808   0.267317   0.000
+pair_coeff  ${Y}   ${O2}  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  3   ${O2}  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  3   5  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  ${Y}   ${O3}  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  3   ${O3}  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  3   6  buck/mdf   4121.8373   0.280386   0.000
+
+pair_coeff  ${Zr}  ${O1}  buck/mdf   2195.8712   0.298760   0.000
+pair_coeff  2  ${O1}  buck/mdf   2195.8712   0.298760   0.000
+pair_coeff  2  4  buck/mdf   2195.8712   0.298760   0.000
+pair_coeff  ${Zr}  ${O2}  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  2  ${O2}  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  2  5  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  ${Zr}  ${O3}  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  2  ${O3}  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  2  6  buck/mdf   3250.8545   0.298760   0.000
+
+pair_coeff  ${O1}  ${O1}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  ${O1}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  4  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  ${O1}  ${O2}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  ${O2}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  5  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  ${O1}  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  6  buck/mdf   22764.000   0.149000   0.000
+
+pair_coeff  ${O2}  ${O2}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  5  ${O2}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  5  5  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  ${O2}  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  5  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  5  6  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  ${O3}  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  6  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  6  6  buck/mdf   22764.000   0.149000   0.000
+
+##############################################################################################
+# 12-6 Lennard-Jones potentials
+pair_coeff  ${O1}  ${H1}  lennard/mdf    6.391   0.000
+pair_coeff  4  ${H1}  lennard/mdf    6.391   0.000
+pair_coeff  4  7  lennard/mdf    6.391   0.000
+pair_coeff  ${O2}  ${H1}  lennard/mdf    6.391   0.000
+pair_coeff  5  ${H1}  lennard/mdf    6.391   0.000
+pair_coeff  5  7  lennard/mdf    6.391   0.000
+pair_coeff  ${O3}  ${H1}  lennard/mdf    7.800   0.000
+pair_coeff  6  ${H1}  lennard/mdf    7.800   0.000
+pair_coeff  6  7  lennard/mdf    7.800   0.000
+
+##############################################################################################
+# Coulombic interaction
+pair_coeff      *      *  coul/cut
+
+#########################################################################################################
+# Parameters for reciprocal space electrostatics
+#########################################################################################################
+
+# kspace_style pppm 1.0e-6
+# kspace_modify fftbench no
+fix md all nve
+fix tst all temp/csvr 1500 1500 0.1 39827
+timestep 0.001
+velocity all create 1500 93847 mom yes dist gaussian
+fix com all momentum 100 linear 1 1 1
+run 0 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Neighbor list info ...
+  update: every = 1 steps, delay = 0 steps, check = yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 12
+  ghost atom cutoff = 12
+  binsize = 6, bins = 5 5 5
+  3 neighbor lists, perpetual/occasional/extra = 3 0 0
+  (1) pair buck/mdf, perpetual, skip from (3)
+      attributes: half, newton on
+      pair build: skip
+      stencil: none
+      bin: none
+  (2) pair lennard/mdf, perpetual, skip from (3)
+      attributes: half, newton on
+      pair build: skip
+      stencil: none
+      bin: none
+  (3) pair coul/cut, perpetual
+      attributes: half, newton on
+      pair build: half/bin/newton/tri
+      stencil: half/bin/3d/tri
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 7.694 | 7.725 | 7.814 Mbytes
+   Step          Temp          E_pair         E_mol          TotEng         Press     
+         0   33490.604      785.12729      68.383419      5528.8311      550788.51    
+Loop time of 2.7275e-06 on 4 procs for 0 steps with 1081 atoms
+
+clear
+OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (src/comm.cpp:98)
+  using 1 OpenMP thread(s) per MPI task
+units metal
+atom_style full
+boundary p p p
+read_data /tmp/26fbbb9e264846f1a0f65a9bd5f68e1d
+Reading data file ...
+  triclinic box = (0 0 0) to (25.335 25.134 25.264) with tilt (0 0 0)
+  2 by 1 by 2 MPI processor grid
+  reading atoms ...
+  1081 atoms
+  reading velocities ...
+  1081 velocities
+  scanning bonds ...
+  1 = max bonds/atom
+  reading bonds ...
+  1 bonds
+Finding 1-2 1-3 1-4 neighbors ...
+  special bond factors lj:    0        0        0       
+  special bond factors coul:  0        0        0       
+     1 = max # of 1-2 neighbors
+     0 = max # of 1-3 neighbors
+     0 = max # of 1-4 neighbors
+     1 = max # of special neighbors
+  special bonds CPU = 0.000 seconds
+  read_data CPU = 0.006 seconds
+include _ff.lmp
+##############################################################################################
+#### Atoms' types - mass - charge
+##############################################################################################
+#@ 7   atom types
+
+variable Ba  equal 1
+variable Zr  equal 2
+variable  Y  equal 3
+variable O1  equal 4
+variable O2  equal 5
+variable O3  equal 6
+variable H1  equal 7
+
+##############################################################################################
+#### Atoms' masses
+##############################################################################################
+
+mass  ${Ba}   137.327
+mass  1   137.327
+mass  ${Zr}    91.224
+mass  2    91.224
+mass  ${Y}     88.910
+mass  3     88.910
+mass  ${O1}    15.996
+mass  4    15.996
+mass  ${O2}    15.996
+mass  5    15.996
+mass  ${O3}    15.996
+mass  6    15.996
+mass  ${H1}     1.010
+mass  7     1.010
+
+##############################################################################################
+#### Atoms' charges
+##############################################################################################
+
+set type ${Ba}  charge    0.000000
+set type 1  charge    0.000000
+Setting atom values ...
+  216 settings made for charge
+set type ${Zr}  charge    0.000000
+set type 2  charge    0.000000
+Setting atom values ...
+  216 settings made for charge
+set type ${Y}   charge    0.000000
+set type 3   charge    0.000000
+Setting atom values ...
+  0 settings made for charge
+set type ${O1}  charge    0.000000
+set type 4  charge    0.000000
+Setting atom values ...
+  1 settings made for charge
+set type ${O2}  charge    0.000000
+set type 5  charge    0.000000
+Setting atom values ...
+  647 settings made for charge
+set type ${O3}  charge    0.000000
+set type 6  charge    0.000000
+Setting atom values ...
+  0 settings made for charge
+set type ${H1}  charge    0.000000
+set type 7  charge    0.000000
+Setting atom values ...
+  1 settings made for charge
+
+##############################################################################################
+#### Covalent bonds parameters
+##############################################################################################
+#@  1   bond types
+
+bond_style harmonic
+#@ O1 - H1
+bond_coeff   1      23.008000      0.985357
+
+##############################################################################################
+# Pair potentials
+##############################################################################################
+
+variable rmin  equal  8.
+variable rmax  equal 10.
+
+pair_style hybrid/overlay buck/mdf ${rmin} ${rmax} lennard/mdf ${rmin} ${rmax}  coul/cut ${rmax}
+pair_style hybrid/overlay buck/mdf 8 ${rmax} lennard/mdf ${rmin} ${rmax}  coul/cut ${rmax}
+pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf ${rmin} ${rmax}  coul/cut ${rmax}
+pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf 8 ${rmax}  coul/cut ${rmax}
+pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf 8 10  coul/cut ${rmax}
+pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf 8 10  coul/cut 10
+
+##############################################################################################
+# Buckingham interaction potentials
+pair_coeff  ${Ba}  ${O1}  buck/mdf   688.21662   0.392014   0.000
+pair_coeff  1  ${O1}  buck/mdf   688.21662   0.392014   0.000
+pair_coeff  1  4  buck/mdf   688.21662   0.392014   0.000
+pair_coeff  ${Ba}  ${O2}  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  1  ${O2}  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  1  5  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  ${Ba}  ${O3}  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  1  ${O3}  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  1  6  buck/mdf   972.19945   0.392014   0.000
+
+pair_coeff  ${Y}   ${O1}  buck/mdf   2972.3808   0.267317   0.000
+pair_coeff  3   ${O1}  buck/mdf   2972.3808   0.267317   0.000
+pair_coeff  3   4  buck/mdf   2972.3808   0.267317   0.000
+pair_coeff  ${Y}   ${O2}  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  3   ${O2}  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  3   5  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  ${Y}   ${O3}  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  3   ${O3}  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  3   6  buck/mdf   4121.8373   0.280386   0.000
+
+pair_coeff  ${Zr}  ${O1}  buck/mdf   2195.8712   0.298760   0.000
+pair_coeff  2  ${O1}  buck/mdf   2195.8712   0.298760   0.000
+pair_coeff  2  4  buck/mdf   2195.8712   0.298760   0.000
+pair_coeff  ${Zr}  ${O2}  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  2  ${O2}  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  2  5  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  ${Zr}  ${O3}  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  2  ${O3}  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  2  6  buck/mdf   3250.8545   0.298760   0.000
+
+pair_coeff  ${O1}  ${O1}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  ${O1}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  4  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  ${O1}  ${O2}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  ${O2}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  5  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  ${O1}  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  6  buck/mdf   22764.000   0.149000   0.000
+
+pair_coeff  ${O2}  ${O2}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  5  ${O2}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  5  5  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  ${O2}  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  5  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  5  6  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  ${O3}  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  6  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  6  6  buck/mdf   22764.000   0.149000   0.000
+
+##############################################################################################
+# 12-6 Lennard-Jones potentials
+pair_coeff  ${O1}  ${H1}  lennard/mdf    6.391   0.000
+pair_coeff  4  ${H1}  lennard/mdf    6.391   0.000
+pair_coeff  4  7  lennard/mdf    6.391   0.000
+pair_coeff  ${O2}  ${H1}  lennard/mdf    6.391   0.000
+pair_coeff  5  ${H1}  lennard/mdf    6.391   0.000
+pair_coeff  5  7  lennard/mdf    6.391   0.000
+pair_coeff  ${O3}  ${H1}  lennard/mdf    7.800   0.000
+pair_coeff  6  ${H1}  lennard/mdf    7.800   0.000
+pair_coeff  6  7  lennard/mdf    7.800   0.000
+
+##############################################################################################
+# Coulombic interaction
+pair_coeff      *      *  coul/cut
+
+#########################################################################################################
+# Parameters for reciprocal space electrostatics
+#########################################################################################################
+
+# kspace_style pppm 1.0e-6
+# kspace_modify fftbench no
+fix md all nve
+fix tst all temp/csvr 1500 1500 0.1 39827
+timestep 0.001
+velocity all create 1500 93847 mom yes dist gaussian
+fix com all momentum 100 linear 1 1 1
+fix ext all external pf/array 1
+fix_modify ext virial no
+fix ux all store/state 1 xu yu zu
+change_box all x final 0.0 25.335 y final 0.0 25.134 z final 0.0 25.264 xy final 0.0 xz final 0.0 yz final 0.0
+Changing box ...
+  triclinic box = (0 0 0) to (25.335 25.134 25.264) with tilt (0 0 0)
+  triclinic box = (0 0 0) to (25.335 25.134 25.264) with tilt (0 0 0)
+  triclinic box = (0 0 0) to (25.335 25.134 25.264) with tilt (0 0 0)
+  triclinic box = (0 0 0) to (25.335 25.134 25.264) with tilt (0 0 0)
+  triclinic box = (0 0 0) to (25.335 25.134 25.264) with tilt (0 0 0)
+  triclinic box = (0 0 0) to (25.335 25.134 25.264) with tilt (0 0 0)
+run 0 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Neighbor list info ...
+  update: every = 1 steps, delay = 0 steps, check = yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 12
+  ghost atom cutoff = 12
+  binsize = 6, bins = 5 5 5
+  3 neighbor lists, perpetual/occasional/extra = 3 0 0
+  (1) pair buck/mdf, perpetual, skip from (3)
+      attributes: half, newton on
+      pair build: skip
+      stencil: none
+      bin: none
+  (2) pair lennard/mdf, perpetual, skip from (3)
+      attributes: half, newton on
+      pair build: skip
+      stencil: none
+      bin: none
+  (3) pair coul/cut, perpetual
+      attributes: half, newton on
+      pair build: half/bin/newton/tri
+      stencil: half/bin/3d/tri
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 8.444 | 8.475 | 8.564 Mbytes
+   Step          Temp          E_pair         E_mol          TotEng         Press     
+         0   33490.604      785.12729      68.383419      5528.8311      550788.51    
+Loop time of 1.04e-05 on 4 procs for 0 steps with 1081 atoms
+
+group HXY id 1 750 795 
+3 atoms in group HXY
+delete_bonds HXY multi remove
+System init for delete_bonds ...
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Deleting bonds ...
+  0 total bonds, 0 turned on, 0 turned off
+  0 total angles, 0 turned on, 0 turned off
+  0 total dihedrals, 0 turned on, 0 turned off
+  0 total impropers, 0 turned on, 0 turned off
+set atom 1 type 7
+Setting atom values ...
+  1 settings made for type
+set atom 1 charge 0.0
+Setting atom values ...
+  1 settings made for charge
+set atom 795 type 4
+Setting atom values ...
+  1 settings made for type
+set atom 795 charge 0.0
+Setting atom values ...
+  1 settings made for charge
+set atom 750 type 5
+Setting atom values ...
+  1 settings made for type
+set atom 750 charge 0.0
+Setting atom values ...
+  1 settings made for charge
+set atom 795 image -1 -1 0
+Setting atom values ...
+  1 settings made for image
+create_bonds single/bond 1 795 1 special yes
+Finding 1-2 1-3 1-4 neighbors ...
+  special bond factors lj:    0        0        0       
+  special bond factors coul:  0        0        0       
+     1 = max # of 1-2 neighbors
+     0 = max # of 1-3 neighbors
+     0 = max # of 1-4 neighbors
+     1 = max # of special neighbors
+  special bonds CPU = 0.000 seconds
+group HXY delete
+run 0 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.444 | 8.475 | 8.564 Mbytes
+   Step          Temp          E_pair         E_mol          TotEng         Press     
+         0   33490.604      784.19378      11.017428      5470.5316      555931.02    
+Loop time of 2.67275e-06 on 4 procs for 0 steps with 1081 atoms
+
+reset_atoms mol all single yes
+Resetting molecule IDs ...
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+  number of new molecule IDs = 1080
+  reset_atoms mol CPU = 0.001 seconds
+run 0 post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.444 | 8.475 | 8.564 Mbytes
+   Step          Temp          E_pair         E_mol          TotEng         Press     
+         0   33490.604      784.19378      11.017428      5470.5316      555931.02    
+Loop time of 2.81325e-06 on 4 procs for 0 steps with 1081 atoms
+
+clear
+OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (src/comm.cpp:98)
+  using 1 OpenMP thread(s) per MPI task
+units metal
+atom_style full
+boundary p p p
+read_data /tmp/26fbbb9e264846f1a0f65a9bd5f68e1d
+Reading data file ...
+  triclinic box = (0 0 0) to (25.335 25.134 25.264) with tilt (0 0 0)
+  2 by 1 by 2 MPI processor grid
+  reading atoms ...
+  1081 atoms
+  reading velocities ...
+  1081 velocities
+  scanning bonds ...
+  1 = max bonds/atom
+  reading bonds ...
+  1 bonds
+Finding 1-2 1-3 1-4 neighbors ...
+  special bond factors lj:    0        0        0       
+  special bond factors coul:  0        0        0       
+     1 = max # of 1-2 neighbors
+     0 = max # of 1-3 neighbors
+     0 = max # of 1-4 neighbors
+     1 = max # of special neighbors
+  special bonds CPU = 0.000 seconds
+  read_data CPU = 0.006 seconds
+include _ff.lmp
+##############################################################################################
+#### Atoms' types - mass - charge
+##############################################################################################
+#@ 7   atom types
+
+variable Ba  equal 1
+variable Zr  equal 2
+variable  Y  equal 3
+variable O1  equal 4
+variable O2  equal 5
+variable O3  equal 6
+variable H1  equal 7
+
+##############################################################################################
+#### Atoms' masses
+##############################################################################################
+
+mass  ${Ba}   137.327
+mass  1   137.327
+mass  ${Zr}    91.224
+mass  2    91.224
+mass  ${Y}     88.910
+mass  3     88.910
+mass  ${O1}    15.996
+mass  4    15.996
+mass  ${O2}    15.996
+mass  5    15.996
+mass  ${O3}    15.996
+mass  6    15.996
+mass  ${H1}     1.010
+mass  7     1.010
+
+##############################################################################################
+#### Atoms' charges
+##############################################################################################
+
+set type ${Ba}  charge    0.000000
+set type 1  charge    0.000000
+Setting atom values ...
+  216 settings made for charge
+set type ${Zr}  charge    0.000000
+set type 2  charge    0.000000
+Setting atom values ...
+  216 settings made for charge
+set type ${Y}   charge    0.000000
+set type 3   charge    0.000000
+Setting atom values ...
+  0 settings made for charge
+set type ${O1}  charge    0.000000
+set type 4  charge    0.000000
+Setting atom values ...
+  1 settings made for charge
+set type ${O2}  charge    0.000000
+set type 5  charge    0.000000
+Setting atom values ...
+  647 settings made for charge
+set type ${O3}  charge    0.000000
+set type 6  charge    0.000000
+Setting atom values ...
+  0 settings made for charge
+set type ${H1}  charge    0.000000
+set type 7  charge    0.000000
+Setting atom values ...
+  1 settings made for charge
+
+##############################################################################################
+#### Covalent bonds parameters
+##############################################################################################
+#@  1   bond types
+
+bond_style harmonic
+#@ O1 - H1
+bond_coeff   1      23.008000      0.985357
+
+##############################################################################################
+# Pair potentials
+##############################################################################################
+
+variable rmin  equal  8.
+variable rmax  equal 10.
+
+pair_style hybrid/overlay buck/mdf ${rmin} ${rmax} lennard/mdf ${rmin} ${rmax}  coul/cut ${rmax}
+pair_style hybrid/overlay buck/mdf 8 ${rmax} lennard/mdf ${rmin} ${rmax}  coul/cut ${rmax}
+pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf ${rmin} ${rmax}  coul/cut ${rmax}
+pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf 8 ${rmax}  coul/cut ${rmax}
+pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf 8 10  coul/cut ${rmax}
+pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf 8 10  coul/cut 10
+
+##############################################################################################
+# Buckingham interaction potentials
+pair_coeff  ${Ba}  ${O1}  buck/mdf   688.21662   0.392014   0.000
+pair_coeff  1  ${O1}  buck/mdf   688.21662   0.392014   0.000
+pair_coeff  1  4  buck/mdf   688.21662   0.392014   0.000
+pair_coeff  ${Ba}  ${O2}  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  1  ${O2}  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  1  5  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  ${Ba}  ${O3}  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  1  ${O3}  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  1  6  buck/mdf   972.19945   0.392014   0.000
+
+pair_coeff  ${Y}   ${O1}  buck/mdf   2972.3808   0.267317   0.000
+pair_coeff  3   ${O1}  buck/mdf   2972.3808   0.267317   0.000
+pair_coeff  3   4  buck/mdf   2972.3808   0.267317   0.000
+pair_coeff  ${Y}   ${O2}  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  3   ${O2}  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  3   5  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  ${Y}   ${O3}  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  3   ${O3}  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  3   6  buck/mdf   4121.8373   0.280386   0.000
+
+pair_coeff  ${Zr}  ${O1}  buck/mdf   2195.8712   0.298760   0.000
+pair_coeff  2  ${O1}  buck/mdf   2195.8712   0.298760   0.000
+pair_coeff  2  4  buck/mdf   2195.8712   0.298760   0.000
+pair_coeff  ${Zr}  ${O2}  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  2  ${O2}  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  2  5  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  ${Zr}  ${O3}  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  2  ${O3}  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  2  6  buck/mdf   3250.8545   0.298760   0.000
+
+pair_coeff  ${O1}  ${O1}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  ${O1}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  4  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  ${O1}  ${O2}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  ${O2}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  5  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  ${O1}  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  6  buck/mdf   22764.000   0.149000   0.000
+
+pair_coeff  ${O2}  ${O2}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  5  ${O2}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  5  5  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  ${O2}  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  5  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  5  6  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  ${O3}  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  6  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  6  6  buck/mdf   22764.000   0.149000   0.000
+
+##############################################################################################
+# 12-6 Lennard-Jones potentials
+pair_coeff  ${O1}  ${H1}  lennard/mdf    6.391   0.000
+pair_coeff  4  ${H1}  lennard/mdf    6.391   0.000
+pair_coeff  4  7  lennard/mdf    6.391   0.000
+pair_coeff  ${O2}  ${H1}  lennard/mdf    6.391   0.000
+pair_coeff  5  ${H1}  lennard/mdf    6.391   0.000
+pair_coeff  5  7  lennard/mdf    6.391   0.000
+pair_coeff  ${O3}  ${H1}  lennard/mdf    7.800   0.000
+pair_coeff  6  ${H1}  lennard/mdf    7.800   0.000
+pair_coeff  6  7  lennard/mdf    7.800   0.000
+
+##############################################################################################
+# Coulombic interaction
+pair_coeff      *      *  coul/cut
+
+#########################################################################################################
+# Parameters for reciprocal space electrostatics
+#########################################################################################################
+
+# kspace_style pppm 1.0e-6
+# kspace_modify fftbench no
+fix md all nve
+fix tst all temp/csvr 1500 1500 0.1 39827
+timestep 0.001
+velocity all create 1500 93847 mom yes dist gaussian
+fix com all momentum 100 linear 1 1 1
+fix ext all external pf/array 1
+fix_modify ext virial no
+fix ux all store/state 1 xu yu zu
+change_box all x final 0.0 25.335 y final 0.0 25.134 z final 0.0 25.264 xy final 0.0 xz final 0.0 yz final 0.0
+Changing box ...
+  triclinic box = (0 0 0) to (25.335 25.134 25.264) with tilt (0 0 0)
+  triclinic box = (0 0 0) to (25.335 25.134 25.264) with tilt (0 0 0)
+  triclinic box = (0 0 0) to (25.335 25.134 25.264) with tilt (0 0 0)
+  triclinic box = (0 0 0) to (25.335 25.134 25.264) with tilt (0 0 0)
+  triclinic box = (0 0 0) to (25.335 25.134 25.264) with tilt (0 0 0)
+  triclinic box = (0 0 0) to (25.335 25.134 25.264) with tilt (0 0 0)
+run 0 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Neighbor list info ...
+  update: every = 1 steps, delay = 0 steps, check = yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 12
+  ghost atom cutoff = 12
+  binsize = 6, bins = 5 5 5
+  3 neighbor lists, perpetual/occasional/extra = 3 0 0
+  (1) pair buck/mdf, perpetual, skip from (3)
+      attributes: half, newton on
+      pair build: skip
+      stencil: none
+      bin: none
+  (2) pair lennard/mdf, perpetual, skip from (3)
+      attributes: half, newton on
+      pair build: skip
+      stencil: none
+      bin: none
+  (3) pair coul/cut, perpetual
+      attributes: half, newton on
+      pair build: half/bin/newton/tri
+      stencil: half/bin/3d/tri
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 8.444 | 8.475 | 8.564 Mbytes
+   Step          Temp          E_pair         E_mol          TotEng         Press     
+         0   33490.604      785.12729      68.383419      5528.8311      550788.51    
+Loop time of 3.0435e-06 on 4 procs for 0 steps with 1081 atoms
+
+group HXY id 1 750 751 
+3 atoms in group HXY
+delete_bonds HXY multi remove
+System init for delete_bonds ...
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Deleting bonds ...
+  0 total bonds, 0 turned on, 0 turned off
+  0 total angles, 0 turned on, 0 turned off
+  0 total dihedrals, 0 turned on, 0 turned off
+  0 total impropers, 0 turned on, 0 turned off
+set atom 1 type 7
+Setting atom values ...
+  1 settings made for type
+set atom 1 charge 0.0
+Setting atom values ...
+  1 settings made for charge
+set atom 751 type 4
+Setting atom values ...
+  1 settings made for type
+set atom 751 charge 0.0
+Setting atom values ...
+  1 settings made for charge
+set atom 750 type 5
+Setting atom values ...
+  1 settings made for type
+set atom 750 charge 0.0
+Setting atom values ...
+  1 settings made for charge
+set atom 751 image -1 -1 0
+Setting atom values ...
+  1 settings made for image
+create_bonds single/bond 1 751 1 special yes
+Finding 1-2 1-3 1-4 neighbors ...
+  special bond factors lj:    0        0        0       
+  special bond factors coul:  0        0        0       
+     1 = max # of 1-2 neighbors
+     0 = max # of 1-3 neighbors
+     0 = max # of 1-4 neighbors
+     1 = max # of special neighbors
+  special bonds CPU = 0.000 seconds
+group HXY delete
+reset_atoms mol all single yes
+Resetting molecule IDs ...
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+  number of new molecule IDs = 1080
+  reset_atoms mol CPU = 0.001 seconds
+run 0 post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.444 | 8.475 | 8.564 Mbytes
+   Step          Temp          E_pair         E_mol          TotEng         Press     
+         0   33490.604      688.17537      0.81233284     5364.3081      519570.58    
+Loop time of 2.988e-06 on 4 procs for 0 steps with 1081 atoms
+
+set atom 751 image -1 -1 0
+Setting atom values ...
+  1 settings made for image
+reset_atoms mol all single yes
+Resetting molecule IDs ...
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+  number of new molecule IDs = 1080
+  reset_atoms mol CPU = 0.001 seconds
+run 0 post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.444 | 8.475 | 8.564 Mbytes
+   Step          Temp          E_pair         E_mol          TotEng         Press     
+         0   33490.604      688.17537      0.81233284     5364.3081      519570.58    
+Loop time of 2.53475e-06 on 4 procs for 0 steps with 1081 atoms
+
+run 0 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.444 | 8.475 | 8.564 Mbytes
+   Step          Temp          E_pair         E_mol          TotEng         Press     
+         0   33490.604      688.17537      0.81233284     5364.3081      519570.58    
+Loop time of 3.74975e-06 on 4 procs for 0 steps with 1081 atoms
+
+Total wall time: 0:00:00
