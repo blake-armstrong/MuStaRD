@@ -23,6 +23,7 @@ class Topology:
         self.xyz_types = np.vectorize(lambda x: self.SI.reverse_atom_types[x])(
             self.types
         )
+        self.id_to_idx = np.vectorize(lambda x: self.atoms[x].idx)
 
     def generate_generic_topology(self, lmp):
         ids = np.array(gather_atoms(lmp, "id", 0, 1))

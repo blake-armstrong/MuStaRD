@@ -81,6 +81,7 @@ class SystemInfo:
         self.scf_tol = float(params.pop("scf_tol"))
         self.scf_max_iter = int(params.pop("scf_max_iter"))
         self.set_RT(self.temperature * self.units["boltz"])
+        self.file = str(None)
 
         if params:
             raise ValueError(f"Unknown keys in reaction parameters: {params.keys()}")
@@ -346,21 +347,21 @@ class Trajectory:
                 else:
                     self.dcd_file = mdtraj.open(fname, "w")
 
-        def _write(self, lmp, box_data, MPI_info, rank, id_to_idx, xyz_types, pos=None):
+        def _write(self, lmp, box_data, universe, topology, pos=None):
             abcabc, abc = extract_box(box_data)
             na = lmp.extract_global("natoms")
             z = np.zeros((na, 3))  # type: ignore
             xu = lmp.numpy.extract_fix("ux", 1, 2)
             ids = lmp.numpy.extract_atom("id")
             if ids.size != 0:
-                z[id_to_idx(ids)] = xu
-            if rank == 0:
-                for i in MPI_info.total_ranks[1:]:
-                    _z = MPI_info.comm.recv(source=i, tag=i)
+                z[topology.id_to_idx(ids)] = xu
+            if universe.me == 0:
+                for i in range(1, universe.num_procs):
+                    _z = universe.global_comm.recv(source=i, tag=i)
                     z += _z
             else:
-                MPI_info.comm.send(z, dest=0, tag=rank)
-            if rank == 0:
+                universe.global_comm.send(z, dest=0, tag=universe.me)
+            if universe.me == 0:
                 unwrapped_pos = z
                 if pos is not None:
                     unwrapped_pos = pos
@@ -375,7 +376,7 @@ class Trajectory:
                     self.xyz_file.writelines(
                         [
                             "{0} {1[0]:.3f} {1[1]:.3f} {1[2]:.3f}\n".format(typ, pos)
-                            for typ, pos in zip(xyz_types, unwrapped_pos)
+                            for typ, pos in zip(topology.xyz_types, unwrapped_pos)
                         ]
                     )
                     self.xyz_file.flush()

@@ -148,6 +148,7 @@ def main():
         commands,
         INPUTS,
         debug=True,
+        mpi_list=[10, 2],
         # msevb_mpi_ranks=[1, 1],
     )
     msevb.add_trajectory(filename="trajectory.dcd", write_frequency=50)
