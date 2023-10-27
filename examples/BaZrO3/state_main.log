@@ -1,0 +1,3236 @@
+LAMMPS (8 Feb 2023)
+WARNING: Using I/O redirection is unreliable with parallel runs. Better to use the -in switch to read input files. (src/lammps.cpp:531)
+OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (src/comm.cpp:98)
+  using 1 OpenMP thread(s) per MPI task
+units metal
+atom_style full
+boundary p p p
+read_data bazryo3-1.0.lmp
+Reading data file ...
+  orthogonal box = (0 0 0) to (25.319 25.319 25.319)
+  2 by 2 by 2 MPI processor grid
+  reading atoms ...
+  1081 atoms
+  scanning bonds ...
+  1 = max bonds/atom
+  reading bonds ...
+  1 bonds
+Finding 1-2 1-3 1-4 neighbors ...
+  special bond factors lj:    0        0        0       
+  special bond factors coul:  0        0        0       
+     1 = max # of 1-2 neighbors
+     0 = max # of 1-3 neighbors
+     0 = max # of 1-4 neighbors
+     1 = max # of special neighbors
+  special bonds CPU = 0.000 seconds
+  read_data CPU = 0.008 seconds
+change_box all triclinic
+Changing box ...
+  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
+include _ff.lmp
+##############################################################################################
+#### Atoms' types - mass - charge
+##############################################################################################
+#@ 7   atom types
+
+variable Ba  equal 1
+variable Zr  equal 2
+variable  Y  equal 3
+variable O1  equal 4
+variable O2  equal 5
+variable O3  equal 6
+variable H1  equal 7
+
+##############################################################################################
+#### Atoms' masses
+##############################################################################################
+
+mass  ${Ba}   137.327
+mass  1   137.327
+mass  ${Zr}    91.224
+mass  2    91.224
+mass  ${Y}     88.910
+mass  3     88.910
+mass  ${O1}    15.996
+mass  4    15.996
+mass  ${O2}    15.996
+mass  5    15.996
+mass  ${O3}    15.996
+mass  6    15.996
+mass  ${H1}     1.010
+mass  7     1.010
+
+##############################################################################################
+#### Atoms' charges
+##############################################################################################
+
+set type ${Ba}  charge    0.000000
+set type 1  charge    0.000000
+Setting atom values ...
+  216 settings made for charge
+set type ${Zr}  charge    0.000000
+set type 2  charge    0.000000
+Setting atom values ...
+  216 settings made for charge
+set type ${Y}   charge    0.000000
+set type 3   charge    0.000000
+Setting atom values ...
+  0 settings made for charge
+set type ${O1}  charge    0.000000
+set type 4  charge    0.000000
+Setting atom values ...
+  1 settings made for charge
+set type ${O2}  charge    0.000000
+set type 5  charge    0.000000
+Setting atom values ...
+  647 settings made for charge
+set type ${O3}  charge    0.000000
+set type 6  charge    0.000000
+Setting atom values ...
+  0 settings made for charge
+set type ${H1}  charge    0.000000
+set type 7  charge    0.000000
+Setting atom values ...
+  1 settings made for charge
+
+##############################################################################################
+#### Covalent bonds parameters
+##############################################################################################
+#@  1   bond types
+
+bond_style harmonic
+#@ O1 - H1
+bond_coeff   1      23.008000      0.985357
+
+##############################################################################################
+# Pair potentials
+##############################################################################################
+
+variable rmin  equal  8.
+variable rmax  equal 10.
+
+pair_style hybrid/overlay buck/mdf ${rmin} ${rmax} lennard/mdf ${rmin} ${rmax}  coul/cut ${rmax}
+pair_style hybrid/overlay buck/mdf 8 ${rmax} lennard/mdf ${rmin} ${rmax}  coul/cut ${rmax}
+pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf ${rmin} ${rmax}  coul/cut ${rmax}
+pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf 8 ${rmax}  coul/cut ${rmax}
+pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf 8 10  coul/cut ${rmax}
+pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf 8 10  coul/cut 10
+
+##############################################################################################
+# Buckingham interaction potentials
+pair_coeff  ${Ba}  ${O1}  buck/mdf   688.21662   0.392014   0.000
+pair_coeff  1  ${O1}  buck/mdf   688.21662   0.392014   0.000
+pair_coeff  1  4  buck/mdf   688.21662   0.392014   0.000
+pair_coeff  ${Ba}  ${O2}  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  1  ${O2}  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  1  5  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  ${Ba}  ${O3}  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  1  ${O3}  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  1  6  buck/mdf   972.19945   0.392014   0.000
+
+pair_coeff  ${Y}   ${O1}  buck/mdf   2972.3808   0.267317   0.000
+pair_coeff  3   ${O1}  buck/mdf   2972.3808   0.267317   0.000
+pair_coeff  3   4  buck/mdf   2972.3808   0.267317   0.000
+pair_coeff  ${Y}   ${O2}  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  3   ${O2}  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  3   5  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  ${Y}   ${O3}  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  3   ${O3}  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  3   6  buck/mdf   4121.8373   0.280386   0.000
+
+pair_coeff  ${Zr}  ${O1}  buck/mdf   2195.8712   0.298760   0.000
+pair_coeff  2  ${O1}  buck/mdf   2195.8712   0.298760   0.000
+pair_coeff  2  4  buck/mdf   2195.8712   0.298760   0.000
+pair_coeff  ${Zr}  ${O2}  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  2  ${O2}  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  2  5  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  ${Zr}  ${O3}  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  2  ${O3}  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  2  6  buck/mdf   3250.8545   0.298760   0.000
+
+pair_coeff  ${O1}  ${O1}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  ${O1}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  4  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  ${O1}  ${O2}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  ${O2}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  5  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  ${O1}  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  6  buck/mdf   22764.000   0.149000   0.000
+
+pair_coeff  ${O2}  ${O2}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  5  ${O2}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  5  5  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  ${O2}  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  5  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  5  6  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  ${O3}  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  6  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  6  6  buck/mdf   22764.000   0.149000   0.000
+
+##############################################################################################
+# 12-6 Lennard-Jones potentials
+pair_coeff  ${O1}  ${H1}  lennard/mdf    6.391   0.000
+pair_coeff  4  ${H1}  lennard/mdf    6.391   0.000
+pair_coeff  4  7  lennard/mdf    6.391   0.000
+pair_coeff  ${O2}  ${H1}  lennard/mdf    6.391   0.000
+pair_coeff  5  ${H1}  lennard/mdf    6.391   0.000
+pair_coeff  5  7  lennard/mdf    6.391   0.000
+pair_coeff  ${O3}  ${H1}  lennard/mdf    7.800   0.000
+pair_coeff  6  ${H1}  lennard/mdf    7.800   0.000
+pair_coeff  6  7  lennard/mdf    7.800   0.000
+
+##############################################################################################
+# Coulombic interaction
+pair_coeff      *      *  coul/cut
+
+#########################################################################################################
+# Parameters for reciprocal space electrostatics
+#########################################################################################################
+
+# kspace_style pppm 1.0e-6
+# kspace_modify fftbench no
+thermo_style custom etotal epair ebond
+fix md all nve
+timestep 0.0002
+fix ux all store/state 1 xu yu zu
+fix ext all external pf/array 1
+fix_modify ext energy no
+fix_modify ext virial no
+write_data /tmp/mustard.6cafd90cdde3411e8632681500023565 nocoeff
+System init for write_data ...
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Neighbor list info ...
+  update: every = 1 steps, delay = 0 steps, check = yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 12
+  ghost atom cutoff = 12
+  binsize = 6, bins = 5 5 5
+  3 neighbor lists, perpetual/occasional/extra = 3 0 0
+  (1) pair buck/mdf, perpetual, skip from (3)
+      attributes: half, newton on
+      pair build: skip
+      stencil: none
+      bin: none
+  (2) pair lennard/mdf, perpetual, skip from (3)
+      attributes: half, newton on
+      pair build: skip
+      stencil: none
+      bin: none
+  (3) pair coul/cut, perpetual
+      attributes: half, newton on
+      pair build: half/bin/newton/tri
+      stencil: half/bin/3d/tri
+      bin: standard
+run 0 post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5060.8627      5057.7329      3.1298212    
+Loop time of 6.13e-06 on 8 procs for 0 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5060.8627      5057.7329      3.1298212    
+Loop time of 5.28725e-06 on 8 procs for 0 steps with 1081 atoms
+
+108.8% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 5.287e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         126 min
+Histogram: 1 0 0 1 1 0 0 2 1 2
+Nghost:        3053.25 ave        3062 max        3047 min
+Histogram: 1 1 2 1 0 1 0 0 1 1
+Neighs:        31921.8 ave       32954 max       30387 min
+Histogram: 1 0 0 1 1 1 0 1 2 1
+
+Total # of neighbors = 255374
+Ave neighs/atom = 236.23867
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5060.8627      5057.7329      3.1298212    
+ 5060.9334      5057.5236      3.1584641    
+Loop time of 0.00209062 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5060.9334      5057.5236      3.1584641    
+Loop time of 5.41425e-06 on 8 procs for 0 steps with 1081 atoms
+
+110.8% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 5.414e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         126 min
+Histogram: 1 0 0 1 1 0 0 2 1 2
+Nghost:        3053.25 ave        3062 max        3047 min
+Histogram: 1 1 2 1 0 1 0 0 1 1
+Neighs:        31921.5 ave       32953 max       30386 min
+Histogram: 1 0 0 1 1 1 0 1 2 1
+
+Total # of neighbors = 255372
+Ave neighs/atom = 236.23682
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5060.9334      5057.5236      3.1584641    
+ 5061.139       5056.8973      3.2436363    
+Loop time of 0.00206186 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.139       5056.8973      3.2436363    
+Loop time of 4.09238e-06 on 8 procs for 0 steps with 1081 atoms
+
+113.0% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.092e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         126 min
+Histogram: 1 0 0 1 1 0 0 2 1 2
+Nghost:        3053.25 ave        3062 max        3047 min
+Histogram: 1 1 2 1 0 1 0 0 1 1
+Neighs:          31921 ave       32947 max       30387 min
+Histogram: 1 0 0 1 1 1 0 1 2 1
+
+Total # of neighbors = 255368
+Ave neighs/atom = 236.23312
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.139       5056.8973      3.2436363    
+ 5061.4504      5055.8586      3.3807995    
+Loop time of 0.00210136 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.4504      5055.8586      3.3807995    
+Loop time of 4.7135e-06 on 8 procs for 0 steps with 1081 atoms
+
+114.0% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.713e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         126 min
+Histogram: 1 0 0 1 1 0 0 2 1 2
+Nghost:        3053.25 ave        3062 max        3047 min
+Histogram: 1 1 2 1 0 1 0 0 1 1
+Neighs:          31921 ave       32948 max       30385 min
+Histogram: 1 0 0 1 1 1 0 1 2 1
+
+Total # of neighbors = 255368
+Ave neighs/atom = 236.23312
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.4504      5055.8586      3.3807995    
+ 5061.8055      5054.4151      3.5570407    
+Loop time of 0.00211981 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.8055      5054.4151      3.5570407    
+Loop time of 5.10837e-06 on 8 procs for 0 steps with 1081 atoms
+
+112.6% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 5.108e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         126 min
+Histogram: 1 0 0 1 1 0 0 2 1 2
+Nghost:        3053.25 ave        3062 max        3047 min
+Histogram: 1 1 2 1 0 1 0 0 1 1
+Neighs:        31920.6 ave       32948 max       30386 min
+Histogram: 1 0 0 1 1 1 0 1 2 1
+
+Total # of neighbors = 255365
+Ave neighs/atom = 236.23034
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.8055      5054.4151      3.5570407    
+ 5062.1208      5052.5763      3.7470997    
+Loop time of 0.00208972 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.1208      5052.5763      3.7470997    
+Loop time of 4.293e-06 on 8 procs for 0 steps with 1081 atoms
+
+119.4% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.293e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         126 min
+Histogram: 1 0 0 1 1 0 0 2 1 2
+Nghost:        3053.25 ave        3062 max        3047 min
+Histogram: 1 1 2 1 0 1 0 0 1 1
+Neighs:        31920.2 ave       32949 max       30383 min
+Histogram: 1 0 0 1 1 1 0 1 2 1
+
+Total # of neighbors = 255362
+Ave neighs/atom = 236.22757
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.1208      5052.5763      3.7470997    
+ 5062.3332      5050.3532      3.9134906    
+Loop time of 0.00209815 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.3332      5050.3532      3.9134906    
+Loop time of 5.052e-06 on 8 procs for 0 steps with 1081 atoms
+
+106.4% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 5.052e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         126 min
+Histogram: 1 0 0 1 1 0 0 2 1 2
+Nghost:        3053.25 ave        3062 max        3047 min
+Histogram: 1 1 2 1 0 1 0 0 1 1
+Neighs:          31921 ave       32949 max       30381 min
+Histogram: 1 0 0 1 1 1 0 1 2 1
+
+Total # of neighbors = 255368
+Ave neighs/atom = 236.23312
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+reset_atoms mol all single yes
+Resetting molecule IDs ...
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+  number of new molecule IDs = 1080
+  reset_atoms mol CPU = 0.001 seconds
+run 0 post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.3332      5050.3532      3.9134906    
+Loop time of 4.45362e-06 on 8 procs for 0 steps with 1081 atoms
+
+group HXY id 1 13 2 
+3 atoms in group HXY
+delete_bonds HXY multi remove
+System init for delete_bonds ...
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Deleting bonds ...
+  0 total bonds, 0 turned on, 0 turned off
+  0 total angles, 0 turned on, 0 turned off
+  0 total dihedrals, 0 turned on, 0 turned off
+  0 total impropers, 0 turned on, 0 turned off
+set atom 1 type 7
+Setting atom values ...
+  1 settings made for type
+set atom 1 charge 0.0
+Setting atom values ...
+  1 settings made for charge
+set atom 2 type 4
+Setting atom values ...
+  1 settings made for type
+set atom 2 charge 0.0
+Setting atom values ...
+  1 settings made for charge
+set atom 13 type 5
+Setting atom values ...
+  1 settings made for type
+set atom 13 charge 0.0
+Setting atom values ...
+  1 settings made for charge
+set atom 2 image 0 0 0
+Setting atom values ...
+  1 settings made for image
+create_bonds single/bond 1 2 1 special yes
+Finding 1-2 1-3 1-4 neighbors ...
+  special bond factors lj:    0        0        0       
+  special bond factors coul:  0        0        0       
+     1 = max # of 1-2 neighbors
+     0 = max # of 1-3 neighbors
+     0 = max # of 1-4 neighbors
+     1 = max # of special neighbors
+  special bonds CPU = 0.000 seconds
+group HXY delete
+set atom 2 image 0 0 0
+Setting atom values ...
+  1 settings made for image
+reset_atoms mol all single yes
+Resetting molecule IDs ...
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+  number of new molecule IDs = 1080
+  reset_atoms mol CPU = 0.001 seconds
+run 0 post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.792       5050.6663      3.0591181    
+Loop time of 3.69325e-06 on 8 procs for 0 steps with 1081 atoms
+
+write_data /tmp/mustard.6cafd90cdde3411e8632681500023565 nocoeff
+System init for write_data ...
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.792       5050.6663      3.0591181    
+Loop time of 4.2355e-06 on 8 procs for 0 steps with 1081 atoms
+
+97.4% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.236e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         126 min
+Histogram: 1 0 0 1 1 0 0 2 1 2
+Nghost:        3053.25 ave        3062 max        3047 min
+Histogram: 1 1 2 1 0 1 0 0 1 1
+Neighs:          31921 ave       32949 max       30381 min
+Histogram: 1 0 0 1 1 1 0 1 2 1
+
+Total # of neighbors = 255368
+Ave neighs/atom = 236.23312
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.792       5050.6663      3.0591181    
+ 5061.4577      5048.0334      2.760575     
+Loop time of 0.00216225 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.4577      5048.0334      2.760575     
+Loop time of 4.69e-06 on 8 procs for 0 steps with 1081 atoms
+
+103.9% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.69e-06   |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         126 min
+Histogram: 1 0 0 1 1 0 0 2 1 2
+Nghost:        3053.25 ave        3062 max        3047 min
+Histogram: 1 1 2 1 0 1 0 0 1 1
+Neighs:        31920.1 ave       32945 max       30384 min
+Histogram: 1 0 0 1 1 1 0 1 2 1
+
+Total # of neighbors = 255361
+Ave neighs/atom = 236.22664
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.4577      5048.0334      2.760575     
+ 5061.2365      5045.0469      2.5384072    
+Loop time of 0.00211033 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.2365      5045.0469      2.5384072    
+Loop time of 3.45662e-06 on 8 procs for 0 steps with 1081 atoms
+
+97.6% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 3.457e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         126 min
+Histogram: 1 0 0 1 1 0 0 2 1 2
+Nghost:        3053.25 ave        3062 max        3047 min
+Histogram: 1 1 2 1 0 1 0 0 1 1
+Neighs:        31920.1 ave       32943 max       30386 min
+Histogram: 1 0 0 1 1 1 0 1 2 1
+
+Total # of neighbors = 255361
+Ave neighs/atom = 236.22664
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.2365      5045.0469      2.5384072    
+ 5061.2002      5041.7265      2.4037488    
+Loop time of 0.00216527 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.2002      5041.7265      2.4037488    
+Loop time of 4.24925e-06 on 8 procs for 0 steps with 1081 atoms
+
+94.1% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.249e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         126 min
+Histogram: 1 0 0 1 1 0 0 2 1 2
+Nghost:        3053.25 ave        3062 max        3047 min
+Histogram: 1 1 2 1 0 1 0 0 1 1
+Neighs:          31920 ave       32942 max       30389 min
+Histogram: 1 0 0 1 1 1 0 1 2 1
+
+Total # of neighbors = 255360
+Ave neighs/atom = 236.22572
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.2002      5041.7265      2.4037488    
+ 5061.3757      5038.0947      2.3599546    
+Loop time of 0.00206488 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.3757      5038.0947      2.3599546    
+Loop time of 4.32425e-06 on 8 procs for 0 steps with 1081 atoms
+
+109.8% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.324e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         126 min
+Histogram: 1 0 0 1 1 0 0 2 1 2
+Nghost:        3053.25 ave        3062 max        3047 min
+Histogram: 1 1 2 1 0 1 0 0 1 1
+Neighs:          31919 ave       32939 max       30391 min
+Histogram: 1 0 0 1 1 1 0 1 2 1
+
+Total # of neighbors = 255352
+Ave neighs/atom = 236.21832
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.3757      5038.0947      2.3599546    
+ 5061.747       5034.1764      2.4061248    
+Loop time of 0.00209128 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.747       5034.1764      2.4061248    
+Loop time of 5.52788e-06 on 8 procs for 0 steps with 1081 atoms
+
+106.3% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 5.528e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         126 min
+Histogram: 1 0 0 1 1 0 0 2 1 2
+Nghost:        3053.25 ave        3062 max        3047 min
+Histogram: 1 1 2 1 0 1 0 0 1 1
+Neighs:        31917.5 ave       32938 max       30386 min
+Histogram: 1 0 0 1 1 1 0 1 2 1
+
+Total # of neighbors = 255340
+Ave neighs/atom = 236.20722
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.747       5034.1764      2.4061248    
+ 5062.2377      5029.9997      2.5347925    
+Loop time of 0.00206855 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.2377      5029.9997      2.5347925    
+Loop time of 4.46112e-06 on 8 procs for 0 steps with 1081 atoms
+
+120.5% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.461e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         126 min
+Histogram: 1 0 0 1 1 0 0 2 1 2
+Nghost:        3053.25 ave        3062 max        3047 min
+Histogram: 1 1 2 1 0 1 0 0 1 1
+Neighs:        31917.9 ave       32934 max       30391 min
+Histogram: 1 0 0 1 1 1 0 1 2 1
+
+Total # of neighbors = 255343
+Ave neighs/atom = 236.20999
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.2377      5029.9997      2.5347925    
+ 5062.7019      5025.594       2.7241932    
+Loop time of 0.00207881 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.7019      5025.594       2.7241932    
+Loop time of 3.87987e-06 on 8 procs for 0 steps with 1081 atoms
+
+103.1% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 3.88e-06   |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         126 min
+Histogram: 1 0 0 1 1 0 0 2 1 2
+Nghost:        3053.25 ave        3062 max        3047 min
+Histogram: 1 2 0 2 0 1 0 0 1 1
+Neighs:        31917.1 ave       32929 max       30395 min
+Histogram: 1 0 0 1 1 0 1 2 1 1
+
+Total # of neighbors = 255337
+Ave neighs/atom = 236.20444
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+reset_atoms mol all single yes
+Resetting molecule IDs ...
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+  number of new molecule IDs = 1080
+  reset_atoms mol CPU = 0.001 seconds
+run 0 post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.7019      5025.594       2.7241932    
+Loop time of 6.60275e-06 on 8 procs for 0 steps with 1081 atoms
+
+group HXY id 1 2 13 
+3 atoms in group HXY
+delete_bonds HXY multi remove
+System init for delete_bonds ...
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Deleting bonds ...
+  0 total bonds, 0 turned on, 0 turned off
+  0 total angles, 0 turned on, 0 turned off
+  0 total dihedrals, 0 turned on, 0 turned off
+  0 total impropers, 0 turned on, 0 turned off
+set atom 1 type 7
+Setting atom values ...
+  1 settings made for type
+set atom 1 charge 0.0
+Setting atom values ...
+  1 settings made for charge
+set atom 13 type 4
+Setting atom values ...
+  1 settings made for type
+set atom 13 charge 0.0
+Setting atom values ...
+  1 settings made for charge
+set atom 2 type 5
+Setting atom values ...
+  1 settings made for type
+set atom 2 charge 0.0
+Setting atom values ...
+  1 settings made for charge
+set atom 13 image 0 0 0
+Setting atom values ...
+  1 settings made for image
+create_bonds single/bond 1 13 1 special yes
+Finding 1-2 1-3 1-4 neighbors ...
+  special bond factors lj:    0        0        0       
+  special bond factors coul:  0        0        0       
+     1 = max # of 1-2 neighbors
+     0 = max # of 1-3 neighbors
+     0 = max # of 1-4 neighbors
+     1 = max # of special neighbors
+  special bonds CPU = 0.000 seconds
+group HXY delete
+set atom 13 image 0 0 0
+Setting atom values ...
+  1 settings made for image
+reset_atoms mol all single yes
+Resetting molecule IDs ...
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+  number of new molecule IDs = 1080
+  reset_atoms mol CPU = 0.001 seconds
+run 0 post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.0035      5025.1786      2.4411113    
+Loop time of 5.05188e-06 on 8 procs for 0 steps with 1081 atoms
+
+write_data /tmp/mustard.6cafd90cdde3411e8632681500023565 nocoeff
+System init for write_data ...
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.0035      5025.1786      2.4411113    
+Loop time of 4.38437e-06 on 8 procs for 0 steps with 1081 atoms
+
+111.2% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.384e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         126 min
+Histogram: 1 0 0 1 1 0 0 2 1 2
+Nghost:        3053.25 ave        3062 max        3047 min
+Histogram: 1 2 0 2 0 1 0 0 1 1
+Neighs:        31917.1 ave       32929 max       30395 min
+Histogram: 1 0 0 1 1 0 1 2 1 1
+
+Total # of neighbors = 255337
+Ave neighs/atom = 236.20444
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.0035      5025.1786      2.4411113    
+ 5061.5843      5020.4719      2.0318462    
+Loop time of 0.00214747 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.5843      5020.4719      2.0318462    
+Loop time of 4.17012e-06 on 8 procs for 0 steps with 1081 atoms
+
+98.9% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.17e-06   |            |       |100.00
+
+Nlocal:        135.125 ave         141 max         126 min
+Histogram: 1 0 1 0 1 0 0 2 1 2
+Nghost:        3053.25 ave        3063 max        3047 min
+Histogram: 2 1 0 2 0 1 0 0 1 1
+Neighs:        31916.9 ave       32923 max       30394 min
+Histogram: 1 0 1 0 1 0 1 2 0 2
+
+Total # of neighbors = 255335
+Ave neighs/atom = 236.20259
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.5843      5020.4719      2.0318462    
+ 5061.1021      5015.5794      1.7023877    
+Loop time of 0.00258294 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.1021      5015.5794      1.7023877    
+Loop time of 4.21675e-06 on 8 procs for 0 steps with 1081 atoms
+
+124.5% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.217e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         126 min
+Histogram: 1 0 1 0 0 1 0 1 2 2
+Nghost:        3053.25 ave        3063 max        3048 min
+Histogram: 3 0 2 0 1 0 0 0 1 1
+Neighs:        31916.6 ave       32690 max       30394 min
+Histogram: 1 0 1 0 0 1 0 1 1 3
+
+Total # of neighbors = 255333
+Ave neighs/atom = 236.20074
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.1021      5015.5794      1.7023877    
+ 5060.7291      5010.5323      1.4736244    
+Loop time of 0.00209809 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5060.7291      5010.5323      1.4736244    
+Loop time of 4.2895e-06 on 8 procs for 0 steps with 1081 atoms
+
+119.5% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.289e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         126 min
+Histogram: 1 0 1 0 0 1 0 1 2 2
+Nghost:        3053.25 ave        3063 max        3048 min
+Histogram: 3 0 2 0 1 0 0 0 1 1
+Neighs:        31914.5 ave       32684 max       30395 min
+Histogram: 1 0 1 0 0 1 0 1 1 3
+
+Total # of neighbors = 255316
+Ave neighs/atom = 236.18501
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5060.7291      5010.5323      1.4736244    
+ 5060.573       5005.3607      1.3464812    
+Loop time of 0.00205767 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5060.573       5005.3607      1.3464812    
+Loop time of 3.85562e-06 on 8 procs for 0 steps with 1081 atoms
+
+107.0% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 3.856e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         126 min
+Histogram: 1 0 1 0 0 1 0 1 2 2
+Nghost:        3053.25 ave        3063 max        3048 min
+Histogram: 3 0 2 0 1 0 0 0 1 1
+Neighs:        31912.4 ave       32672 max       30399 min
+Histogram: 1 0 1 0 0 1 0 1 1 3
+
+Total # of neighbors = 255299
+Ave neighs/atom = 236.16929
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5060.573       5005.3607      1.3464812    
+ 5060.6612      5000.0951      1.3156754    
+Loop time of 0.00207342 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5060.6612      5000.0951      1.3156754    
+Loop time of 3.78837e-06 on 8 procs for 0 steps with 1081 atoms
+
+105.6% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 3.788e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         126 min
+Histogram: 1 0 1 0 0 1 0 2 1 2
+Nghost:        3053.25 ave        3063 max        3047 min
+Histogram: 1 2 0 2 1 0 0 0 1 1
+Neighs:          31911 ave       32903 max       30397 min
+Histogram: 1 0 1 0 0 1 1 2 1 1
+
+Total # of neighbors = 255288
+Ave neighs/atom = 236.15911
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5060.6612      5000.0951      1.3156754    
+ 5060.9982      4994.7683      1.3803075    
+Loop time of 0.00247324 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5060.9982      4994.7683      1.3803075    
+Loop time of 3.906e-06 on 8 procs for 0 steps with 1081 atoms
+
+112.0% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 3.906e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         126 min
+Histogram: 1 0 1 0 0 1 0 2 1 2
+Nghost:        3053.25 ave        3063 max        3047 min
+Histogram: 1 2 0 2 1 0 0 0 1 1
+Neighs:        31910.2 ave       32906 max       30400 min
+Histogram: 1 0 1 0 0 1 1 2 1 1
+
+Total # of neighbors = 255282
+Ave neighs/atom = 236.15356
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5060.9982      4994.7683      1.3803075    
+ 5061.5664      4989.4153      1.5453514    
+Loop time of 0.00209011 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.5664      4989.4153      1.5453514    
+Loop time of 4.89025e-06 on 8 procs for 0 steps with 1081 atoms
+
+92.0% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.89e-06   |            |       |100.00
+
+Nlocal:        135.125 ave         141 max         126 min
+Histogram: 1 0 1 0 0 1 1 1 1 2
+Nghost:        3053.25 ave        3064 max        3047 min
+Histogram: 2 1 1 2 0 0 0 1 0 1
+Neighs:        31908.2 ave       32903 max       30401 min
+Histogram: 1 1 0 0 0 0 3 1 0 2
+
+Total # of neighbors = 255266
+Ave neighs/atom = 236.13876
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.5664      4989.4153      1.5453514    
+ 5062.2452      4984.0733      1.8121133    
+Loop time of 0.00207278 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.2452      4984.0733      1.8121133    
+Loop time of 3.73063e-06 on 8 procs for 0 steps with 1081 atoms
+
+110.6% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 3.731e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         141 max         126 min
+Histogram: 1 0 1 0 0 1 1 1 1 2
+Nghost:        3053.25 ave        3064 max        3047 min
+Histogram: 2 1 1 2 0 0 0 1 0 1
+Neighs:        31908.4 ave       32897 max       30406 min
+Histogram: 1 1 0 0 0 0 3 1 0 2
+
+Total # of neighbors = 255267
+Ave neighs/atom = 236.13969
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.2452      4984.0733      1.8121133    
+ 5062.7794      4978.7761      2.158791     
+Loop time of 0.00214162 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.7794      4978.7761      2.158791     
+Loop time of 4.709e-06 on 8 procs for 0 steps with 1081 atoms
+
+108.8% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.709e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         142 max         126 min
+Histogram: 1 1 0 0 0 1 2 1 1 1
+Nghost:        3053.25 ave        3064 max        3047 min
+Histogram: 2 0 2 2 0 0 0 1 0 1
+Neighs:          31909 ave       33017 max       30410 min
+Histogram: 1 1 0 0 1 1 1 0 1 2
+
+Total # of neighbors = 255272
+Ave neighs/atom = 236.14431
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+reset_atoms mol all single yes
+Resetting molecule IDs ...
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+  number of new molecule IDs = 1080
+  reset_atoms mol CPU = 0.001 seconds
+run 0 post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.7794      4978.7761      2.158791     
+Loop time of 4.35087e-06 on 8 procs for 0 steps with 1081 atoms
+
+group HXY id 1 13 2 
+3 atoms in group HXY
+delete_bonds HXY multi remove
+System init for delete_bonds ...
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Deleting bonds ...
+  0 total bonds, 0 turned on, 0 turned off
+  0 total angles, 0 turned on, 0 turned off
+  0 total dihedrals, 0 turned on, 0 turned off
+  0 total impropers, 0 turned on, 0 turned off
+set atom 1 type 7
+Setting atom values ...
+  1 settings made for type
+set atom 1 charge 0.0
+Setting atom values ...
+  1 settings made for charge
+set atom 2 type 4
+Setting atom values ...
+  1 settings made for type
+set atom 2 charge 0.0
+Setting atom values ...
+  1 settings made for charge
+set atom 13 type 5
+Setting atom values ...
+  1 settings made for type
+set atom 13 charge 0.0
+Setting atom values ...
+  1 settings made for charge
+set atom 2 image 0 0 0
+Setting atom values ...
+  1 settings made for image
+create_bonds single/bond 1 2 1 special yes
+Finding 1-2 1-3 1-4 neighbors ...
+  special bond factors lj:    0        0        0       
+  special bond factors coul:  0        0        0       
+     1 = max # of 1-2 neighbors
+     0 = max # of 1-3 neighbors
+     0 = max # of 1-4 neighbors
+     1 = max # of special neighbors
+  special bonds CPU = 0.000 seconds
+group HXY delete
+set atom 2 image 0 0 0
+Setting atom values ...
+  1 settings made for image
+reset_atoms mol all single yes
+Resetting molecule IDs ...
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+  number of new molecule IDs = 1080
+  reset_atoms mol CPU = 0.001 seconds
+run 0 post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.553       4979.0322      1.6762848    
+Loop time of 3.6195e-06 on 8 procs for 0 steps with 1081 atoms
+
+write_data /tmp/mustard.6cafd90cdde3411e8632681500023565 nocoeff
+System init for write_data ...
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.553       4979.0322      1.6762848    
+Loop time of 6.04837e-06 on 8 procs for 0 steps with 1081 atoms
+
+109.5% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 6.048e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         142 max         126 min
+Histogram: 1 1 0 0 0 1 2 1 1 1
+Nghost:        3053.25 ave        3064 max        3047 min
+Histogram: 2 0 2 2 0 0 0 1 0 1
+Neighs:          31909 ave       33017 max       30410 min
+Histogram: 1 1 0 0 1 1 1 0 1 2
+
+Total # of neighbors = 255272
+Ave neighs/atom = 236.14431
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.553       4979.0322      1.6762848    
+ 5061.9126      4973.6143      1.3622804    
+Loop time of 0.00216683 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.9126      4973.6143      1.3622804    
+Loop time of 5.25738e-06 on 8 procs for 0 steps with 1081 atoms
+
+102.2% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 5.257e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         141 max         126 min
+Histogram: 1 0 1 0 0 1 2 0 1 2
+Nghost:        3053.25 ave        3063 max        3047 min
+Histogram: 2 1 0 3 0 0 0 0 1 1
+Neighs:        31907.2 ave       32896 max       30416 min
+Histogram: 1 0 1 0 1 0 2 0 0 3
+
+Total # of neighbors = 255258
+Ave neighs/atom = 236.13136
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.9126      4973.6143      1.3622804    
+ 5061.2654      4968.2894      1.1538543    
+Loop time of 0.00216374 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.2654      4968.2894      1.1538543    
+Loop time of 3.82075e-06 on 8 procs for 0 steps with 1081 atoms
+
+104.7% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 3.821e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         126 min
+Histogram: 1 0 1 0 0 1 0 2 0 3
+Nghost:        3053.25 ave        3063 max        3047 min
+Histogram: 1 2 1 2 0 0 0 0 1 1
+Neighs:        31907.5 ave       32897 max       30420 min
+Histogram: 1 0 1 0 0 1 2 0 1 2
+
+Total # of neighbors = 255260
+Ave neighs/atom = 236.13321
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.2654      4968.2894      1.1538543    
+ 5060.8787      4963.0808      1.0571294    
+Loop time of 0.00208433 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5060.8787      4963.0808      1.0571294    
+Loop time of 3.9325e-06 on 8 procs for 0 steps with 1081 atoms
+
+111.3% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 3.932e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         125 min
+Histogram: 1 0 0 1 0 0 1 1 1 3
+Nghost:        3053.25 ave        3063 max        3047 min
+Histogram: 1 3 0 2 0 0 0 0 1 1
+Neighs:        31905.9 ave       32888 max       30187 min
+Histogram: 1 0 1 0 0 0 2 2 0 2
+
+Total # of neighbors = 255247
+Ave neighs/atom = 236.12118
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5060.8787      4963.0808      1.0571294    
+ 5060.8198      4958.0098      1.0645986    
+Loop time of 0.00210048 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5060.8198      4958.0098      1.0645986    
+Loop time of 4.36575e-06 on 8 procs for 0 steps with 1081 atoms
+
+111.7% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.366e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         124 min
+Histogram: 1 0 0 1 0 0 1 1 1 3
+Nghost:        3053.25 ave        3063 max        3047 min
+Histogram: 1 3 1 0 1 0 0 0 0 2
+Neighs:        31905.2 ave       32889 max       29944 min
+Histogram: 1 0 0 1 0 0 1 1 2 2
+
+Total # of neighbors = 255242
+Ave neighs/atom = 236.11656
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5060.8198      4958.0098      1.0645986    
+ 5061.0731      4953.0994      1.174562     
+Loop time of 0.00214943 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.0731      4953.0994      1.174562     
+Loop time of 4.0945e-06 on 8 procs for 0 steps with 1081 atoms
+
+109.9% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.094e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         124 min
+Histogram: 1 0 0 1 0 0 1 1 1 3
+Nghost:        3053.25 ave        3063 max        3047 min
+Histogram: 2 1 1 1 1 0 0 0 0 2
+Neighs:        31903.4 ave       32891 max       29938 min
+Histogram: 1 0 0 1 0 0 1 1 2 2
+
+Total # of neighbors = 255227
+Ave neighs/atom = 236.10268
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.0731      4953.0994      1.174562     
+ 5061.6423      4948.3738      1.3987232    
+Loop time of 0.0021763 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.6423      4948.3738      1.3987232    
+Loop time of 4.18187e-06 on 8 procs for 0 steps with 1081 atoms
+
+110.6% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.182e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         124 min
+Histogram: 1 0 0 0 1 0 1 1 2 2
+Nghost:        3053.25 ave        3062 max        3047 min
+Histogram: 2 0 2 1 1 0 0 0 0 2
+Neighs:        31901.9 ave       32890 max       29934 min
+Histogram: 1 0 0 0 1 0 1 1 2 2
+
+Total # of neighbors = 255215
+Ave neighs/atom = 236.09158
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.6423      4948.3738      1.3987232    
+ 5062.4856      4943.8589      1.7564948    
+Loop time of 0.00211142 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.4856      4943.8589      1.7564948    
+Loop time of 4.2455e-06 on 8 procs for 0 steps with 1081 atoms
+
+106.0% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.246e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         124 min
+Histogram: 1 0 0 0 0 1 1 2 1 2
+Nghost:        3053.25 ave        3062 max        3047 min
+Histogram: 2 0 2 0 2 0 0 0 0 2
+Neighs:        31900.1 ave       32892 max       29932 min
+Histogram: 1 0 0 0 0 1 1 2 2 1
+
+Total # of neighbors = 255201
+Ave neighs/atom = 236.07863
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.4856      4943.8589      1.7564948    
+ 5063.3616      4939.5792      2.253727     
+Loop time of 0.00213274 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5063.3616      4939.5792      2.253727     
+Loop time of 3.7985e-06 on 8 procs for 0 steps with 1081 atoms
+
+108.6% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 3.798e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         124 min
+Histogram: 1 0 0 0 0 0 3 1 1 2
+Nghost:        3053.25 ave        3062 max        3047 min
+Histogram: 2 0 1 1 2 0 0 0 1 1
+Neighs:        31899.4 ave       32884 max       29932 min
+Histogram: 1 0 0 0 0 0 4 0 1 2
+
+Total # of neighbors = 255195
+Ave neighs/atom = 236.07308
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+reset_atoms mol all single yes
+Resetting molecule IDs ...
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+  number of new molecule IDs = 1080
+  reset_atoms mol CPU = 0.001 seconds
+run 0 post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5063.3616      4939.5792      2.253727     
+Loop time of 5.03288e-06 on 8 procs for 0 steps with 1081 atoms
+
+group HXY id 1 2 13 
+3 atoms in group HXY
+delete_bonds HXY multi remove
+System init for delete_bonds ...
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Deleting bonds ...
+  0 total bonds, 0 turned on, 0 turned off
+  0 total angles, 0 turned on, 0 turned off
+  0 total dihedrals, 0 turned on, 0 turned off
+  0 total impropers, 0 turned on, 0 turned off
+set atom 1 type 7
+Setting atom values ...
+  1 settings made for type
+set atom 1 charge 0.0
+Setting atom values ...
+  1 settings made for charge
+set atom 13 type 4
+Setting atom values ...
+  1 settings made for type
+set atom 13 charge 0.0
+Setting atom values ...
+  1 settings made for charge
+set atom 2 type 5
+Setting atom values ...
+  1 settings made for type
+set atom 2 charge 0.0
+Setting atom values ...
+  1 settings made for charge
+set atom 13 image 0 0 0
+Setting atom values ...
+  1 settings made for image
+create_bonds single/bond 1 13 1 special yes
+Finding 1-2 1-3 1-4 neighbors ...
+  special bond factors lj:    0        0        0       
+  special bond factors coul:  0        0        0       
+     1 = max # of 1-2 neighbors
+     0 = max # of 1-3 neighbors
+     0 = max # of 1-4 neighbors
+     1 = max # of special neighbors
+  special bonds CPU = 0.000 seconds
+group HXY delete
+set atom 13 image 0 0 0
+Setting atom values ...
+  1 settings made for image
+reset_atoms mol all single yes
+Resetting molecule IDs ...
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+  number of new molecule IDs = 1080
+  reset_atoms mol CPU = 0.001 seconds
+run 0 post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.8742      4939.1713      2.1743424    
+Loop time of 3.99988e-06 on 8 procs for 0 steps with 1081 atoms
+
+write_data /tmp/mustard.6cafd90cdde3411e8632681500023565 nocoeff
+System init for write_data ...
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.8742      4939.1713      2.1743424    
+Loop time of 4.561e-06 on 8 procs for 0 steps with 1081 atoms
+
+101.4% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.561e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         124 min
+Histogram: 1 0 0 0 0 0 3 1 1 2
+Nghost:        3053.25 ave        3062 max        3047 min
+Histogram: 2 0 1 1 2 0 0 0 1 1
+Neighs:        31899.4 ave       32884 max       29932 min
+Histogram: 1 0 0 0 0 0 4 0 1 2
+
+Total # of neighbors = 255195
+Ave neighs/atom = 236.07308
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.8742      4939.1713      2.1743424    
+ 5062.3108      4934.9749      1.8244421    
+Loop time of 0.00216365 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.3108      4934.9749      1.8244421    
+Loop time of 4.96913e-06 on 8 procs for 0 steps with 1081 atoms
+
+118.2% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.969e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         124 min
+Histogram: 1 0 0 0 0 0 3 1 1 2
+Nghost:        3053.25 ave        3062 max        3047 min
+Histogram: 2 0 1 1 2 0 0 0 1 1
+Neighs:        31899.6 ave       32888 max       29930 min
+Histogram: 1 0 0 0 0 0 4 0 1 2
+
+Total # of neighbors = 255197
+Ave neighs/atom = 236.07493
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5062.3108      4934.9749      1.8244421    
+ 5061.4664      4931.0568      1.5539053    
+Loop time of 0.00217068 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.4664      4931.0568      1.5539053    
+Loop time of 4.76275e-06 on 8 procs for 0 steps with 1081 atoms
+
+112.9% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.763e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         125 min
+Histogram: 1 0 0 0 0 0 3 0 3 1
+Nghost:        3053.25 ave        3061 max        3047 min
+Histogram: 1 1 1 2 0 1 0 0 1 1
+Neighs:          31899 ave       32888 max       30178 min
+Histogram: 1 0 0 0 0 1 1 4 0 1
+
+Total # of neighbors = 255192
+Ave neighs/atom = 236.07031
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5061.4664      4931.0568      1.5539053    
+ 5060.7388      4927.4233      1.3863322    
+Loop time of 0.00205924 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5060.7388      4927.4233      1.3863322    
+Loop time of 4.5785e-06 on 8 procs for 0 steps with 1081 atoms
+
+109.2% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.578e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         138 max         125 min
+Histogram: 1 0 0 0 0 0 1 1 1 4
+Nghost:        3053.25 ave        3061 max        3049 min
+Histogram: 2 2 1 1 0 0 0 0 1 1
+Neighs:        31898.4 ave       32436 max       30172 min
+Histogram: 1 0 0 0 0 0 0 1 5 1
+
+Total # of neighbors = 255187
+Ave neighs/atom = 236.06568
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5060.7388      4927.4233      1.3863322    
+ 5060.295       4924.0785      1.3075006    
+Loop time of 0.00206906 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5060.295       4924.0785      1.3075006    
+Loop time of 5.04063e-06 on 8 procs for 0 steps with 1081 atoms
+
+109.1% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 5.041e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         138 max         126 min
+Histogram: 1 0 0 0 0 0 1 1 0 5
+Nghost:        3053.25 ave        3060 max        3050 min
+Histogram: 2 1 3 0 0 0 0 0 0 2
+Neighs:          31897 ave       32434 max       30394 min
+Histogram: 1 0 0 0 0 0 0 3 2 2
+
+Total # of neighbors = 255176
+Ave neighs/atom = 236.0555
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5060.295       4924.0785      1.3075006    
+ 5060.0579      4921.0273      1.2907672    
+Loop time of 0.00239444 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5060.0579      4921.0273      1.2907672    
+Loop time of 5.689e-06 on 8 procs for 0 steps with 1081 atoms
+
+114.3% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 5.689e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         138 max         126 min
+Histogram: 1 0 0 0 0 0 1 1 0 5
+Nghost:        3053.25 ave        3060 max        3049 min
+Histogram: 2 0 4 0 0 0 0 0 0 2
+Neighs:        31896.4 ave       32389 max       30389 min
+Histogram: 1 0 0 0 0 0 0 3 0 4
+
+Total # of neighbors = 255171
+Ave neighs/atom = 236.05088
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5060.0579      4921.0273      1.2907672    
+ 5059.9298      4918.2753      1.3138023    
+Loop time of 0.0019544 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.9298      4918.2753      1.3138023    
+Loop time of 3.76588e-06 on 8 procs for 0 steps with 1081 atoms
+
+112.9% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 3.766e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         138 max         126 min
+Histogram: 1 0 0 0 0 1 0 1 0 5
+Nghost:        3053.25 ave        3060 max        3049 min
+Histogram: 2 1 3 0 0 0 0 0 0 2
+Neighs:          31897 ave       32391 max       30395 min
+Histogram: 1 0 0 0 0 0 1 1 2 3
+
+Total # of neighbors = 255176
+Ave neighs/atom = 236.0555
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.9298      4918.2753      1.3138023    
+ 5059.8552      4915.8277      1.3612724    
+Loop time of 0.00210735 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.8552      4915.8277      1.3612724    
+Loop time of 6.11638e-06 on 8 procs for 0 steps with 1081 atoms
+
+110.4% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 6.116e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         138 max         126 min
+Histogram: 1 0 0 0 0 1 0 1 0 5
+Nghost:        3053.25 ave        3061 max        3049 min
+Histogram: 2 2 2 0 0 0 0 0 0 2
+Neighs:        31896.6 ave       32548 max       30399 min
+Histogram: 1 0 0 0 1 0 0 2 2 2
+
+Total # of neighbors = 255173
+Ave neighs/atom = 236.05273
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.8552      4915.8277      1.3612724    
+ 5059.8068      4913.6884      1.422482     
+Loop time of 0.00209343 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.8068      4913.6884      1.422482     
+Loop time of 5.68438e-06 on 8 procs for 0 steps with 1081 atoms
+
+110.0% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 5.684e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         139 max         124 min
+Histogram: 1 0 0 0 0 1 0 1 1 4
+Nghost:        3053.25 ave        3062 max        3049 min
+Histogram: 3 1 2 0 0 0 0 0 0 2
+Neighs:        31897.8 ave       32549 max       29893 min
+Histogram: 1 0 0 0 0 1 0 0 3 3
+
+Total # of neighbors = 255182
+Ave neighs/atom = 236.06105
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.8068      4913.6884      1.422482     
+ 5059.7708      4911.8595      1.4891569    
+Loop time of 0.00212312 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.7708      4911.8595      1.4891569    
+Loop time of 4.04538e-06 on 8 procs for 0 steps with 1081 atoms
+
+108.1% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.045e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         139 max         124 min
+Histogram: 1 0 0 0 0 0 1 1 2 3
+Nghost:        3053.25 ave        3062 max        3048 min
+Histogram: 2 0 4 0 0 0 0 0 1 1
+Neighs:        31898.1 ave       32462 max       29885 min
+Histogram: 1 0 0 0 0 0 1 0 3 3
+
+Total # of neighbors = 255185
+Ave neighs/atom = 236.06383
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.7708      4911.8595      1.4891569    
+ 5059.7391      4910.3415      1.5541307    
+Loop time of 0.00203759 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.7391      4910.3415      1.5541307    
+Loop time of 4.91413e-06 on 8 procs for 0 steps with 1081 atoms
+
+119.6% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.914e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         140 max         123 min
+Histogram: 1 0 0 0 0 1 0 2 2 2
+Nghost:        3053.25 ave        3063 max        3047 min
+Histogram: 2 0 1 3 0 0 0 0 1 1
+Neighs:        31899.2 ave       32729 max       29667 min
+Histogram: 1 0 0 0 0 0 1 2 2 2
+
+Total # of neighbors = 255194
+Ave neighs/atom = 236.07216
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.7391      4910.3415      1.5541307    
+ 5059.707       4909.1327      1.6106577    
+Loop time of 0.00201561 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.707       4909.1327      1.6106577    
+Loop time of 4.30825e-06 on 8 procs for 0 steps with 1081 atoms
+
+107.4% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.308e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         141 max         121 min
+Histogram: 1 0 0 0 0 0 1 2 2 2
+Nghost:        3053.25 ave        3065 max        3046 min
+Histogram: 2 0 0 4 0 0 0 1 0 1
+Neighs:        31898.1 ave       33102 max       29176 min
+Histogram: 1 0 0 0 0 0 2 3 0 2
+
+Total # of neighbors = 255185
+Ave neighs/atom = 236.06383
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.707       4909.1327      1.6106577    
+ 5059.6715      4908.2296      1.6521021    
+Loop time of 0.00200174 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.6715      4908.2296      1.6521021    
+Loop time of 4.1165e-06 on 8 procs for 0 steps with 1081 atoms
+
+106.3% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.116e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         141 max         121 min
+Histogram: 1 0 0 0 0 0 1 1 3 2
+Nghost:        3053.25 ave        3065 max        3046 min
+Histogram: 2 0 0 4 0 0 0 1 0 1
+Neighs:        31898.6 ave       33101 max       29174 min
+Histogram: 1 0 0 0 0 0 2 3 0 2
+
+Total # of neighbors = 255189
+Ave neighs/atom = 236.06753
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.6715      4908.2296      1.6521021    
+ 5059.6313      4907.6266      1.6718932    
+Loop time of 0.00202904 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.6313      4907.6266      1.6718932    
+Loop time of 6.5735e-06 on 8 procs for 0 steps with 1081 atoms
+
+91.3% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 6.574e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         141 max         121 min
+Histogram: 1 0 0 0 0 0 1 1 3 2
+Nghost:        3053.25 ave        3065 max        3046 min
+Histogram: 2 0 0 4 0 0 0 1 0 1
+Neighs:        31899.5 ave       33105 max       29172 min
+Histogram: 1 0 0 0 0 0 2 3 0 2
+
+Total # of neighbors = 255196
+Ave neighs/atom = 236.07401
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.6313      4907.6266      1.6718932    
+ 5059.5867      4907.3163      1.6637276    
+Loop time of 0.0020575 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.5867      4907.3163      1.6637276    
+Loop time of 3.86238e-06 on 8 procs for 0 steps with 1081 atoms
+
+100.3% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 3.862e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         141 max         120 min
+Histogram: 1 0 0 0 0 0 1 2 2 2
+Nghost:        3053.25 ave        3066 max        3046 min
+Histogram: 2 0 2 2 0 0 0 1 0 1
+Neighs:        31899.1 ave       33107 max       28934 min
+Histogram: 1 0 0 0 0 0 1 3 1 2
+
+Total # of neighbors = 255193
+Ave neighs/atom = 236.07123
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.5867      4907.3163      1.6637276    
+ 5059.5404      4907.2894      1.6220589    
+Loop time of 0.00213429 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.5404      4907.2894      1.6220589    
+Loop time of 4.98675e-06 on 8 procs for 0 steps with 1081 atoms
+
+112.8% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.987e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         141 max         120 min
+Histogram: 1 0 0 0 0 0 1 2 2 2
+Nghost:        3053.25 ave        3066 max        3046 min
+Histogram: 2 0 2 2 0 0 0 1 0 1
+Neighs:          31900 ave       33118 max       28927 min
+Histogram: 1 0 0 0 0 0 1 3 1 2
+
+Total # of neighbors = 255200
+Ave neighs/atom = 236.07771
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.5404      4907.2894      1.6220589    
+ 5059.4966      4907.5346      1.5429057    
+Loop time of 0.00211347 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4966      4907.5346      1.5429057    
+Loop time of 6.43225e-06 on 8 procs for 0 steps with 1081 atoms
+
+99.1% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 6.432e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         143 max         119 min
+Histogram: 1 0 0 0 0 1 1 3 1 1
+Nghost:        3053.25 ave        3067 max        3044 min
+Histogram: 1 1 0 4 0 0 1 0 0 1
+Neighs:        31901.1 ave       33611 max       28658 min
+Histogram: 1 0 0 0 0 0 3 2 1 1
+
+Total # of neighbors = 255209
+Ave neighs/atom = 236.08603
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4966      4907.5346      1.5429057    
+ 5059.4602      4908.0391      1.4249171    
+Loop time of 0.00205417 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4602      4908.0391      1.4249171    
+Loop time of 3.62425e-06 on 8 procs for 0 steps with 1081 atoms
+
+89.7% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 3.624e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         142 max         118 min
+Histogram: 1 0 0 0 0 0 2 1 2 2
+Nghost:        3053.25 ave        3068 max        3045 min
+Histogram: 2 0 2 2 0 0 1 0 0 1
+Neighs:        31903.6 ave       33342 max       28405 min
+Histogram: 1 0 0 0 0 0 1 3 1 2
+
+Total # of neighbors = 255229
+Ave neighs/atom = 236.10453
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4602      4908.0391      1.4249171    
+ 5059.4348      4908.7883      1.2704266    
+Loop time of 0.00202755 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4348      4908.7883      1.2704266    
+Loop time of 4.71525e-06 on 8 procs for 0 steps with 1081 atoms
+
+103.4% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.715e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         142 max         118 min
+Histogram: 1 0 0 0 0 0 2 1 2 2
+Nghost:        3053.25 ave        3068 max        3045 min
+Histogram: 2 0 2 2 0 0 1 0 0 1
+Neighs:        31906.9 ave       33347 max       28405 min
+Histogram: 1 0 0 0 0 0 1 3 1 2
+
+Total # of neighbors = 255255
+Ave neighs/atom = 236.12858
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4348      4908.7883      1.2704266    
+ 5059.4205      4909.7661      1.0860366    
+Loop time of 0.00203566 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4205      4909.7661      1.0860366    
+Loop time of 7.27363e-06 on 8 procs for 0 steps with 1081 atoms
+
+111.7% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 7.274e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         142 max         116 min
+Histogram: 1 0 0 0 0 0 1 1 3 2
+Nghost:        3053.25 ave        3070 max        3045 min
+Histogram: 2 0 3 1 0 0 1 0 0 1
+Neighs:        31909.1 ave       33350 max       27936 min
+Histogram: 1 0 0 0 0 0 1 2 2 2
+
+Total # of neighbors = 255273
+Ave neighs/atom = 236.14524
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4205      4909.7661      1.0860366    
+ 5059.4143      4910.955       0.88232644   
+Loop time of 0.00234818 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4143      4910.955       0.88232644   
+Loop time of 4.625e-06 on 8 procs for 0 steps with 1081 atoms
+
+118.9% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.625e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         142 max         116 min
+Histogram: 1 0 0 0 0 0 1 2 2 2
+Nghost:        3053.25 ave        3070 max        3045 min
+Histogram: 2 0 2 2 0 1 0 0 0 1
+Neighs:        31909.9 ave       33353 max       27934 min
+Histogram: 1 0 0 0 0 0 1 2 2 2
+
+Total # of neighbors = 255279
+Ave neighs/atom = 236.15079
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4143      4910.955       0.88232644   
+ 5059.4124      4912.336       0.67267841   
+Loop time of 0.00204033 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4124      4912.336       0.67267841   
+Loop time of 5.45e-06 on 8 procs for 0 steps with 1081 atoms
+
+103.2% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 5.45e-06   |            |       |100.00
+
+Nlocal:        135.125 ave         142 max         116 min
+Histogram: 1 0 0 0 0 0 1 2 2 2
+Nghost:        3053.25 ave        3070 max        3045 min
+Histogram: 2 0 2 2 0 0 1 0 0 1
+Neighs:        31910.5 ave       33349 max       27926 min
+Histogram: 1 0 0 0 0 0 2 1 2 2
+
+Total # of neighbors = 255284
+Ave neighs/atom = 236.15541
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4124      4912.336       0.67267841   
+ 5059.4123      4913.8888      0.47164544   
+Loop time of 0.00204024 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4123      4913.8888      0.47164544   
+Loop time of 4.36575e-06 on 8 procs for 0 steps with 1081 atoms
+
+120.3% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.366e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         142 max         116 min
+Histogram: 1 0 0 0 0 0 1 2 2 2
+Nghost:        3053.25 ave        3070 max        3045 min
+Histogram: 2 1 1 2 0 0 1 0 0 1
+Neighs:          31912 ave       33342 max       27922 min
+Histogram: 1 0 0 0 0 0 2 1 1 3
+
+Total # of neighbors = 255296
+Ave neighs/atom = 236.16651
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4123      4913.8888      0.47164544   
+ 5059.4129      4915.592       0.2933541    
+Loop time of 0.00157667 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4129      4915.592       0.2933541    
+Loop time of 4.39787e-06 on 8 procs for 0 steps with 1081 atoms
+
+102.3% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.398e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         142 max         116 min
+Histogram: 1 0 0 0 0 0 2 1 1 3
+Nghost:        3053.25 ave        3070 max        3045 min
+Histogram: 2 2 0 1 1 0 1 0 0 1
+Neighs:        31914.5 ave       33345 max       27924 min
+Histogram: 1 0 0 0 0 0 2 1 0 4
+
+Total # of neighbors = 255316
+Ave neighs/atom = 236.18501
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4129      4915.592       0.2933541    
+ 5059.4137      4917.4231      0.15018614   
+Loop time of 0.00158615 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4137      4917.4231      0.15018614   
+Loop time of 3.74688e-06 on 8 procs for 0 steps with 1081 atoms
+
+113.4% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 3.747e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         142 max         116 min
+Histogram: 1 0 0 0 0 0 2 1 1 3
+Nghost:        3053.25 ave        3070 max        3045 min
+Histogram: 2 2 0 1 1 0 1 0 0 1
+Neighs:        31916.5 ave       33356 max       27923 min
+Histogram: 1 0 0 0 0 0 2 1 0 4
+
+Total # of neighbors = 255332
+Ave neighs/atom = 236.19981
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4137      4917.4231      0.15018614   
+ 5059.4149      4919.3588      0.051758856  
+Loop time of 0.00159083 on 8 procs for 1 steps with 1081 atoms
+
+run 0
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4149      4919.3588      0.051758856  
+Loop time of 4.28175e-06 on 8 procs for 0 steps with 1081 atoms
+
+105.1% CPU use with 8 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 4.282e-06  |            |       |100.00
+
+Nlocal:        135.125 ave         142 max         117 min
+Histogram: 1 0 0 0 0 0 2 1 1 3
+Nghost:        3053.25 ave        3069 max        3045 min
+Histogram: 2 1 1 1 1 0 1 0 0 1
+Neighs:        31916.9 ave       33361 max       28188 min
+Histogram: 1 0 0 0 0 1 1 1 1 3
+
+Total # of neighbors = 255335
+Ave neighs/atom = 236.20259
+Ave special neighs/atom = 0.0018501388
+Neighbor list builds = 0
+Dangerous builds = 0
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4149      4919.3588      0.051758856  
+ 5059.4163      4921.3748      0.0041787782 
+Loop time of 0.00161298 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4163      4921.3748      0.0041787782 
+ 5059.418       4923.4464      0.0095760013 
+Loop time of 0.00164048 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.418       4923.4464      0.0095760013 
+ 5059.42        4925.5485      0.065942482  
+Loop time of 0.00166857 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.42        4925.5485      0.065942482  
+ 5059.4223      4927.6555      0.16728779   
+Loop time of 0.0015929 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4223      4927.6555      0.16728779   
+ 5059.4247      4929.7418      0.30410524   
+Loop time of 0.00157711 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4247      4929.7418      0.30410524   
+ 5059.4272      4931.7818      0.4641189    
+Loop time of 0.00156446 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4272      4931.7818      0.4641189    
+ 5059.4297      4933.7502      0.6332605    
+Loop time of 0.00159343 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4297      4933.7502      0.6332605    
+ 5059.4321      4935.6219      0.79680581   
+Loop time of 0.00159379 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4321      4935.6219      0.79680581   
+ 5059.4344      4937.3726      0.94058395   
+Loop time of 0.00157003 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4344      4937.3726      0.94058395   
+ 5059.4365      4938.9783      1.0521613    
+Loop time of 0.00162075 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4365      4938.9783      1.0521613    
+ 5059.4382      4940.4163      1.1218973    
+Loop time of 0.00158832 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4382      4940.4163      1.1218973    
+ 5059.4397      4941.6646      1.1437745    
+Loop time of 0.00159468 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4397      4941.6646      1.1437745    
+ 5059.4407      4942.7024      1.1159206    
+Loop time of 0.00162314 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4407      4942.7024      1.1159206    
+ 5059.4414      4943.5103      1.0407694    
+Loop time of 0.00158349 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4414      4943.5103      1.0407694    
+ 5059.4418      4944.0702      0.92484353   
+Loop time of 0.00162604 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4418      4944.0702      0.92484353   
+ 5059.4419      4944.3655      0.77818234   
+Loop time of 0.00162559 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4419      4944.3655      0.77818234   
+ 5059.4417      4944.3813      0.61347248   
+Loop time of 0.00156644 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4417      4944.3813      0.61347248   
+ 5059.4415      4944.1044      0.44496753   
+Loop time of 0.0015685 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4415      4944.1044      0.44496753   
+ 5059.4412      4943.5233      0.28729556   
+Loop time of 0.00160611 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4412      4943.5233      0.28729556   
+ 5059.4408      4942.6284      0.15425762   
+Loop time of 0.00156124 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4408      4942.6284      0.15425762   
+ 5059.4406      4941.4122      0.057714203  
+Loop time of 0.0015998 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4406      4941.4122      0.057714203  
+ 5059.4405      4939.8689      0.0066439366 
+Loop time of 0.00159002 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4405      4939.8689      0.0066439366 
+ 5059.4404      4937.9946      0.0064420044 
+Loop time of 0.00154962 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4404      4937.9946      0.0064420044 
+ 5059.4406      4935.7877      0.058505659  
+Loop time of 0.00160297 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4406      4935.7877      0.058505659  
+ 5059.4408      4933.2482      0.16013236   
+Loop time of 0.00160919 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4408      4933.2482      0.16013236   
+ 5059.4412      4930.3784      0.30473318   
+Loop time of 0.00159655 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4412      4930.3784      0.30473318   
+ 5059.4416      4927.1822      0.48234153   
+Loop time of 0.00180733 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4416      4927.1822      0.48234153   
+ 5059.442       4923.6656      0.68037622   
+Loop time of 0.00161156 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.442       4923.6656      0.68037622   
+ 5059.4423      4919.8362      0.88459988   
+Loop time of 0.00168101 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4423      4919.8362      0.88459988   
+ 5059.4425      4915.7036      1.0801998    
+Loop time of 0.00165638 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4425      4915.7036      1.0801998    
+ 5059.4425      4911.2787      1.2529095    
+Loop time of 0.00163861 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4425      4911.2787      1.2529095    
+ 5059.4422      4906.5744      1.3900873    
+Loop time of 0.00293793 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4422      4906.5744      1.3900873    
+ 5059.4417      4901.6047      1.4816704    
+Loop time of 0.00159427 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4417      4901.6047      1.4816704    
+ 5059.4408      4896.3851      1.5209336    
+Loop time of 0.00220553 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4408      4896.3851      1.5209336    
+ 5059.4397      4890.9323      1.5049961    
+Loop time of 0.00227588 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4397      4890.9323      1.5049961    
+ 5059.4382      4885.2642      1.4350378    
+Loop time of 0.00220331 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4382      4885.2642      1.4350378    
+ 5059.4364      4879.3994      1.3162098    
+Loop time of 0.00223255 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4364      4879.3994      1.3162098    
+ 5059.4344      4873.3577      1.1572452    
+Loop time of 0.00224286 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4344      4873.3577      1.1572452    
+ 5059.4323      4867.1594      0.9697992    
+Loop time of 0.00220037 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4323      4867.1594      0.9697992    
+ 5059.4301      4860.8252      0.7675679    
+Loop time of 0.00224838 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4301      4860.8252      0.7675679    
+ 5059.4278      4854.3766      0.56525167   
+Loop time of 0.00227171 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4278      4854.3766      0.56525167   
+ 5059.4257      4847.8349      0.37744017   
+Loop time of 0.00220233 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4257      4847.8349      0.37744017   
+ 5059.4237      4841.2219      0.21750286   
+Loop time of 0.00220932 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4237      4841.2219      0.21750286   
+ 5059.4219      4834.5592      0.096568284  
+Loop time of 0.00227143 on 8 procs for 1 steps with 1081 atoms
+
+run 1 pre yes post no
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 8.352 | 8.368 | 8.469 Mbytes
+    TotEng         E_pair         E_bond    
+ 5059.4219      4834.5592      0.096568284  
+ 5059.4203      4827.8683      0.022669556  
+Loop time of 0.00226369 on 8 procs for 1 steps with 1081 atoms
+
+Total wall time: 0:00:03

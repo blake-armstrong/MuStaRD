@@ -5,10 +5,10 @@ OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (src/comm.cpp:98
 units metal
 atom_style full
 boundary p p p
-read_data /tmp/mustard.427b5bb848334b6f98163604a88d756b
+read_data /tmp/mustard.222ba0c3a69648a3a642031f6611b1a9
 Reading data file ...
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-  1 by 2 by 2 MPI processor grid
+  triclinic box = (0 0 0) to (25.335 25.134 25.264) with tilt (0 0 0)
+  2 by 2 by 2 MPI processor grid
   reading atoms ...
   1081 atoms
   reading velocities ...
@@ -25,10 +25,10 @@ Finding 1-2 1-3 1-4 neighbors ...
      0 = max # of 1-4 neighbors
      1 = max # of special neighbors
   special bonds CPU = 0.000 seconds
-  read_data CPU = 0.006 seconds
+  read_data CPU = 0.008 seconds
 change_box all triclinic
 Changing box ...
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
+  triclinic box = (0 0 0) to (25.335 25.134 25.264) with tilt (0 0 0)
 include ff.lmp
 ##############################################################################################
 #### Atoms' types - mass - charge
@@ -193,26 +193,26 @@ pair_coeff      *      *  coul/long
 
 kspace_style pppm 1.0e-5
 kspace_modify fftbench no
-change_box all x final 0.0 25.319 y final 0.0 25.319 z final 0.0 25.319 xy final 0.0 xz final 0.0 yz final 0.0
+change_box all x final 0.0 25.335 y final 0.0 25.134 z final 0.0 25.264 xy final 0.0 xz final 0.0 yz final 0.0
 Changing box ...
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
+  triclinic box = (0 0 0) to (25.335 25.134 25.264) with tilt (0 0 0)
+  triclinic box = (0 0 0) to (25.335 25.134 25.264) with tilt (0 0 0)
+  triclinic box = (0 0 0) to (25.335 25.134 25.264) with tilt (0 0 0)
+  triclinic box = (0 0 0) to (25.335 25.134 25.264) with tilt (0 0 0)
+  triclinic box = (0 0 0) to (25.335 25.134 25.264) with tilt (0 0 0)
+  triclinic box = (0 0 0) to (25.335 25.134 25.264) with tilt (0 0 0)
 run 0 pre yes post no
 WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
 WARNING: System is not charge neutral, net charge = 1 (src/kspace.cpp:327)
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
+  G vector (1/distance) = 0.34512771
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990511
-  estimated relative force accuracy = 9.7158722e-06
+  estimated absolute RMS force accuracy = 0.00013888431
+  estimated relative force accuracy = 9.6449815e-06
   using double precision FFTW3
-  3d grid and FFT values/proc = 41209 16000
+  3d grid and FFT values/proc = 24389 8000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Neighbor list info ...
   update: every = 1 steps, delay = 0 steps, check = yes
@@ -236,9 +236,25 @@ Neighbor list info ...
       pair build: half/bin/newton/tri
       stencil: half/bin/3d/tri
       bin: standard
-Per MPI rank memory allocation (min/avg/max) = 11.47 | 11.5 | 11.59 Mbytes
+Per MPI rank memory allocation (min/avg/max) = 9.833 | 9.849 | 9.951 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-         0   0             -31400.045      0.0006539975  -31400.044     -14291.126    
-Loop time of 3.817e-06 on 4 procs for 0 steps with 1081 atoms
+         0   0             -31459.754      2.9354721     -31456.818     -5466.9571    
+Loop time of 4.11875e-06 on 8 procs for 0 steps with 1081 atoms
 
-Total wall time: 0:00:00
+run 0 post no
+WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
+PPPM initialization ...
+  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
+  G vector (1/distance) = 0.34512771
+  grid = 40 40 40
+  stencil order = 5
+  estimated absolute RMS force accuracy = 0.00013888431
+  estimated relative force accuracy = 9.6449815e-06
+  using double precision FFTW3
+  3d grid and FFT values/proc = 24389 8000
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Per MPI rank memory allocation (min/avg/max) = 9.833 | 9.849 | 9.951 Mbytes
+   Step          Temp          E_pair         E_mol          TotEng         Press     
+         0   0             -31459.754      2.9354721     -31456.818     -5466.9571    
+Loop time of 4.37925e-06 on 8 procs for 0 steps with 1081 atoms
+

@@ -1,0 +1,525 @@
+LAMMPS (2 Aug 2023 - Development - patch_2Aug2023-425-g3e9f1c8af2-modified)
+OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (src/comm.cpp:98)
+  using 1 OpenMP thread(s) per MPI task
+thermo_modify flush yes
+
+# ------ Units -------------------------------------
+units metal                                           # eV, ps, Angstrom, bar
+
+# ------ Timer ----------- -------------------------
+timer timeout 23:55:00 every 1000
+New timer settings: style=normal  mode=nosync  timeout=23:55:00
+
+# ------ Simulation files --------------------------
+variable ff_file        index           ff.lmp   # force field file
+variable coord_file     index       bazryo3-1.0.lmp   # coordinates file
+variable runID          index                     0   # run ID for final restart
+variable rstID          equal            ${runID}-1   # ID of previous  restart
+variable rstID          equal            0-1   
+variable traj_file      index   trajectory.${runID}   # trajectory file - no extension
+variable traj_file      index   trajectory.0   
+variable old_restart    index      restart.${rstID}   # previous restart file
+variable old_restart    index      restart.-1   
+variable new_restart    index      restart.${runID}   # current restart file
+variable new_restart    index      restart.0   
+
+# ------ Simulation type ---------------------------
+variable single         index                   no    # single point calculation
+variable minimisation   index                   no    # energy minimisation
+variable relax_cell     index                   no    # energy minimisation with variable cell
+variable md             index                   no    # molecular dynamics
+variable plumed         index                   no    # PLUMED: metadynamics, umbrella sampling...
+variable fep            index                   no    # free energy perturbation
+variable ti             index                   no    # thermodynamic integration
+variable multiRun       index                   no    # task farming of runs
+
+# ------ Molecular dynamics variables --------------
+variable ens            index                  nvt    # ensemble (nve, nph, nvt, npt)
+variable timestep       index                0.001    # simulation timestep (time units)
+variable nsteps         index               100000    # number of MD steps
+variable nequil         index               100000    # equilibration steps - FEP only
+
+# ------ Thermostat --------------------------------
+variable tst            index                 csvr    # thermostat (nh, ber, lang, csvr)
+variable temp           index                 1500.    # starting temperature (K)
+variable trel           index                  0.1    # thermostat relaxation time (time units)
+
+# ------ Barostat (NPT runs only) ------------------
+variable npttype        index                  iso    # type of NPT (iso, aniso, tri, z...)
+variable pres           index                    1    # pressure bar/atm
+variable prel           index                    1.   # barostat relaxation time (time units)
+
+# ------ Output ------------------------------------
+variable nthermo        index                  50    # thermodynamic data output frequency
+variable ntraj          index                 100    # trajectory output frequency - all system
+variable trajType       index                  dcd    # trajectory type (dcd, xtc, xyz)
+
+# ------ Random number seeds -----------------------
+variable iseed0         index                15973    # Random seed for initial velocities
+variable iseed1         index                96248    # Ramdom seed for the stochastic thermostats
+
+# ------ PLUMED variables --------------------------
+variable plumed_infile  index         "plumed.inp"
+variable plumed_dir     index            "Walker_"
+
+# ------ FEP variables -----------------------------
+variable fep_file       index            "fep.inp"
+variable fep_dir        index                 "./"
+variable gewald         index                  0.3
+
+# ------ FEP variables -----------------------------
+variable multi_dir      index               "run_"
+
+# ------ Multiple Runs/Task Farming ----------------
+variable nRepl          index                    1
+if "${nRepl} < 2" then "jump SELF end_farming"
+jump SELF end_farming
+
+# ------ Atom Style --------------------------------
+atom_style full
+
+# ------ Period Boundary Conditions ----------------
+boundary p p p                                        # 3D Periodic Boundary Conditions
+
+# ------ Read Coordinates and Topology -------------
+box tilt large
+
+The 'box' command has been removed and will be ignored
+
+if "${runID} == 0" then "read_data ${coord_file}"     # Charges, coordinates and topology are defined here
+read_data ${coord_file}
+read_data bazryo3-1.0.lmp
+Reading data file ...
+  orthogonal box = (0 0 0) to (25.319 25.319 25.319)
+  1 by 1 by 1 MPI processor grid
+  reading atoms ...
+  3 atoms
+  scanning bonds ...
+  1 = max bonds/atom
+  reading bonds ...
+  1 bonds
+Finding 1-2 1-3 1-4 neighbors ...
+  special bond factors lj:    0        0        0       
+  special bond factors coul:  0        0        0       
+     1 = max # of 1-2 neighbors
+     0 = max # of 1-3 neighbors
+     0 = max # of 1-4 neighbors
+     1 = max # of special neighbors
+  special bonds CPU = 0.000 seconds
+  read_data CPU = 0.003 seconds
+if "${runID} >= 1" then "read_restart ${old_restart}" # Restart simulation
+change_box all triclinic
+Changing box ...
+  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
+
+# ------ Read Force Field --------------------------
+include ${ff_file}
+include ff.lmp
+##############################################################################################
+#### Atoms' types - mass - charge
+##############################################################################################
+#@ 7   atom types
+
+variable Ba  equal 1
+variable Zr  equal 2
+variable  Y  equal 3
+variable O1  equal 4
+variable O2  equal 5
+variable O3  equal 6
+variable H1  equal 7
+
+##############################################################################################
+#### Atoms' masses
+##############################################################################################
+
+mass  ${Ba}   137.327
+mass  1   137.327
+mass  ${Zr}    91.224
+mass  2    91.224
+mass  ${Y}     88.910
+mass  3     88.910
+mass  ${O1}    15.996
+mass  4    15.996
+mass  ${O2}    15.996
+mass  5    15.996
+mass  ${O3}    15.996
+mass  6    15.996
+mass  ${H1}     1.008
+mass  7     1.008
+
+##############################################################################################
+#### Atoms' charges
+##############################################################################################
+
+set type ${Ba}  charge     2.000000
+set type 1  charge     2.000000
+Setting atom values ...
+  0 settings made for charge
+set type ${Zr}  charge     4.000000
+set type 2  charge     4.000000
+Setting atom values ...
+  0 settings made for charge
+set type ${Y}   charge     3.000000
+set type 3   charge     3.000000
+Setting atom values ...
+  0 settings made for charge
+set type ${O1}  charge    -1.308698
+set type 4  charge    -1.308698
+Setting atom values ...
+  1 settings made for charge
+set type ${O2}  charge    -2.000000
+set type 5  charge    -2.000000
+Setting atom values ...
+  1 settings made for charge
+set type ${O3}  charge    -2.000000
+set type 6  charge    -2.000000
+Setting atom values ...
+  0 settings made for charge
+set type ${H1}  charge     0.308698
+set type 7  charge     0.308698
+Setting atom values ...
+  1 settings made for charge
+
+##############################################################################################
+#### Covalent bonds parameters
+##############################################################################################
+#@  1   bond types
+
+bond_style harmonic
+#@ O1 - H1
+# bond_coeff   1      11.504000      0.985357
+bond_coeff   1      23.008000      0.985357
+
+##############################################################################################
+# Pair potentials
+##############################################################################################
+
+variable rmin  equal  8.
+variable rmax  equal 10.
+
+pair_style hybrid/overlay buck/mdf ${rmin} ${rmax} lennard/mdf ${rmin} ${rmax} coul/long ${rmax}
+pair_style hybrid/overlay buck/mdf 8 ${rmax} lennard/mdf ${rmin} ${rmax} coul/long ${rmax}
+pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf ${rmin} ${rmax} coul/long ${rmax}
+pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf 8 ${rmax} coul/long ${rmax}
+pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf 8 10 coul/long ${rmax}
+pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf 8 10 coul/long 10
+
+##############################################################################################
+# Buckingham interaction potentials
+pair_coeff  ${Ba}  ${O1}  buck/mdf   688.21662   0.392014   0.000
+pair_coeff  1  ${O1}  buck/mdf   688.21662   0.392014   0.000
+pair_coeff  1  4  buck/mdf   688.21662   0.392014   0.000
+pair_coeff  ${Ba}  ${O2}  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  1  ${O2}  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  1  5  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  ${Ba}  ${O3}  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  1  ${O3}  buck/mdf   972.19945   0.392014   0.000
+pair_coeff  1  6  buck/mdf   972.19945   0.392014   0.000
+
+pair_coeff  ${Y}   ${O1}  buck/mdf   2972.3808   0.267317   0.000
+pair_coeff  3   ${O1}  buck/mdf   2972.3808   0.267317   0.000
+pair_coeff  3   4  buck/mdf   2972.3808   0.267317   0.000
+pair_coeff  ${Y}   ${O2}  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  3   ${O2}  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  3   5  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  ${Y}   ${O3}  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  3   ${O3}  buck/mdf   4121.8373   0.280386   0.000
+pair_coeff  3   6  buck/mdf   4121.8373   0.280386   0.000
+
+pair_coeff  ${Zr}  ${O1}  buck/mdf   2195.8712   0.298760   0.000
+pair_coeff  2  ${O1}  buck/mdf   2195.8712   0.298760   0.000
+pair_coeff  2  4  buck/mdf   2195.8712   0.298760   0.000
+pair_coeff  ${Zr}  ${O2}  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  2  ${O2}  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  2  5  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  ${Zr}  ${O3}  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  2  ${O3}  buck/mdf   3250.8545   0.298760   0.000
+pair_coeff  2  6  buck/mdf   3250.8545   0.298760   0.000
+
+pair_coeff  ${O1}  ${O1}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  ${O1}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  4  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  ${O1}  ${O2}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  ${O2}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  5  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  ${O1}  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  4  6  buck/mdf   22764.000   0.149000   0.000
+
+pair_coeff  ${O2}  ${O2}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  5  ${O2}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  5  5  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  ${O2}  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  5  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  5  6  buck/mdf   22764.000   0.149000   0.000
+
+pair_coeff  ${O3}  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  6  ${O3}  buck/mdf   22764.000   0.149000   0.000
+pair_coeff  6  6  buck/mdf   22764.000   0.149000   0.000
+
+##############################################################################################
+# 12-6 Lennard-Jones potentials
+pair_coeff  ${O1}  ${H1}  lennard/mdf    6.391   0.000
+pair_coeff  4  ${H1}  lennard/mdf    6.391   0.000
+pair_coeff  4  7  lennard/mdf    6.391   0.000
+pair_coeff  ${O2}  ${H1}  lennard/mdf    6.391   0.000
+pair_coeff  5  ${H1}  lennard/mdf    6.391   0.000
+pair_coeff  5  7  lennard/mdf    6.391   0.000
+pair_coeff  ${O3}  ${H1}  lennard/mdf    7.800   0.000
+pair_coeff  6  ${H1}  lennard/mdf    7.800   0.000
+pair_coeff  6  7  lennard/mdf    7.800   0.000
+
+##############################################################################################
+# Coulombic interaction
+pair_coeff      *      *  coul/long
+
+#########################################################################################################
+# Parameters for reciprocal space electrostatics
+#########################################################################################################
+
+kspace_style pppm 1.0e-7
+kspace_modify fftbench no
+
+# ------ Group definitions -------------------------
+
+# ------ Energy minimisation -----------------------
+if "${runID} > 0" then "jump SELF end_minimise"
+if "${minimisation} == no && ${relax_cell} == no" then "jump SELF end_minimise"
+jump SELF end_minimise
+
+# ------ PLUMED ------------------------------------
+if "${plumed} == no" then "jump SELF end_plumed"
+jump SELF end_plumed
+
+# ------ Ensemble ----------------------------------
+group free id > 0
+3 atoms in group free
+variable fixAtoms string "all"
+
+# nve/nph
+if "${ens} == nve"                  then "fix md ${fixAtoms} nve"
+if "${ens} == nph"                  then "fix md ${fixAtoms} nph ${npttype} ${pres} ${pres} ${prel} tchain 5 pchain 5 mtk yes"
+if "${ens} == nph || ${ens} == nve" then "jump SELF end_ensemble"
+# Nose-Hoover
+if "${ens} == nvt && ${tst} == nh"  then "fix tst ${fixAtoms} nvt temp ${temp} ${temp} ${trel} tchain 5"
+if "${ens} == npt && ${tst} == nh"  then "fix tst ${fixAtoms} npt temp ${temp} ${temp} ${trel} ${npttype} ${pres} ${pres} ${prel} tchain 5 pchain 5 mtk yes"
+# Other thermostats
+if "${ens} == nvt && ${tst} != nh"  then "fix md ${fixAtoms} nve"
+fix md ${fixAtoms} nve
+fix md all nve
+if "${ens} == npt && ${tst} != nh"  then "fix md ${fixAtoms} nph ${npttype} ${pres} ${pres} ${prel} tchain 5 pchain 5 mtk yes"
+if "${tst} == ber"                  then "fix tst ${fixAtoms} temp/berendsen ${temp} ${temp} ${trel}"
+if "${tst} == lang"                 then "fix tst ${fixAtoms} langevin ${temp} ${temp} ${trel} ${iseed1} tally yes zero yes"
+if "${tst} == csvr"                 then "fix tst ${fixAtoms} temp/csvr ${temp} ${temp} ${trel} ${iseed1}"
+fix tst ${fixAtoms} temp/csvr ${temp} ${temp} ${trel} ${iseed1}
+fix tst all temp/csvr ${temp} ${temp} ${trel} ${iseed1}
+fix tst all temp/csvr 1500. ${temp} ${trel} ${iseed1}
+fix tst all temp/csvr 1500. 1500. ${trel} ${iseed1}
+fix tst all temp/csvr 1500. 1500. 0.1 ${iseed1}
+fix tst all temp/csvr 1500. 1500. 0.1 96248
+label end_ensemble
+
+variable myTemp string "temp"
+if "${fixAtoms} == all" then "jump SELF end_temp"
+jump SELF end_temp
+
+# ------ Thermodynamic output ----------------------
+variable str_basic string 'step time pe ${myTemp} press cella cellb cellc cellalpha cellbeta cellgamma'
+step time pe temp press cella cellb cellc cellalpha cellbeta cellgamma
+
+# ------ Use target pressure for the Enthalpy ------
+variable pv2h equal 1602191.7 # for metal units
+variable enth equal etotal+${pres}*vol/${pv2h}
+variable enth equal etotal+1*vol/${pv2h}
+variable enth equal etotal+1*vol/1602191.7
+
+if "${ens} == nve" then "variable str_ens string 'etotal'"
+if "${ens} == nvt" then "variable str_ens string ''"
+variable str_ens string ''
+if "${ens} == npt" then "variable str_ens string 'vol density'"
+if "${ens} == nph" then "variable str_ens string 'vol v_enth'"
+
+thermo_style custom ${str_basic} ${str_ens} cpu cpuremain
+thermo_style custom step time pe temp press cella cellb cellc cellalpha cellbeta cellgamma ${str_ens} cpu cpuremain
+thermo_style custom step time pe temp press cella cellb cellc cellalpha cellbeta cellgamma  cpu cpuremain
+WARNING: New thermo_style command, previous thermo_modify settings will be lost (src/output.cpp:904)
+thermo ${nthermo}
+thermo 50
+thermo_modify flush yes
+
+# ------ Time step ---------------------------------
+timestep ${timestep}
+timestep 0.001
+
+# ------ Initial velocities and COM motion ---------
+if "${runID} == 0" then "velocity free create ${temp} ${iseed0} mom yes dist gaussian"
+velocity free create ${temp} ${iseed0} mom yes dist gaussian
+velocity free create 1500. ${iseed0} mom yes dist gaussian
+velocity free create 1500. 15973 mom yes dist gaussian
+fix com all momentum 1000 linear 1 1 1
+
+# ------ Periodic Checkpoint -----------------------
+restart 100000 checkpoint.1 checkpoint.2
+
+# ------ Trajectory output -------------------------
+if "${ntraj} <= 0 || ${ntraj} > ${nsteps} || ${nsteps} == 0 || ${multiRun} == yes" then "jump SELF end_dump"
+  dump traj all ${trajType} ${ntraj} ${traj_file}.${trajType}
+  dump traj all dcd ${ntraj} ${traj_file}.${trajType}
+  dump traj all dcd 100 ${traj_file}.${trajType}
+  dump traj all dcd 100 trajectory.0.${trajType}
+  dump traj all dcd 100 trajectory.0.dcd
+  dump_modify traj unwrap yes
+label end_dump
+
+# ------ Thermodynamic integration -----------------
+if "${ti} == no" then "variable nt equal ${nsteps}" "jump SELF end_ti"
+variable nt equal ${nsteps}
+variable nt equal 100000
+jump SELF end_ti
+
+# ------ Free Energy Perturbation ------------------
+if "${fep} == no" then "jump SELF end_fep"
+jump SELF end_fep
+
+# ------ Multiple Molecular Dynamics ------------------------
+if "${multiRun} == no" then "jump SELF end_multi"
+jump SELF end_multi
+
+# ------ Molecular Dynamics ------------------------
+if "${md} == no && ${plumed} == no" then "jump SELF end_md"
+jump SELF end_md
+
+variable e2body    equal ebond+evdwl
+variable ecoul_tot equal ecoul+elong
+variable str_dbg string 'pe ebond eangle edihed eimp evdwl ecoul elong etail v_e2body v_ecoul_tot'
+thermo_style custom ${str_dbg}
+thermo_style custom pe ebond eangle edihed eimp evdwl ecoul elong etail v_e2body v_ecoul_tot
+WARNING: New thermo_style command, previous thermo_modify settings will be lost (src/output.cpp:904)
+run 0
+PPPM initialization ...
+WARNING: System is not charge neutral, net charge = -3 (src/kspace.cpp:327)
+  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
+  G vector (1/distance) = 0.35217446
+  grid = 45 45 45
+  stencil order = 5
+  estimated absolute RMS force accuracy = 1.3504833e-06
+  estimated relative force accuracy = 9.3785876e-08
+  using double precision FFTW3
+  3d grid and FFT values/proc = 157464 91125
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+Neighbor list info ...
+  update: every = 1 steps, delay = 0 steps, check = yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 12
+  ghost atom cutoff = 12
+  binsize = 6, bins = 5 5 5
+  3 neighbor lists, perpetual/occasional/extra = 3 0 0
+  (1) pair buck/mdf, perpetual, skip from (3)
+      attributes: half, newton on
+      pair build: skip
+      stencil: none
+      bin: none
+  (2) pair lennard/mdf, perpetual, skip from (3)
+      attributes: half, newton on
+      pair build: skip
+      stencil: none
+      bin: none
+  (3) pair coul/long, perpetual
+      attributes: half, newton on
+      pair build: half/bin/newton/tri
+      stencil: half/bin/3d/tri
+      bin: standard
+Per MPI rank memory allocation (min/avg/max) = 23.67 | 23.67 | 23.67 Mbytes
+    PotEng         E_bond        E_angle        E_dihed        E_impro         E_vdwl         E_coul         E_long         E_tail        v_e2body     v_ecoul_tot  
+ 4.4706424      3.129277       0              0              0              0.08629917     2.1566834     -0.90161715     0              3.2155762      1.2550662    
+Loop time of 9.72e-07 on 1 procs for 0 steps with 3 atoms
+
+205.8% CPU use with 1 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Bond    | 0          | 0          | 0          |   0.0 |  0.00
+Kspace  | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0          | 0          | 0          |   0.0 |  0.00
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 0          | 0          | 0          |   0.0 |  0.00
+Other   |            | 9.72e-07   |            |       |100.00
+
+Nlocal:              3 ave           3 max           3 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:             21 ave          21 max          21 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:              3 ave           3 max           3 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 3
+Ave neighs/atom = 1
+Ave special neighs/atom = 0.66666667
+Neighbor list builds = 0
+Dangerous builds = 0
+
+
+# define numerical force calculation
+variable    nugget equal 1.0e-6 # regularization for relerr
+fix	     numforce all numdiff 1 1e-4
+variable     ferrx atom f_numforce[1]-fx
+variable     ferry atom f_numforce[2]-fy
+variable     ferrz atom f_numforce[3]-fz
+variable     ferrsq atom v_ferrx^2+v_ferry^2+v_ferrz^2
+compute	     faverrsq all reduce ave v_ferrsq
+variable     fsq atom fx^2+fy^2+fz^2
+compute      favsq all reduce ave v_fsq
+variable     frelerr equal sqrt(c_faverrsq/(c_favsq+${nugget}))
+variable     frelerr equal sqrt(c_faverrsq/(c_favsq+1e-06))
+dump errors  all custom 1 force_error.dump f_numforce[1] f_numforce[2] f_numforce[3] v_ferrx v_ferry v_ferrz
+
+run 1
+PPPM initialization ...
+  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
+  G vector (1/distance) = 0.35217446
+  grid = 45 45 45
+  stencil order = 5
+  estimated absolute RMS force accuracy = 1.3504833e-06
+  estimated relative force accuracy = 9.3785876e-08
+  using double precision FFTW3
+  3d grid and FFT values/proc = 157464 91125
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+WARNING: Dump errors includes no atom IDs and is not sorted by ID. This may complicate post-processing tasks or visualization (src/dump.cpp:219)
+Per MPI rank memory allocation (min/avg/max) = 24.79 | 24.79 | 24.79 Mbytes
+    PotEng         E_bond        E_angle        E_dihed        E_impro         E_vdwl         E_coul         E_long         E_tail        v_e2body     v_ecoul_tot  
+ 4.4706424      3.129277       0              0              0              0.08629917     2.1566834     -0.90161715     0              3.2155762      1.2550662    
+ 3.3427835      1.8706156      0              0              0              0.050836205    2.353688      -0.93235628     0              1.9214518      1.4213317    
+Loop time of 0.18713 on 1 procs for 1 steps with 3 atoms
+
+Performance: 0.462 ns/day, 51.981 hours/ns, 5.344 timesteps/s, 16.032 atom-step/s
+99.9% CPU use with 1 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 7.996e-06  | 7.996e-06  | 7.996e-06  |   0.0 |  0.00
+Bond    | 9.22e-07   | 9.22e-07   | 9.22e-07   |   0.0 |  0.00
+Kspace  | 0.0093105  | 0.0093105  | 0.0093105  |   0.0 |  4.98
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 4.459e-06  | 4.459e-06  | 4.459e-06  |   0.0 |  0.00
+Output  | 0.00017198 | 0.00017198 | 0.00017198 |   0.0 |  0.09
+Modify  | 0.17762    | 0.17762    | 0.17762    |   0.0 | 94.92
+Other   |            | 1.097e-05  |            |       |  0.01
+
+Nlocal:              3 ave           3 max           3 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:             21 ave          21 max          21 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:              3 ave           3 max           3 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 3
+Ave neighs/atom = 1
+Ave special neighs/atom = 0.66666667
+Neighbor list builds = 0
+Dangerous builds = 0
+
+quit

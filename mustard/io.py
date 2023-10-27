@@ -297,6 +297,7 @@ class Output:
         def _write(self, lmp, step, speed, pe):
             props = [lmp.get_thermo(prop) for prop in self.properties]
             ke = lmp.get_thermo("ke")
+            ke = lmp.extract_compute("new_ke", 0, 0)
             self.logger.info(self.info.format(step, pe, pe + ke, *props, speed))
 
         def write(self, step, pe, lmp):
@@ -356,7 +357,7 @@ class Trajectory:
             if ids.size != 0:
                 z[topology.id_to_idx(ids)] = xu
             if universe.me == 0:
-                for i in range(1, universe.num_procs):
+                for i in range(1, universe.sub_size):
                     _z = universe.global_comm.recv(source=i, tag=i)
                     z += _z
             else:

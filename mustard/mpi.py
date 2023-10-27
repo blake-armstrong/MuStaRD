@@ -21,6 +21,9 @@ class Universe:
         if self.debug:
             level = logging.DEBUG
         self.logger = logger("internal", filename=None, level=level)
+        self.log("MuStaRD")
+        self.log(f"Running with {self.num_procs} available processor(s)")
+        self.global_comm.Barrier()
         self._initialise_mpi_distribution(mpi_list)
 
     def _initialise_mpi_distribution(self, mpi_list):
@@ -41,17 +44,16 @@ class Universe:
             if np.sum(mpi_list) > self.num_procs:
                 raise ValueError("mpi_list described more processors than requested.")
             ranks0 = mpi_list[0]
-            self.log(f"Using {ranks0} processors for main LAMMPS object.")
+            self.log(f"Using {ranks0} processor(s) for main LAMMPS object.")
             num_fixed_ranks = np.sum(mpi_list)
             color_list = mpi_list[1:]
             num_fixed_colors += len(color_list)
-
+        self.global_comm.Barrier()
         color = 0
         modify = False
-        total_colors = len(color_list) + 1
         if self.me >= ranks0:
             ranks_start = ranks0
-            color = total_colors
+            color = len(color_list) + 1
             modify = True
             for n, num_ranks in enumerate(color_list):
                 ranks_start += num_ranks
@@ -59,7 +61,8 @@ class Universe:
                     modify = False
                     color = 1 + n
                     self.log(
-                        f"State {color} using {num_ranks} processors", rank=ranks_start
+                        f"State {color} using {num_ranks} processor(s)",
+                        rank=ranks_start - num_ranks,
                     )
                     break
         self.rank = Rank(color, modify)
@@ -68,24 +71,23 @@ class Universe:
         if self.rank.modify:
             self.subsub_comm = self.sub_comm.Split(self.rank.color, self.me)
             self.lmp_comm = self.subsub_comm
-        self.total_colors = total_colors
+        # self.total_colors = total_colors
+        # print("total colors", self.total_colors)
         self.num_fixed_colors = num_fixed_colors
         self.num_fixed_ranks = num_fixed_ranks
         self.num_free_ranks = self.num_procs - self.num_fixed_ranks
         self.sub_rank = self.lmp_comm.Get_rank()
+        self.sub_size = self.lmp_comm.Get_size()
         self.colors = (None, None)
-        print("rank", self.me, "color", self.rank.color, "modify", self.rank.modify)
+        self.total_colors = self.global_comm.allreduce(self.rank.color, op=MPI.MAX) + 1
 
-    def available_ranks_to_colors(self, num_total_colors):
-        if self.total_colors == num_total_colors:
+    def _available_ranks_to_colors(self, num_total_colors):
+        if num_total_colors <= self.total_colors:
             return
-        self.total_colors = num_total_colors
         if not self.rank.modify:
             return
         # available ranks can now be modified
         new_colors = num_total_colors - self.num_fixed_colors
-        if new_colors <= 0:
-            return
         color = ((self.me - self.num_free_ranks) % new_colors) + new_colors + 1
         self.colors = (None, None)
         if new_colors > self.num_free_ranks:
@@ -101,7 +103,7 @@ class Universe:
                 )
             warning = (
                 "More states identified than available processors."
-                "This will have significant issues on performance."
+                "This will have significant impacts on performance."
                 "It is recommended that more processors/virtual processors are requested."
             )
             raise Warning(warning)
@@ -109,11 +111,13 @@ class Universe:
         self.subsub_comm.Free()
         self.subsub_comm = self.sub_comm.Split(self.rank.color, self.me)
         self.lmp_comm = self.subsub_comm
+        self.sub_size = self.lmp_comm.Get_size()
         self.sub_rank = self.lmp_comm.Get_rank()
-        print("rank", self.me, "color", self.rank.color, "modify", self.rank.modify)
 
-    #     return np.sort(np.arange(total_ranks) % num_colors), num_colors
-    # def
+    def available_ranks_to_colors(self, num_total_colors):
+        self._available_ranks_to_colors(num_total_colors)
+        self.global_comm.Barrier()
+        self.total_colors = self.global_comm.allreduce(self.rank.color, op=MPI.MAX) + 1
 
     def log(self, msg, rank=0, level="info"):
         log = self.logger.info
@@ -126,39 +130,6 @@ class Universe:
             return
         if rank == -1:
             log(msg)
-
-
-class MPI_info(NamedTuple):
-    color: int
-    colors: np.ndarray
-    color_locs: list
-    color_rank_0: int
-    total_ranks: np.ndarray
-    total_colors: int
-    comm: MPI.Comm
-
-
-def distribute_mpi_ranks(color_list, total_colors, rank):
-    color = color_list[rank]
-    color_locs = [np.argwhere(np.array(color_list) == c)[0, 0] for c in set(color_list)]
-    colors = np.array([color])
-    if len(color_list) < total_colors:
-        ol = np.arange(total_colors)
-        _colors = ol[1:] % (len(color_list) - 1)
-        tmp = [
-            ol[1:][np.argwhere(_colors == i).flatten()]
-            for i in range((len(color_list) - 1))
-        ]
-        colors = ([np.array([0])] + tmp)[rank]
-    return MPI_info(
-        color=color,
-        colors=colors,
-        color_locs=color_locs,
-        color_rank_0=np.argwhere(np.array(color_list) == color)[0, 0],
-        total_ranks=np.argwhere(np.array(color_list) == color).flatten(),
-        total_colors=total_colors,
-        comm=MPI.COMM_WORLD.Split(color, rank),
-    )
 
 
 def synchronize_args(cls):

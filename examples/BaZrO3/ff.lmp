@@ -21,7 +21,7 @@ mass  ${Y}     88.910
 mass  ${O1}    15.996
 mass  ${O2}    15.996
 mass  ${O3}    15.996
-mass  ${H1}     1.010
+mass  ${H1}     1.008
 
 ##############################################################################################
 #### Atoms' charges
@@ -42,6 +42,7 @@ set type ${H1}  charge     0.308698
 
 bond_style harmonic
 #@ O1 - H1
+# bond_coeff   1      11.504000      0.985357
 bond_coeff   1      23.008000      0.985357
 
 ##############################################################################################
@@ -92,3 +93,4 @@ pair_coeff      *      *  coul/long
 
 kspace_style pppm 1.0e-5
 kspace_modify fftbench no 
+kspace_modify gewald 0.34497565

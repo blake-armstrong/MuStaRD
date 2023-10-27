@@ -83,7 +83,7 @@ class Topology:
             for rxn in self.SI.reactions
         ]
 
-    def _get_snapshot(self, frame):
+    def _get_snapshot(self, frame, step):
         return Topology.Snapshot(
             frame=frame,
             ids=self.ids,
@@ -91,6 +91,7 @@ class Topology:
             atoms=self.atoms,
             residues=self.residues,
             bonds=self.bonds,
+            step=step,
         )
 
     def rxn_pairs_to_systems(self, rxn_pairs, rxn_nums, pair_dists, hxy_angles):
@@ -308,6 +309,7 @@ class Topology:
         atoms: dict
         residues: dict
         bonds: dict
+        step: int
 
     class SpecificTopology(NamedTuple):
         H_ids: np.ndarray

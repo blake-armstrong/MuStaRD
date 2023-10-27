@@ -22,6 +22,7 @@ class Forces:
         self.mixed_forces = current_forces
         self.current_virial = current_virial
         self.mixed_virial = current_virial
+        self.has_run_0_been_called = False
         self.step = 1
         self.prev_step = 1
         self.empty_forces = np.zeros(shape=self.current_forces.shape)
@@ -67,7 +68,6 @@ class Forces:
 
 
 class Mustard:
-    @synchronize_args
     def __init__(
         self,
         lmp_coord_file,
@@ -81,6 +81,32 @@ class Mustard:
         # write_restart=None
         debug=False,
     ):
+        self.universe = Universe(mpi_list, debug)
+        self.log = self.universe.log
+        # List of parameters to broadcast
+        params_to_broadcast = (
+            lmp_coord_file,
+            force_field_file,
+            header,
+            commands,
+            reaction_parameters,
+            mpi_list,
+            debug,
+        )
+        # Broadcast all parameters from rank 0
+        broadcasted_params = self.universe.global_comm.bcast(
+            params_to_broadcast, root=0
+        )
+        # Unpack the broadcasted parameters
+        (
+            lmp_coord_file,
+            force_field_file,
+            header,
+            commands,
+            reaction_parameters,
+            mpi_list,
+            debug,
+        ) = broadcasted_params
         # SYSTEM INFO
         self.SI = SystemInfo(reaction_parameters)
         self.get_occupancies = self._set_get_occupancies()
@@ -89,18 +115,9 @@ class Mustard:
         self.num_colors = 1
         self.step_count = 0
         self.rebuild = True
-        self.universe = Universe(mpi_list, debug)
-        self.log = self.universe.log
-
-        f = None
-        if self.universe.me == 0:
-            f = str(uuid.uuid4().hex)
-        f = "mustard." + self.universe.global_comm.bcast(f, root=0)
-        self.SI.file = f
-        self.universe.global_comm.Barrier()
-        self.log("MuStaRD")
-        self.log(f"Running with {self.universe.num_procs} available processors")
-        self.universe._initialise_mpi_distribution(mpi_list)
+        self.SI.file = "mustard." + self.universe.global_comm.bcast(
+            str(uuid.uuid4().hex), root=0
+        )
         self.cmds = {
             "header": header,
             "ff": [f"include {force_field_file}"],
@@ -111,7 +128,10 @@ class Mustard:
         }
         cmdargs = ["-nocite", "-screen", "none", "-log", "none"]
         if self.universe.debug:
-            cmdargs[-1] = "main.log"
+            if self.universe.rank.color == 0:
+                cmdargs[-1] = "state_main.log"
+            else:
+                cmdargs[-1] = f"state_{self.universe.rank.color}.log"
         self.lmp = lammps(
             name="",
             cmdargs=cmdargs,
@@ -123,6 +143,8 @@ class Mustard:
                 f"read_data {lmp_coord_file}",
                 "change_box all triclinic",
                 f"include {force_field_file}",
+                "thermo_style custom etotal epair ebond",
+                "compute new_ke all ke",
             ]
         )
         virial = "compute pre_vir all pressure NULL virial"
@@ -139,14 +161,18 @@ class Mustard:
             if self.SI.scale_box:
                 fixes[-1] = fixes[-1].replace("no", "yes")
             self.lmp.commands_list(fixes)
-        self.lmp.command("run 0 post no")
-        self.restart_commands = header + [
-            f"read_data /tmp/{self.SI.file}",
-            "change_box all triclinic",
-            f"include {force_field_file}",
-        ]
+            self._reset_forces_and_virial()
+        # self.lmp.command("run 0 post no")
+        self.restart_commands = {
+            "header": header,
+            "read_data": [f"read_data /tmp/{self.SI.file}"],
+            "change_box": ["change_box all triclinic"],
+            "force_field": [f"include {force_field_file}"],
+            "virial": [""],
+        }
+
         if self.SI.scale_box:
-            self.restart_commands.append(virial)
+            self.restart_commands["virial"][0] = virial
         self.topology = Topology(self.lmp, self.SI)
         frame = self._get_frame()
         rxn_pairs, systems_idxs, _ = self._get_systems(frame.pos, frame.xyz_pbc)
@@ -154,14 +180,25 @@ class Mustard:
         if rxn_pairs:
             num_systems = len(systems_idxs)
         self._redistribute_EVB_states(num_systems, frame)
+        if self.universe.rank.color == 0:
+            # positions = np.loadtxt("pos.txt")
+            # velocities = np.loadtxt("vel.txt") * 0
+            # velocities[0] = np.array([1000, 1000, 1000])
+            # positions = np.trunc(positions * 10**3) / (10**3)
+            # print(positions)
+            # self.set_positions(positions)
+            # self.set_velocities(velocities)
+            self.lmp.command(f"write_data /tmp/{self.SI.file} nocoeff")
+        self.lmp.command("run 0 post no")
         self.forces = self._initialise_forces_and_virial()
+        self.forces.has_run_0_been_called = True
         self.Trajectory = Trajectory()
         self.Output = Output()
 
     def _initialise_forces_and_virial(self):
         forces = None
         if self.universe.rank.color == 0:
-            current_forces = self.get_forces()
+            current_forces = self._get_forces()
             current_virial = None
             if self.SI.scale_box:
                 current_virial = self.get_virial()
@@ -209,10 +246,21 @@ class Mustard:
     def _reset_lmp_topology(self, frame):
         if self.universe.rank.color == 0:
             raise RuntimeError("dont do this")
-        self.lmp.commands_list(["clear"] + self.restart_commands)
+        self.lmp.commands_list(
+            ["clear"]
+            + self.restart_commands["header"]
+            + self.restart_commands["read_data"]
+        )
         self.set_positions(frame.pos)
         self.set_images(frame.images)
         self.set_box_data(frame.box_data)
+        self.lmp.commands_list(
+            self.restart_commands["change_box"]
+            + self.restart_commands["force_field"]
+            + self.restart_commands["virial"]
+            + ["thermo_style custom etotal epair ebond"]
+            + ["compute new_ke all ke"],
+        )
         self.lmp.command("run 0 pre yes post no")
 
     def _reset_forces_and_virial(self):
@@ -231,19 +279,19 @@ class Mustard:
             )
 
     def _redistribute_EVB_states(self, num_total_colors, frame):
-        if self.universe.total_colors == num_total_colors:
+        # if num_total_colors <= self.universe.num_fixed_colors:
+        if num_total_colors <= self.universe.total_colors:
             return
         self.log("REDISTRIBUTE CALLED")
         self.log(f"num_total_colors {num_total_colors}")
-        self.lmp.command(f"run 0 pre yes post no")
+        if self.universe.rank.color != 0:
+            self.lmp.command(f"run 0 pre yes post no")
         if self.universe.rank.color == 0:
             self.lmp.command(f"write_data /tmp/{self.SI.file} nocoeff")
         self.universe.global_comm.Barrier()
-        # vel = self.universe.global_comm.bcast(vel, root=0)
         if self.universe.rank.modify:
             self.lmp.close()
         self.universe.available_ranks_to_colors(num_total_colors)
-        # self.MPI_info = distribute_mpi_ranks(colors, num_colors, self.universe.me)
         self.universe.global_comm.Barrier()
         if not self.universe.rank.modify:
             return
@@ -256,10 +304,18 @@ class Mustard:
             comm=self.universe.lmp_comm,
         )
         self.topology.set_lmp(self.lmp)
-        self.lmp.commands_list(self.restart_commands)
+        # self.lmp.commands_list(self.restart_commands)
+        self.lmp.commands_list(
+            self.restart_commands["header"] + self.restart_commands["read_data"]
+        )
         self.set_positions(frame.pos)
-        self.set_box_data(frame.box_data)
         self.set_images(frame.images)
+        self.set_box_data(frame.box_data)
+        self.lmp.commands_list(
+            self.restart_commands["change_box"]
+            + self.restart_commands["force_field"]
+            + self.restart_commands["virial"]
+        )
         self.lmp.command("run 0 pre yes post no")
 
     def _get_frame(self, pos=None):
@@ -335,6 +391,11 @@ class Mustard:
         # if step_count % 1 != 0 and not change_topology:
         #    run = "run 0 pre no post no"
         self.lmp.command(run)  # re-calculate pe w/ new topology
+        eb = self.lmp.get_thermo("ebond")
+        ep = self.lmp.get_thermo("epair")
+        if self.universe.sub_rank == 0:
+            print("ebond 1", self.step_count, eb)
+            print("epair 1", self.step_count, ep)
         pe = self.lmp.get_thermo("pe")
         cs = self._get_computes()
         _forces = self.get_forces()
@@ -342,7 +403,9 @@ class Mustard:
         if self.SI.scale_box:
             _virial = self.get_virial()
         if self.universe.sub_rank == 0:
-            self.log(f"Potential energy for color {color}: {pe}", level="debug")
+            self.log(
+                f"Potential energy for color {color}: {pe}", level="debug", rank=-1
+            )
             self.universe.global_comm.send(pe, dest=0, tag=color)
             self.universe.global_comm.send(_forces, dest=0, tag=color + 200)
             if _virial is not None:
@@ -392,12 +455,13 @@ class Mustard:
                             source=source, tag=i + 400
                         )
         elif self.universe.colors == (None, None):
-            self._calc_color_pe(
-                self.universe.rank.color,
-                systems_idxs[self.universe.rank.color],
-                frame,
-                rxn_pairs,
-            )
+            if self.universe.rank.color < len(systems_idxs):
+                self._calc_color_pe(
+                    self.universe.rank.color,
+                    systems_idxs[self.universe.rank.color],
+                    frame,
+                    rxn_pairs,
+                )
         else:
             for color in self.universe.colors:
                 self._calc_color_pe(
@@ -433,8 +497,10 @@ class Mustard:
             new_cmp = dict(zip(self.SI.computes, new_cmp))
             init_cmp = dict(zip(self.SI.computes, init_cmp))
         rxn_num = self.topology.rxn_nums_dict[pair]
-        snapshot = self.topology._get_snapshot(frame)
+        snapshot = self.topology._get_snapshot(frame, self.step_count)
         rxn_ids = {"x_id": x, "h_id": h, "y_id": y}
+        # self.rxn_ids = rxn_ids
+        print("xhy", self.step_count, x, h, y)
         cpl_val = self.SI.coupling_value_functions[rxn_num](
             rxn_ids,
             snapshot,
@@ -475,27 +541,27 @@ class Mustard:
                         source=MPI.ANY_SOURCE, tag=i + 100
                     )
         elif self.universe.colors == (None, None):
-            init_compute, new_compute = None, None
-            if computes is not None:
-                init_compute = computes[0]
-                new_compute = computes[self.universe.rank.color]
-            _cpl_val, _cpl_forces = self._get_coupling(
-                rxn_pairs[states[self.universe.rank.color]],
-                frame,
-                pes[0],
-                pes[self.universe.rank.color],
-                forces[self.universe.rank.color],
-                init_compute,
-                new_compute,
-            )
-            if self.universe.sub_rank == 0:
-                print("cpl_forces", _cpl_forces)
-                self.universe.global_comm.send(
-                    _cpl_val, dest=0, tag=self.universe.rank.color
+            if self.universe.rank.color < len(states):
+                init_compute, new_compute = None, None
+                if computes is not None:
+                    init_compute = computes[0]
+                    new_compute = computes[self.universe.rank.color]
+                _cpl_val, _cpl_forces = self._get_coupling(
+                    rxn_pairs[states[self.universe.rank.color]],
+                    frame,
+                    pes[0],
+                    pes[self.universe.rank.color],
+                    forces[self.universe.rank.color],
+                    init_compute,
+                    new_compute,
                 )
-                self.universe.global_comm.send(
-                    _cpl_forces, dest=0, tag=self.universe.rank.color + 100
-                )
+                if self.universe.sub_rank == 0:
+                    self.universe.global_comm.send(
+                        _cpl_val, dest=0, tag=self.universe.rank.color
+                    )
+                    self.universe.global_comm.send(
+                        _cpl_forces, dest=0, tag=self.universe.rank.color + 100
+                    )
         else:
             for color in self.universe.colors:
                 if color is None:
@@ -514,12 +580,18 @@ class Mustard:
                     new_compute,
                 )
                 if self.universe.sub_rank == 0:
-                    print("cpl_forces", _cpl_forces)
                     self.universe.global_comm.send(_cpl_val, dest=0, tag=color)
                     self.universe.global_comm.send(_cpl_forces, dest=0, tag=color + 100)
+
+        h, y = rxn_pairs[states[1]]
+        x = self.topology.bonds[h][
+            0
+        ]  # NOTE assumes transferring atom is only bonded to one other atom
+        self.rxn_ids = {"x_id": x, "h_id": h, "y_id": y}
         min_eval, min_evec_coeffs = None, None
         if self.universe.me == 0:
             min_eval, min_evec_coeffs = self._get_min_EVB_state(matrix)
+        self.log(f"coupling {self.step_count} {matrix[0,1]}")
         min_eval = self.universe.global_comm.bcast(min_eval, root=0)
         min_evec_coeffs = self.universe.global_comm.bcast(min_evec_coeffs, root=0)
 
@@ -661,18 +733,48 @@ class Mustard:
         if self.universe.me == 0:
             self.log("Amplitudes: ", level="debug")
             self.log(amplitudes, level="debug")
+        h_idxs = self.topology.atoms[self.rxn_ids["h_id"]].idx
+        x_idxs = self.topology.atoms[self.rxn_ids["x_id"]].idx
+        y_idxs = self.topology.atoms[self.rxn_ids["y_id"]].idx
+        self.log(f"forces0 h {forces[0][h_idxs]}")
+        self.log(f"forces0 x {forces[0][x_idxs]}")
+        self.log(f"forces0 y {forces[0][y_idxs]}")
+        self.log(f"forces1 h {forces[1][h_idxs]}")
+        self.log(f"forces1 x {forces[1][x_idxs]}")
+        self.log(f"forces1 y {forces[1][y_idxs]}")
+        # forces[0]
+        # new_forces = forces[0] - self.forces.force_diff
+        # self.log(f"new forces 0 {new_forces}")
+        # self.lmp.command("run 0 pre yes")
+        # self.forces.has_run_0_been_called = True
+        # f = self.get_forces()
+        # self.log(f"new forces run 0 h {f[0]}")
+        # self.log(f"new forces run 0 x {f[1]}")
+        # self.log(f"new forces run 0 y {f[12]}")
+        # f = self.lmp.numpy.extract_atom("f")
+        # ids = self.lmp.numpy.extract_atom("id")
+        # idxs = self.topology.id_to_idx(ids)
+        # f = f[idxs]
+        # self.log(f"new extracted forces 0 {f}")
         _forces = np.einsum("ijk,i->jk", forces, amplitudes)
         _cpl_forces = np.einsum(
             "ijk,i->jk", cpl_forces, 2 * min_evec_coeffs[0] * min_evec_coeffs[1:]
         )
         if self.universe.me == 0:
-            # print(self.universe.rank.color, "forces", forces[self.universe.rank.color])
-            print("forces0", forces[0])
-            print("forces1", forces[1])
-            print("_forces", _forces)
-            print("_cpl_forces", _cpl_forces)
+            print("pos h ", frame.pos[h_idxs])
+            print("pos x ", frame.pos[x_idxs])
+            print("pos y ", frame.pos[y_idxs])
+            print(" mixed_cpl_forces: h", _cpl_forces[h_idxs])
+            print(" mixed_cpl_forces: x", _cpl_forces[x_idxs])
+            print(" mixed_cpl_forces: y", _cpl_forces[y_idxs])
         mixed_forces = _forces + _cpl_forces
+        # for i in range(20):
+        self.log(f"mixed forces h {mixed_forces[h_idxs]}")
+        self.log(f"mixed forces x {mixed_forces[x_idxs]}")
+        self.log(f"mixed forces y {mixed_forces[y_idxs]}")
+        # self.log(f"pos {frame.pos}")
         mixed_virial = None
+        self.log("min eval", min_eval)
         if virials is not None:
             mixed_virial = np.einsum("ij,i->j", virials, amplitudes)
         return min_eval, np.argmax(amplitudes), mixed_forces, mixed_virial
@@ -710,6 +812,8 @@ class Mustard:
             rxn_pairs, systems_idxs, num_systems, frame
         )
         self.forces.current_forces = init_forces
+        # for i in range(20):
+        #     self.log(f"init forces {i} {init_forces[0][i]}")
         self.forces.current_virial = virials
         return self._mix_all_states(
             pairs_idxs,
@@ -755,6 +859,7 @@ class Mustard:
         self._redistribute_EVB_states(num_systems, frame)
         if self.universe.me == 0:
             self.log(f"New total colors: {self.universe.total_colors}", level="debug")
+        self.log("START")
         _, _, ref_mixed_forces, _ = self._get_mixed_properties(
             rxn_pairs, systems_idxs, num_systems, frame, pairs_idxs
         )
@@ -809,6 +914,7 @@ class Mustard:
         return True
 
     def _force_step(self):
+        self.prev_system = np.array([[None, None]])
         if self.universe.rank.color == 0:
             self._reset_forces_and_virial()
         frame = self._get_frame()
@@ -823,6 +929,7 @@ class Mustard:
             self.rebuild = False
             self.forces.set_mixed_forces(None)
             self.forces.set_mixed_virial(None)
+            # self._set_forces()
             return None
         num_systems = len(systems_idxs)
         self.log(f"Reaction systems: {systems_idxs}", level="debug")
@@ -840,6 +947,9 @@ class Mustard:
             rxn_pairs, systems_idxs, num_systems, frame, pairs_idxs
         )
         self.forces.set_mixed_forces(mixed_forces)
+        # if min_state_idx != 0:
+        #     self.Output.log("reaction would have occurred")
+        # min_state_idx = 0
         self.forces.current_forces = self.forces.current_forces[min_state_idx]
         if self.SI.scale_box:
             self.forces.set_mixed_virial(mixed_virial)
@@ -849,6 +959,11 @@ class Mustard:
         self.log("Minimum state: ", level="debug")
         self.log(min_state_idx, level="debug")
         self._out(frame, min_eval)
+        # min_state_idx = 0
+        eb = self.lmp.get_thermo("ebond")
+        ep = self.lmp.get_thermo("epair")
+        self.log(f"ebond 0 {self.step_count} {eb}")
+        self.log(f"epair 0 {self.step_count} {ep}")
         if min_state_idx == 0:
             self.universe.global_comm.Barrier()
             self.rebuild = False
@@ -867,7 +982,11 @@ class Mustard:
             _new_imgs, _yids = self._get_new_imgs(h, y, frame)
             new_imgs += list(_new_imgs)
             yids += list(_yids)
+        ke = self.lmp.get_thermo("ke")
+        self.log(f"ke before {ke}")
         self.lmp.commands_list(["reset_atoms mol all single yes", "run 0 post no"])
+        ke = self.lmp.get_thermo("ke")
+        self.log(f"ke after {ke}")
         if self.universe.rank.color == 0:
             self.topology.change_topology_to_system(min_system, frame)
             self.lmp.commands_list(
@@ -886,7 +1005,25 @@ class Mustard:
             self._reset_lmp_topology(frame)
         self.universe.global_comm.Barrier()
         self.topology.build_topology()
+        if self.universe.rank.color == 0:
+            self.lmp.command("run 0 ")
+            ke = self.lmp.get_thermo("ke")
+            self.log(f"ke after after {ke}")
+            print("post react forces")
+            f = self.get_forces()
+            h_idxs = self.topology.atoms[self.rxn_ids["h_id"]].idx
+            x_idxs = self.topology.atoms[self.rxn_ids["x_id"]].idx
+            y_idxs = self.topology.atoms[self.rxn_ids["y_id"]].idx
+            self.log(f"forces0 h {f[h_idxs]}")
+            self.log(f"forces0 x {f[x_idxs]}")
+            self.log(f"forces0 y {f[y_idxs]}")
+        #     for i in range(20):
+        #         self.log(f"init forces post reaction {i} {f[i]}")
+        #     force_diff = self.forces._calc_force_diff()
+        #     for i in range(20):
+        #         self.log(f"force diff {i} {force_diff[i]}")
         self.safe = False
+        print("YES")
         self.prev_system = np.array([[None, None]])
         self.rebuild = True
         self.universe.global_comm.Barrier()
@@ -914,6 +1051,9 @@ class Mustard:
                 # pre no stops computing neighlist
                 run = f"run {n_step} pre no post no"
             self.lmp.command(run)
+        self.forces.has_run_0_been_called = False
+        if n_step == 0:
+            self.forces.has_run_0_been_called = True
         self.universe.global_comm.Barrier()
         return rxn
 
@@ -977,17 +1117,30 @@ class Mustard:
         if force is None:
             raise ValueError("Something went wrong with fix external")
         ids = self.lmp.numpy.extract_atom("id")
+        print("ids", ids)
         if ids is None:
             raise RuntimeError("ids is None")
         idxs = self.topology.id_to_idx(ids)
+        print("current_forces", self.forces.current_forces)
         force_diff = self.forces._calc_force_diff()
-        if self.universe.me == 0:
-            print("mixed forces")
-            print(self.forces.mixed_forces)
+        print("force_diff", force_diff[idxs])
+        # f = self._get_forces()
         force[:, :] = force_diff[idxs]
+        # force[:, :] = f[idxs] * -1
+
+    def _get_forces(self):
+        return np.array(gather_atoms(self.lmp, "f", 1, 3)).reshape(-1, 3)
 
     def get_forces(self):
-        return np.array(gather_atoms(self.lmp, "f", 1, 3)).reshape(-1, 3)
+        # if self.universe.rank.color == 0:
+        #     self.lmp.command("run 0")
+        # f = self._get_forces()
+        # return f
+        f = self._get_forces()
+        if self.universe.rank.color == 0:
+            if not self.forces.has_run_0_been_called:
+                return f - self.forces.force_diff
+        return f
 
     def _set_virial(self):
         if self.forces.mixed_virial is None:
@@ -1157,6 +1310,7 @@ class Mustard:
             return
 
         for _ in range(steps):
+            self.log(f"Step {self.step_count}")
             self._step()
             self.step_count += 1
 

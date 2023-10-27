@@ -340,7 +340,7 @@ display aodirect 0.300000
 display dof off
 display dof_fnumber 64.000000
 display dof_focaldist 0.700000
-mol new coord.pdb type pdb first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
+mol new bazryo3-1.0.pdb type pdb first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
 mol addfile trajectory.dcd type dcd first 0 last -1 step 1 filebonds 1 autobonds 1 waitfor all
 mol delrep 0 top
 mol representation VDW 0.300000 12.000000

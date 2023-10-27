@@ -3,11 +3,13 @@ import numpy as np
 from mustard import Mustard
 from mustard.utils import MDF, dMDF
 
-LMB = 0.7998
+LMB = 0.7998 + 3
 ZETA = 16
 
 DIST_CUTOFF = 1.8
-DIST_TAPER = 1.7
+DIST_TAPER = 1.8
+# DIST_CUTOFF = 0.1
+# DIST_TAPER = 0.1
 
 
 def get_dist(pos1, pos2, pbc):
@@ -28,10 +30,12 @@ def coupling_value_function(
     h_pos = snapshot.frame.pos[snapshot.atoms[rxn_ids["h_id"]].idx]
     x_pos = snapshot.frame.pos[snapshot.atoms[rxn_ids["x_id"]].idx]
     y_pos = snapshot.frame.pos[snapshot.atoms[rxn_ids["y_id"]].idx]
+    print("h_pos", h_pos, "x_pos", x_pos, "y_pos", y_pos)
     rHY = get_dist(h_pos, y_pos, snapshot.frame.xyz_pbc)
     rHX = get_dist(h_pos, x_pos, snapshot.frame.xyz_pbc)
     Q = abs(rHY - rHX)
-    return Raiteri2011_coupling(Q) * MDF(rHY, DIST_TAPER, DIST_CUTOFF)
+    print(snapshot.step, "rHY", rHY, "rHX", rHX, Q)
+    return Raiteri2011_coupling(Q)  # * MDF(rHY, DIST_TAPER, DIST_CUTOFF)
 
 
 def coupling_forces_function(rxn_ids, snapshot, computes, forces):
@@ -52,10 +56,11 @@ def coupling_forces_function(rxn_ids, snapshot, computes, forces):
     Q = abs(drHYHX)
     cpl = Raiteri2011_coupling(Q)
     taper = MDF(rHY, DIST_TAPER, DIST_CUTOFF)
+    taper = 1
     taper_derivative = 0
-    if rHY < DIST_CUTOFF and rHY > DIST_TAPER:
-        _dHY = dHY.flatten()
-        taper_derivative = dMDF(_dHY[0], _dHY[1], _dHY[2], DIST_TAPER, DIST_CUTOFF)
+    # if rHY < DIST_CUTOFF and rHY > DIST_TAPER:
+    #     _dHY = dHY.flatten()
+    #     taper_derivative = dMDF(_dHY[0], _dHY[1], _dHY[2], DIST_TAPER, DIST_CUTOFF)
     prefactor = -2 * ZETA * cpl * drHYHX
     derivHY = prefactor * (dHY.flatten() / rHY) * taper + taper_derivative * cpl
     derivHX = prefactor * -(dHX.flatten() / rHX) * taper
@@ -65,24 +70,28 @@ def coupling_forces_function(rxn_ids, snapshot, computes, forces):
     cpl_forces[y_idx] -= fHY
     cpl_forces[h_idx] += fHX
     cpl_forces[x_idx] -= fHX
+    print(snapshot.step, "cpl_forces h", cpl_forces[h_idx])
+    print(snapshot.step, "cpl_forces x", cpl_forces[x_idx])
+    print(snapshot.step, "cpl_forces y", cpl_forces[y_idx])
     return cpl_forces
 
 
 def main():
-    lmp_coord_file = "1500.lmp"
-    force_field_file = "ff.lmp"
+    lmp_coord_file = "bazryo3-1.0.lmp"
+    force_field_file = "_ff.lmp"
     header = ["units metal", "atom_style full", "boundary p p p"]
 
     temperature = 1500
-    timestep = 1e-3
+    # timestep = 1e-3
+    timestep = 2e-4
     r1 = np.random.randint(1, 99999)
     r2 = np.random.randint(1, 99999)
     commands = [
         "fix md all nve",
-        f"fix tst all temp/csvr {temperature} {temperature} 0.1 {r1}",
+        # f"fix tst all temp/csvr {temperature} {temperature} 0.1 {r1}",
         f"timestep {timestep}",
         # f"velocity all create {temperature} {r2} mom yes dist gaussian",
-        "fix com all momentum 100 linear 1 1 1",
+        # "fix com all momentum 100 linear 1 1 1",
     ]
     #    commands = ["fix md all nph iso 1 1 1 tchain 5 pchain 5 mtk yes", f"fix tst all temp/csvr {TEMPERATURE} {TEMPERATURE} 0.1 20384", f"timestep {TIMESTEP}", f"velocity all create {TEMPERATURE} 30094 mom yes dist gaussian", "fix com all momentum 100 linear 1 1 1"]
     minimise = [
@@ -97,25 +106,25 @@ def main():
         "constant_volume": True,
         "atom_types": {"Ba": 1, "Zr": 2, "Y": 3, "O1": 4, "O2": 5, "O3": 6, "H1": 7},
         "bond_types": {"O1-H1": 1},
-        "type_charges": {
-            "Ba": 2.000000,
-            "Zr": 4.000000,
-            "Y": 3.000000,
-            "O1": -1.308698,
-            "O2": -2.000000,
-            "O3": -2.000000,
-            "H1": 0.308698,
-        },
-        "neighbour_list_update": 1,
         # "type_charges": {
-        #     "Ba": 0.000000,
-        #     "Zr": 0.000000,
-        #     "Y": 0.0,
-        #     "O1": 0.000,
-        #     "O2": 0.0000,
-        #     "O3": 0.00000,
-        #     "H1": 0.0000,
+        #     "Ba": 2.000000,
+        #     "Zr": 4.000000,
+        #     "Y": 3.000000,
+        #     "O1": -1.308698,
+        #     "O2": -2.000000,
+        #     "O3": -2.000000,
+        #     "H1": 0.308698,
         # },
+        "neighbour_list_update": 1,
+        "type_charges": {
+            "Ba": 0.000000,
+            "Zr": 0.000000,
+            "Y": 0.0,
+            "O1": 0.000,
+            "O2": 0.0000,
+            "O3": 0.00000,
+            "H1": 0.0000,
+        },
         "lammps_unit_system": "metal",
         "reactions": [
             {
@@ -148,23 +157,48 @@ def main():
         commands,
         INPUTS,
         debug=True,
-        mpi_list=[10, 2],
+        mpi_list=[8, 5, 1, 1, 1],
         # msevb_mpi_ranks=[1, 1],
     )
-    msevb.add_trajectory(filename="trajectory.dcd", write_frequency=50)
+    msevb.add_trajectory(filename="trajectory.dcd", write_frequency=1)
     msevb.add_trajectory(filename="reaction.xyz", write_frequency=50, rxn=True)
-    msevb.add_output(filename=None, properties=["temp", "pe", "ke"], write_frequency=50)
+    msevb.add_output(filename=None, properties=["temp", "pe", "ke"], write_frequency=1)
     msevb.add_output(
         filename="mustard.log",
         properties=["temp", "pe", "ke"],
-        write_frequency=50,
+        write_frequency=1,
     )
     # msevb.msevb_minimise()
     # msevb.finite_differences(
-    #     file="finite_differences_e3.out", delta=1e-3
+    #     file="fd_diff.out",
+    #     delta=1e-3,
+    #     index_array=[
+    #         0,
+    #         1,
+    #         2,
+    #         3,
+    #         4,
+    #         5,
+    #         6,
+    #         7,
+    #         8,
+    #         9,
+    #         10,
+    #         11,
+    #         12,
+    #         13,
+    #         14,
+    #         15,
+    #         16,
+    #         17,
+    #         18,
+    #         19,
+    #         20,
+    #     ],
     # )
-    # msevb.step(0)
-    msevb.step(2000000)
+    # msevb.step(200)
+    # msevb.step(100)
+    msevb.step(100)
     # msevb.step(50000)
 
 

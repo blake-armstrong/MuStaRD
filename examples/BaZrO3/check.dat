@@ -1,0 +1,27 @@
+13:40:28-INFO: MuStaRD
+13:40:28-INFO: Running with 16 available processor(s)
+13:40:29-INFO: Using 8 processor(s) for main LAMMPS object.
+13:40:29-INFO: State 1 using 8 processor(s)
+      Step          Pe(mixed)          E_total                Temp                  Pe                  Ke   Speed(ns/day)
+13:40:29-DEBUG: Reaction systems: [[None]
+ [0]]
+13:40:29-DEBUG: rxn_pairs: [array([ 1, 17])]
+13:40:29-DEBUG: Starting total colors: 2
+13:40:29-DEBUG: Number of systems: 2
+13:40:29-DEBUG: New total colors: 2
+13:40:29-DEBUG: Potential energy for color 0: -31396.531973870056
+13:40:29-DEBUG: Potential energy for color 1: -31381.19535512829
+13:40:29-DEBUG: System matrix: 
+13:40:29-DEBUG: [[-3.13965320e+04  4.73107686e-06]
+ [ 4.73107686e-06 -3.13811954e+04]]
+13:40:29-DEBUG: Eigen values: 
+13:40:29-DEBUG: [-31396.53197387 -31381.19535513]
+13:40:29-DEBUG: Occupancies: 
+13:40:29-DEBUG: [1. 0.]
+13:40:29-DEBUG: Amplitudes: 
+13:40:29-DEBUG: [1.00000000e+00 9.51613872e-14]
+13:40:29-DEBUG: Minimum eigen value: 
+13:40:29-DEBUG: -31396.531973870056
+13:40:29-DEBUG: Minimum state: 
+13:40:29-DEBUG: 0
+         0   -31396.5319738701   -31396.5319738701        0.0000000000   -31396.5319738701        0.0000000000      0.00000000

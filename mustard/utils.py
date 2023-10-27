@@ -74,6 +74,9 @@ def dMDF(dx, dy, dz, rm, rc):
     return np.array([ddx, ddy, ddz])
 
 
+from mpi4py import MPI
+
+
 def get_pairs(positions, xyz_pbc, cutoffs, X, H_idxs, Y_idxs, Topology):
     dist_cut, ang_cut = (
         cutoffs["distance"],
@@ -85,6 +88,24 @@ def get_pairs(positions, xyz_pbc, cutoffs, X, H_idxs, Y_idxs, Topology):
     Y_pos = positions[Y_idxs]
     dists = get_distances(H_pos, Y_pos, xyz_pbc)
     dists_bool = dists < dist_cut
+    X_ready_idx = [
+        Topology.atoms[id].idx
+        for idx in H_idxs
+        for id in Topology.residues[Topology.atoms[Topology.ids[idx]].molecule]
+        if Topology.atoms[id].type == X
+    ][0]
+    H_pos0 = positions[H_idxs[0]]
+    X_pos0 = positions[X_ready_idx]
+    if MPI.COMM_WORLD.Get_rank() == 0:
+
+        def get_dist(pos1, pos2, pbc):
+            d_pos = pos1 - pos2
+            d_pos -= pbc * (d_pos / pbc).round()
+            dist = np.linalg.norm(d_pos, axis=-1)
+            return dist
+
+        # print("rHX", get_dist(H_pos0, X_pos0, xyz_pbc))
+        # print("erHX", 23.008 * (get_dist(H_pos0, X_pos0, xyz_pbc) - 0.985357) ** 2)
     if not dists_bool.any():
         return None
     pair_dists = dists[dists_bool.nonzero()[0], dists_bool.nonzero()[1]]
