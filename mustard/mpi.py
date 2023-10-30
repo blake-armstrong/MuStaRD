@@ -89,24 +89,23 @@ class Universe:
         # available ranks can now be modified
         new_colors = num_total_colors - self.num_fixed_colors
         color = ((self.me - self.num_free_ranks) % new_colors) + new_colors + 1
-        self.colors = (None, None)
+        # self.colors = (None, None)
         if new_colors > self.num_free_ranks:
-            overlapping_colors = new_colors - self.num_free_ranks
-            color = (self.me - self.num_free_ranks) + new_colors + 1
-            if self.me == self.num_procs - 1:
-                self.colors = tuple(
-                    range(
-                        num_total_colors - 1,
-                        num_total_colors - 1 - (overlapping_colors + 1),
-                        -1,
-                    )
-                )
-            warning = (
+            # overlapping_colors = new_colors - self.num_free_ranks
+            # color = (self.me - self.num_free_ranks) + new_colors + 1
+            # if self.me == self.num_procs - 1:
+            #     self.colors = tuple(
+            #         range(
+            #             num_total_colors - 1,
+            #             num_total_colors - 1 - (overlapping_colors + 1),
+            #             -1,
+            #         )
+            #     )
+            error = (
                 "More states identified than available processors."
-                "This will have significant impacts on performance."
-                "It is recommended that more processors/virtual processors are requested."
+                "Request more processors/virtual processors."
             )
-            raise Warning(warning)
+            raise RuntimeError(error)
         self.rank.color = color
         self.subsub_comm.Free()
         self.subsub_comm = self.sub_comm.Split(self.rank.color, self.me)
@@ -132,16 +131,16 @@ class Universe:
             log(msg)
 
 
-def synchronize_args(cls):
-    def _sync(*args):
-        return [MPI.COMM_WORLD.bcast(arg, root=0) for arg in args]
-
-    original_init = cls.__init__
-
-    def new_init(self, *args, **kwargs):
-        synchronized_args = _sync(*args)
-        original_init(self, *synchronized_args, **kwargs)
-
-    cls.__init__ = new_init
-    MPI.COMM_WORLD.Barrier()
-    return cls
+# def synchronize_args(cls):
+#     def _sync(*args):
+#         return [MPI.COMM_WORLD.bcast(arg, root=0) for arg in args]
+#
+#     original_init = cls.__init__
+#
+#     def new_init(self, *args, **kwargs):
+#         synchronized_args = _sync(*args)
+#         original_init(self, *synchronized_args, **kwargs)
+#
+#     cls.__init__ = new_init
+#     MPI.COMM_WORLD.Barrier()
+#     return cls

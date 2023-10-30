@@ -92,6 +92,7 @@ def main():
         f"timestep {timestep}",
         # f"velocity all create {temperature} {r2} mom yes dist gaussian",
         # "fix com all momentum 100 linear 1 1 1",
+        # "compute cpe all pe"
     ]
     #    commands = ["fix md all nph iso 1 1 1 tchain 5 pchain 5 mtk yes", f"fix tst all temp/csvr {TEMPERATURE} {TEMPERATURE} 0.1 20384", f"timestep {TIMESTEP}", f"velocity all create {TEMPERATURE} 30094 mom yes dist gaussian", "fix com all momentum 100 linear 1 1 1"]
     minimise = [
@@ -126,6 +127,7 @@ def main():
         #     "H1": 0.0000,
         # },
         "lammps_unit_system": "metal",
+        # "computes" : ("cpe"),
         "reactions": [
             {
                 "reaction": ("O1", "H1", "O2"),
@@ -176,7 +178,7 @@ def main():
     #     #         0,
     # )
     # msevb.step(200)
-    msevb.step(2)
+    # msevb.step(1)
     # msevb.step(100)
     # msevb.step(50000)
 

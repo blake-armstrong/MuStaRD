@@ -24,6 +24,8 @@ class Topology:
             self.types
         )
         self.id_to_idx = np.vectorize(lambda x: self.atoms[x].idx)
+        self.id_to_mass = np.vectorize(lambda x: self.atoms[x].mass)
+        self.masses = self.id_to_mass(self.ids)
 
     def generate_generic_topology(self, lmp):
         ids = np.array(gather_atoms(lmp, "id", 0, 1))
@@ -143,7 +145,7 @@ class Topology:
         new_imgs = np.floor(uypos / abcabc[:3]).astype(int)
         return new_imgs, yids
 
-    def change_topology_to_system(self, system, frame):
+    def change_topology_to_system(self, lmp, system, frame):
         create_bonds = []
         set_type_charge = []
         rxn_nums = [self.rxn_nums_dict[tuple(pair)] for pair in system]
@@ -163,7 +165,7 @@ class Topology:
                 hxy_group_str += f"{eyed} "
 
             # removes all bonds, angles, dihedrals and impropers involving these ids
-            self.lmp.commands_list([hxy_group_str, "delete_bonds HXY multi remove"])
+            lmp.commands_list([hxy_group_str, "delete_bonds HXY multi remove"])
             ids_for_change = hxs + ys
             new_bonds_dict = {
                 eyed: list(self.bonds.get(eyed, []))
@@ -208,7 +210,7 @@ class Topology:
             ]
             create_bonds += self.create_bonds(new_types, nbd)
         create_bonds[-1] = create_bonds[-1].replace("no", "yes")
-        self.lmp.commands_list(set_type_charge + create_bonds + ["group HXY delete"])
+        lmp.commands_list(set_type_charge + create_bonds + ["group HXY delete"])
 
     def create_bonds(self, types, bonds):
         cmd_list = []
@@ -301,6 +303,7 @@ class Topology:
         box_data: tuple
         xyz_pbc: np.ndarray
         vel: np.ndarray
+        forces: np.ndarray
 
     class Snapshot(NamedTuple):
         frame: "Topology.Frame"

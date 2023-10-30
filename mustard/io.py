@@ -297,7 +297,6 @@ class Output:
         def _write(self, lmp, step, speed, pe):
             props = [lmp.get_thermo(prop) for prop in self.properties]
             ke = lmp.get_thermo("ke")
-            ke = lmp.extract_compute("new_ke", 0, 0)
             self.logger.info(self.info.format(step, pe, pe + ke, *props, speed))
 
         def write(self, step, pe, lmp):

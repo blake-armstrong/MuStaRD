@@ -1,0 +1,66 @@
+11:48:04-INFO: MuStaRD
+11:48:04-INFO: Running with 2 available processor(s)
+11:48:04-INFO: Using 1 processor(s) for main LAMMPS object.
+11:48:04-INFO: State 1 using 1 processor(s)
+11:48:04-DEBUG: Reaction systems: [[None]
+ [0]]
+11:48:04-DEBUG: rxn_pairs: [array([1, 2])]
+11:48:04-DEBUG: Starting total colors: 2
+11:48:04-DEBUG: Number of systems: 2
+11:48:04-DEBUG: New total colors: 2
+system ()
+system (array([1, 2]),)
+post_force called
+post_force called
+11:48:04-DEBUG: Potential energy for color 0: 4.470642429733527
+11:48:04-DEBUG: Potential energy for color 1: 5.666294839272808
+xhy 0 3 1 2
+h_pos [ 7.727  9.338 10.626] x_pos [ 8.176 10.598 10.415] y_pos [ 6.457  8.695 10.465]
+0 rHY 1.4325746053870971 rHX 1.3541499178451437 0.07842468754195342
+0 cpl_forces h [0. 0. 0.]
+0 cpl_forces x [0. 0. 0.]
+0 cpl_forces y [0. 0. 0.]
+11:48:04-DEBUG: System matrix: 
+11:48:04-DEBUG: [[4.47064243 0.        ]
+ [0.         5.66629484]]
+11:48:04-DEBUG: Eigen values: 
+11:48:04-DEBUG: [4.47064243 5.66629484]
+11:48:04-DEBUG: Occupancies: 
+11:48:04-DEBUG: [1. 0.]
+forces (2, 3, 3)
+cpl_forces (1, 3, 3)
+11:48:04-DEBUG: Minimum Eigenvalue: 4.470642429733527
+forces (2, 3, 3)
+cpl_forces (1, 3, 3)
+11:48:04-DEBUG: Amplitudes: [1. 0.]
+initial integrate
+post_force called
+post_force called
+11:48:04-DEBUG: Potential energy for color 0: 4.4276996190329685
+11:48:04-DEBUG: Potential energy for color 1: 5.666294839272808
+xhy 0 3 1 2
+h_pos [ 7.72746406  9.34071217 10.62541613] x_pos [ 8.17597829 10.59786063 10.41503055] y_pos [ 6.45699247  8.69496846 10.46500624]
+0 rHY 1.4341598016784922 rHX 1.3512399284749992 0.08291987320349303
+0 cpl_forces h [0. 0. 0.]
+0 cpl_forces x [0. 0. 0.]
+0 cpl_forces y [0. 0. 0.]
+11:48:04-DEBUG: System matrix: 
+11:48:04-DEBUG: [[4.42769962 0.        ]
+ [0.         5.66629484]]
+11:48:04-DEBUG: Eigen values: 
+11:48:04-DEBUG: [4.42769962 5.66629484]
+11:48:04-DEBUG: Occupancies: 
+11:48:04-DEBUG: [1. 0.]
+forces (2, 3, 3)
+cpl_forces (1, 3, 3)
+forces (2, 3, 3)
+cpl_forces (1, 3, 3)
+11:48:04-DEBUG: Minimum Eigenvalue: 4.4276996190329685
+11:48:04-DEBUG: Amplitudes: [1. 0.]
+final integrate
+pos [[ 7.72746406  9.34071217 10.62541613]
+ [ 6.45699247  8.69496846 10.46500624]
+ [ 8.17597829 10.59786063 10.41503055]]
+pos [[ 7.72746406  9.34071217 10.62541613]
+ [ 6.45699247  8.69496846 10.46500624]
+ [ 8.17597829 10.59786063 10.41503055]]

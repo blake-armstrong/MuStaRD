@@ -22,7 +22,7 @@ Finding 1-2 1-3 1-4 neighbors ...
      0 = max # of 1-4 neighbors
      1 = max # of special neighbors
   special bonds CPU = 0.000 seconds
-  read_data CPU = 0.002 seconds
+  read_data CPU = 0.003 seconds
 change_box all triclinic
 Changing box ...
   triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
@@ -50,12 +50,12 @@ mass  ${Zr}    91.224
 mass  2    91.224
 mass  ${Y}     88.910
 mass  3     88.910
-mass  ${O1}    100000
-mass  4    100000
-#mass  ${O1}    15.996
-mass  ${O2}    100000
-mass  5    100000
-#mass  ${O2}    15.996
+# mass  ${O1}    100000
+mass  ${O1}    15.996
+mass  4    15.996
+# mass  ${O2}    100000
+mass  ${O2}    15.996
+mass  5    15.996
 mass  ${O3}    15.996
 mass  6    15.996
 mass  ${H1}     1.008
@@ -194,15 +194,9 @@ pair_coeff      *      *  coul/long
 kspace_style pppm 1.0e-7
 kspace_modify fftbench no
 thermo_style custom etotal epair ebond
-compute new_ke all ke
 fix md all nve
 timestep 0.0002
-fix ux all store/state 1 xu yu zu
-fix ext all external pf/array 1
-fix_modify ext energy no
-fix_modify ext virial no
-write_data /tmp/mustard.0b02ab2d801e401c9842ececca089f6c nocoeff
-System init for write_data ...
+run 0 post no
 PPPM initialization ...
 WARNING: System is not charge neutral, net charge = -3 (src/kspace.cpp:327)
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
@@ -236,7 +230,29 @@ Neighbor list info ...
       pair build: half/bin/newton/tri
       stencil: half/bin/3d/tri
       bin: standard
-run 0 post no
+Per MPI rank memory allocation (min/avg/max) = 23.67 | 23.67 | 23.67 Mbytes
+    TotEng         E_pair         E_bond    
+ 4.4706424      1.3413654      3.129277     
+Loop time of 1.614e-06 on 1 procs for 0 steps with 3 atoms
+
+variable min_state_idx string 0
+write_data /tmp/mustard.ceaf504f1cfd469eaf0f2910c36681d0 nocoeff
+System init for write_data ...
+PPPM initialization ...
+  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
+  G vector (1/distance) = 0.35217446
+  grid = 45 45 45
+  stencil order = 5
+  estimated absolute RMS force accuracy = 1.3504833e-06
+  estimated relative force accuracy = 9.3785876e-08
+  using double precision FFTW3
+  3d grid and FFT values/proc = 157464 91125
+Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
+fix ux all store/state 1 xu yu zu
+fix ext all external pf/callback 1 1
+fix_modify ext energy no
+fix_modify ext virial no
+run 1 post no
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.35217446
@@ -250,40 +266,7 @@ Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 24.42 | 24.42 | 24.42 Mbytes
     TotEng         E_pair         E_bond    
  4.4706424      1.3413654      3.129277     
-Loop time of 9.51e-07 on 1 procs for 0 steps with 3 atoms
-
-run 1 pre yes post no
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.35217446
-  grid = 45 45 45
-  stencil order = 5
-  estimated absolute RMS force accuracy = 1.3504833e-06
-  estimated relative force accuracy = 9.3785876e-08
-  using double precision FFTW3
-  3d grid and FFT values/proc = 157464 91125
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 24.42 | 24.42 | 24.42 Mbytes
-    TotEng         E_pair         E_bond    
- 4.4706424      1.3413654      3.129277     
- 4.470458       1.3470247      3.0824729    
-Loop time of 0.0090646 on 1 procs for 1 steps with 3 atoms
-
-run 1 pre yes post no
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.35217446
-  grid = 45 45 45
-  stencil order = 5
-  estimated absolute RMS force accuracy = 1.3504833e-06
-  estimated relative force accuracy = 9.3785876e-08
-  using double precision FFTW3
-  3d grid and FFT values/proc = 157464 91125
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 24.42 | 24.42 | 24.42 Mbytes
-    TotEng         E_pair         E_bond    
- 4.470458       1.3470247      3.0824729    
- 4.4699209      1.3639732      2.945027     
-Loop time of 0.00900326 on 1 procs for 1 steps with 3 atoms
+ 4.4704391      1.3476114      3.0800883    
+Loop time of 0.035798 on 1 procs for 1 steps with 3 atoms
 
 Total wall time: 0:00:00

@@ -11,60 +11,79 @@ from copy import copy
 import pandas as pd
 from .topology import Topology
 from .io import SystemInfo, Trajectory, Output
-from .mpi import synchronize_args, Universe
+from .mpi import Universe
 from .utils import get_pairs, convert_to_c_type, gather_atoms, extract_box
 from .mixing import get_FD_occupancies
 
 
-class Forces:
-    def __init__(self, current_forces, current_virial):
-        self.current_forces = current_forces
-        self.mixed_forces = current_forces
-        self.current_virial = current_virial
-        self.mixed_virial = current_virial
-        self.has_run_0_been_called = False
-        self.step = 1
-        self.prev_step = 1
-        self.empty_forces = np.zeros(shape=self.current_forces.shape)
-        self.empty_virial = np.zeros(6)
-        self.force_diff = copy(self.empty_forces)
-        self.virial_diff = copy(self.empty_virial)
+# dt = self.lmp.extract_global("dt")
+# if type(dt) != float:
+#     raise ValueError
+# ftm2v = self.lmp.extract_global("ftm2v")
+# if type(ftm2v) != float:
+#     raise ValueError
+# self.dtv = dt
+# self.dtf = 0.5 * dt * ftm2v
+# self.dtfm = self.dtf / self.topology.masses
+# current_forces = self._get_forces()
+# vel = frame.vel + self.dtfm[:, None] * current_forces
+# pos_next = frame.pos + self.dtv * vel
 
-    def set_mixed_forces(self, mixed_forces):
-        if self.prev_step == 0:
-            self.mixed_forces = self.current_forces
-        else:
-            self.mixed_forces = mixed_forces
 
-    def set_mixed_virial(self, mixed_virial):
-        if self.prev_step == 0:
-            self.mixed_virial = self.current_virial
-        else:
-            self.mixed_virial = mixed_virial
 
-    def _set_step(self, step):
-        self.prev_step = self.step
-        self.step = step
 
-    def _calc_force_diff(self):
-        if self.prev_step == 0:
-            return self.force_diff
-        if self.mixed_forces is None:
-            return self.empty_forces
-        if np.isnan(self.mixed_forces).any():
-            raise ValueError("One or more forces are NaN")
-        self.force_diff = self.mixed_forces - self.current_forces
-        return self.force_diff
-
-    def _calc_virial_diff(self):
-        if self.prev_step == 0:
-            return self.virial_diff
-        if self.mixed_virial is None:
-            return self.empty_virial
-        if np.isnan(self.mixed_virial).any():
-            raise ValueError("One or more virial components are NaN")
-        self.virial_diff = self.mixed_virial - self.current_virial
-        return self.virial_diff
+# class Forces:
+#     def __init__(self, current_forces, current_virial):
+#         self.current_forces = current_forces
+#         self.mixed_forces = current_forces
+#         self.current_virial = current_virial
+#         self.mixed_virial = current_virial
+#         self.has_run_0_been_called = False
+#         self.step = 1
+#         self.prev_step = 1
+#         self.empty_forces = np.zeros(shape=self.current_forces.shape)
+#         self.empty_virial = np.zeros(6)
+#         self.force_diff = copy(self.empty_forces)
+#         self.virial_diff = copy(self.empty_virial)
+#         self.dtf = 1.0
+#         self.dftm = np.zeros(shape=len(self.current_forces))
+#         self.dtv = 1.0
+#
+#     def set_mixed_forces(self, mixed_forces):
+#         if self.prev_step == 0:
+#             self.mixed_forces = self.current_forces
+#         else:
+#             self.mixed_forces = mixed_forces
+#
+#     def set_mixed_virial(self, mixed_virial):
+#         if self.prev_step == 0:
+#             self.mixed_virial = self.current_virial
+#         else:
+#             self.mixed_virial = mixed_virial
+#
+#     def _set_step(self, step):
+#         self.prev_step = self.step
+#         self.step = step
+#
+#     def _calc_force_diff(self):
+#         if self.prev_step == 0:
+#             return self.force_diff
+#         if self.mixed_forces is None:
+#             return self.empty_forces
+#         if np.isnan(self.mixed_forces).any():
+#             raise ValueError("One or more forces are NaN")
+#         self.force_diff = self.mixed_forces - self.current_forces
+#         return self.force_diff
+#
+#     def _calc_virial_diff(self):
+#         if self.prev_step == 0:
+#             return self.virial_diff
+#         if self.mixed_virial is None:
+#             return self.empty_virial
+#         if np.isnan(self.mixed_virial).any():
+#             raise ValueError("One or more virial components are NaN")
+#         self.virial_diff = self.mixed_virial - self.current_virial
+#         return self.virial_diff
 
 
 class Mustard:
@@ -144,67 +163,122 @@ class Mustard:
                 "change_box all triclinic",
                 f"include {force_field_file}",
                 "thermo_style custom etotal epair ebond",
-                "compute new_ke all ke",
             ]
         )
         virial = "compute pre_vir all pressure NULL virial"
         if self.SI.scale_box:
             self.lmp.command(virial)
+        # initial_forces = None
+        # if self.universe.rank.color == 0:
+        self.lmp.commands_list(commands)
+        self.lmp.command("run 0 post no")
+        self.box_data = self.get_box_data(self.lmp)
+        self.xyz_pbc = np.array(self.box_data[1]) - np.array(self.box_data[0])
+
         if self.universe.rank.color == 0:
-            self.lmp.commands_list(commands)
-            fixes = [
-                "fix ux all store/state 1 xu yu zu",
-                "fix ext all external pf/array 1",
-                "fix_modify ext energy no",
-                "fix_modify ext virial no",
-            ]
-            if self.SI.scale_box:
-                fixes[-1] = fixes[-1].replace("no", "yes")
-            self.lmp.commands_list(fixes)
-            self._reset_forces_and_virial()
-        # self.lmp.command("run 0 post no")
+            self.lmp.command("variable min_state_idx string 0")
+            self.lmp.command("variable system string [[None]]")
+            self.lmp.command(f"write_data /tmp/{self.SI.file} nocoeff")
+
+        fixes = [
+            "fix ux all store/state 1 xu yu zu",
+            "fix ext all external pf/callback 1 1",
+            # "fix ext all external pf/array 1",
+            "fix_modify ext energy no",
+            "fix_modify ext virial no",
+        ]
+        if self.SI.scale_box:
+            fixes[-1] = fixes[-1].replace("no", "yes")
+        # if self.universe.rank.color == 0:
+        self.lmp.commands_list(fixes)
         self.restart_commands = {
             "header": header,
             "read_data": [f"read_data /tmp/{self.SI.file}"],
             "change_box": ["change_box all triclinic"],
             "force_field": [f"include {force_field_file}"],
+            "fixes": fixes,
             "virial": [""],
         }
-
         if self.SI.scale_box:
             self.restart_commands["virial"][0] = virial
         self.topology = Topology(self.lmp, self.SI)
-        frame = self._get_frame()
-        rxn_pairs, systems_idxs, _ = self._get_systems(frame.pos, frame.xyz_pbc)
-        num_systems = 1
-        if rxn_pairs:
-            num_systems = len(systems_idxs)
-        self._redistribute_EVB_states(num_systems, frame)
-        if self.universe.rank.color == 0:
-            # positions = np.loadtxt("pos.txt")
-            # velocities = np.loadtxt("vel.txt") * 0
-            # velocities[0] = np.array([1000, 1000, 1000])
-            # positions = np.trunc(positions * 10**3) / (10**3)
-            # print(positions)
-            # self.set_positions(positions)
-            # self.set_velocities(velocities)
-            self.lmp.command(f"write_data /tmp/{self.SI.file} nocoeff")
-        self.lmp.command("run 0 post no")
-        self.forces = self._initialise_forces_and_virial()
-        self.forces.has_run_0_been_called = True
+        callback = self.generate_callback()
+        self.lmp.set_fix_external_callback("ext", callback, self.lmp)
         self.Trajectory = Trajectory()
         self.Output = Output()
+        self.lmp.command("run 1 post no")
+        print("pos", self.get_positions(self.lmp))
+        # self._reset_forces_and_virial()
+        # print("init_forces", initial_forces)
+        # frame = self._get_frame()
+        # self.log(f"pos {frame.pos}")
+        # rxn_pairs, systems_idxs, pairs_idxs = self._get_systems(
+            # frame.pos, frame.xyz_pbc
+        # )
+        # if self.universe.rank.color == 1:
+        #     system_idxs = systems_idxs[1]
+        #     system = tuple(
+        #         rxn_pairs[pair_idxs] for pair_idxs in system_idxs if pair_idxs is not None
+        #     )
+        #     self.topology.change_topology_to_system(system, frame)
+        # self.lmp.command("variable previous_system string 0,1")
+        # if self.universe.rank.color == 0:
+        # self.lmp.command("run 1 post no")
+        #     # self.lmp.command("run 1 post no")
+        #         # print("break")
+        # if self.universe.rank.color == 0:
+        #     post_forces = self._get_forces()
+        #     print("post_forces", post_forces)
+        # self.lmp.command("run 1 post no")
+        # print(self.lmp.extract_variable("previous_system"))
 
-    def _initialise_forces_and_virial(self):
+        #        self.restart_commands = {
+        #            "header": header,
+        #            "read_data": [f"read_data /tmp/{self.SI.file}"],
+        #            "change_box": ["change_box all triclinic"],
+        #            "force_field": [f"include {force_field_file}"],
+        #            "virial": [""],
+        #        }
+        #        if self.SI.scale_box:
+        #            self.restart_commands["virial"][0] = virial
+        #        self.topology = Topology(self.lmp, self.SI)
+        #        pos = self.get_positions()
+        #        print("pos", pos)
+        #        frame = self._get_frame(pos=pos, init=True)
+        #        rxn_pairs, systems_idxs, _ = self._get_systems(frame.pos, frame.xyz_pbc)
+        #        num_systems = 1
+        #        if rxn_pairs:
+        #            num_systems = len(systems_idxs)
+        #        self._redistribute_EVB_states(num_systems, frame)
+        #        dt, ftm2v = None, None
+        #        if self.universe.rank.color == 0:
+        #            # positions = np.loadtxt("pos.txt")
+        #            # velocities = np.loadtxt("vel.txt") * 0
+        #            # velocities[0] = np.array([1000, 1000, 1000])
+        #            # positions = np.trunc(positions * 10**3) / (10**3)
+        #            # print(positions)
+        #            # self.set_positions(positions)
+        #            # self.set_velocities(velocities)
+        #            dt = self.lmp.extract_global("dt")
+        #            ftm2v = self.lmp.extract_global("ftm2v")
+        #            self.lmp.command(f"write_data /tmp/{self.SI.file} nocoeff")
+        #        dt, ftm2v = self.universe.global_comm.bcast((dt, ftm2v), root=0)
+        #        self.lmp.command("run 1 post no")
+        #        # self.forces.has_run_0_been_called = True
+        #        self.forces.dtv = dt
+        #        self.forces.dtf = 0.5 * dt * ftm2v
+        #        self.forces.dtfm = self.forces.dtf / self.topology.masses
+        #        print("forces", self._get_forces())
+
+    def _initialise_forces_and_virial(self, initial_forces):
         forces = None
         if self.universe.rank.color == 0:
-            current_forces = self._get_forces()
             current_virial = None
             if self.SI.scale_box:
                 current_virial = self.get_virial()
-            if current_forces is None:
-                raise ValueError("Could not get forces")
-            forces = Forces(current_forces, current_virial)
+            if initial_forces is None:
+                raise ValueError("Initial forces is None")
+            forces = Forces(initial_forces, current_virial)
         forces = self.universe.global_comm.bcast(forces, root=0)
         return forces
 
@@ -251,41 +325,41 @@ class Mustard:
             + self.restart_commands["header"]
             + self.restart_commands["read_data"]
         )
-        self.set_positions(frame.pos)
-        self.set_images(frame.images)
-        self.set_box_data(frame.box_data)
+        self.set_positions(self.lmp, frame.pos)
+        self.set_images(self.lmp, frame.images)
+        self.set_velocities(self.lmp, frame.vel)
         self.lmp.commands_list(
             self.restart_commands["change_box"]
             + self.restart_commands["force_field"]
             + self.restart_commands["virial"]
             + ["thermo_style custom etotal epair ebond"]
-            + ["compute new_ke all ke"],
         )
+        self.set_box_data(self.lmp, frame.box_data)
+        # self.lmp.commands_list(self.restart_commands["fixes"])
         self.lmp.command("run 0 pre yes post no")
 
-    def _reset_forces_and_virial(self):
-        nloc = self.lmp.extract_setting("nlocal")
-        if nloc is None:
-            raise RuntimeError(
-                f"Could not get number of atoms on processor {self.universe.me}"
-            )
-        force = self.lmp.numpy.fix_external_get_force("ext")
-        if force is None:
-            raise ValueError("Something went wrong with fix external")
-        force[:, :] = np.zeros(shape=force.shape)
-        if self.SI.scale_box:
-            self.lmp.fix_external_set_virial_global(
-                "ext", [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-            )
+    # def _reset_forces_and_virial(self):
+    #     nloc = self.lmp.extract_setting("nlocal")
+    #     if nloc is None:
+    #         raise RuntimeError(
+    #             f"Could not get number of atoms on processor {self.universe.me}"
+    #         )
+    #     force = self.lmp.numpy.fix_external_get_force("ext")
+    #     if force is None:
+    #         raise ValueError("Something went wrong with fix external")
+    #     force[:, :] = np.zeros(shape=force.shape)
+    #     if self.SI.scale_box:
+    #         self.lmp.fix_external_set_virial_global(
+    #             "ext", [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    #         )
 
     def _redistribute_EVB_states(self, num_total_colors, frame):
-        # if num_total_colors <= self.universe.num_fixed_colors:
         if num_total_colors <= self.universe.total_colors:
             return
         self.log("REDISTRIBUTE CALLED")
         self.log(f"num_total_colors {num_total_colors}")
-        if self.universe.rank.color != 0:
-            self.lmp.command(f"run 0 pre yes post no")
+        # if self.universe.rank.color != 0:
+            # self.lmp.command(f"run 0 pre yes post no")
         if self.universe.rank.color == 0:
             self.lmp.command(f"write_data /tmp/{self.SI.file} nocoeff")
         self.universe.global_comm.Barrier()
@@ -308,40 +382,45 @@ class Mustard:
         self.lmp.commands_list(
             self.restart_commands["header"] + self.restart_commands["read_data"]
         )
-        self.set_positions(frame.pos)
-        self.set_images(frame.images)
-        self.set_box_data(frame.box_data)
+        self.set_positions(self.lmp, frame.pos)
+        self.set_images(self.lmp, frame.images)
         self.lmp.commands_list(
             self.restart_commands["change_box"]
             + self.restart_commands["force_field"]
             + self.restart_commands["virial"]
         )
+        self.set_box_data(self.lmp, frame.box_data)
+        self.lmp.commands_list(self.restart_commands["fixes"])
         self.lmp.command("run 0 pre yes post no")
 
-    def _get_frame(self, pos=None):
-        frame = None
-        if self.universe.rank.color == 0:
-            if pos is None:
-                pos = self.get_positions()
-            box_data = self.get_box_data()
-            images = self.get_images()
-            xyz_pbc = np.array(box_data[1]) - np.array(box_data[0])
-            vel = self.get_velocities()
-            frame = Topology.Frame(
-                pos=pos, box_data=box_data, images=images, xyz_pbc=xyz_pbc, vel=vel
-            )
-        frame = self.universe.global_comm.bcast(frame, root=0)
-        return frame
+    # def _get_frame(self, pos=None, init=False):
+    #     frame = None
+    #     if self.universe.rank.color == 0:
+    #         vel = self.get_velocities()
+    #         pos = self.get_positions()
+    #         # if pos is None:
+    #         #     vel += self.forces.dtfm * self.forces.current_forces
+    #         #     pos = pos0 + self.forces.dtv * vel
+    #         # if not init:
+    #         #     if self.forces.step == 0:
+    #         #         pos = pos0
+    #         box_data = self.get_box_data()
+    #         images = self.get_images()
+    #         xyz_pbc = np.array(box_data[1]) - np.array(box_data[0])
+    #         vel = self.get_velocities()
+    #         frame = Topology.Frame(
+    #             pos=pos, box_data=box_data, images=images, xyz_pbc=xyz_pbc, vel=vel
+    #         )
+    #     frame = self.universe.global_comm.bcast(frame, root=0)
+    #     return frame
 
     def _get_systems(self, pos, xyz_pbc):
-        rxn_pairs, rxn_nums, pair_dists, hxy_angles, systems_idxs, pairs_idxs = (
-            [],
-            [],
-            [],
-            [],
-            [],
-            [],
-        )
+        rxn_pairs = []
+        rxn_nums = []
+        pair_dists = []
+        hxy_angles = []
+        systems_idxs = []
+        pairs_idxs = []
         for rxn_num, rxn in enumerate(self.SI.reactions):
             rxn_info = get_pairs(
                 pos,
@@ -414,72 +493,72 @@ class Mustard:
                 self.universe.global_comm.send(cs, dest=0, tag=color + 400)
         self.prev_system = system
 
-    def _get_color_info(self, rxn_pairs, systems_idxs, num_systems, frame):
-        pes = np.zeros(num_systems)
-        forces = np.zeros(shape=(num_systems, len(frame.pos), len(frame.pos[0])))
-        virials = None
-        computes = None
-        if self.SI.scale_box:
-            virials = np.zeros((num_systems, 6))
-        if self.SI.computes is not None:
-            computes = np.zeros((num_systems, len(self.SI.computes)))
-        if self.universe.rank.color == 0:
-            init_pe = self.lmp.get_thermo("pe")
-            init_forces = self.get_forces()
-            init_virial = None
-            init_computes = None
-            if virials is not None:
-                init_virial = self.get_virial()
-            if computes is not None:
-                init_computes = self._get_computes()
-            if self.universe.me == 0:
-                pes[0] = init_pe
-                self.log(f"Potential energy for color 0: {init_pe}", level="debug")
-                forces[0] = init_forces
-                if virials is not None and init_virial is not None:
-                    virials[0, :] = init_virial
-                if computes is not None and init_computes is not None:
-                    computes[0, :] = init_computes
-                for i in range(1, num_systems):
-                    source = MPI.ANY_SOURCE
-                    pes[i] = self.universe.global_comm.recv(source=source, tag=i)
-                    forces[i, :, :] = self.universe.global_comm.recv(
-                        source=source, tag=i + 200
-                    )
-                    if virials is not None:
-                        virials[i, :] = self.universe.global_comm.recv(
-                            source=source, tag=i + 300
-                        )
-                    if computes is not None:
-                        computes[i, :] = self.universe.global_comm.recv(
-                            source=source, tag=i + 400
-                        )
-        elif self.universe.colors == (None, None):
-            if self.universe.rank.color < len(systems_idxs):
-                self._calc_color_pe(
-                    self.universe.rank.color,
-                    systems_idxs[self.universe.rank.color],
-                    frame,
-                    rxn_pairs,
-                )
-        else:
-            for color in self.universe.colors:
-                self._calc_color_pe(
-                    color,
-                    systems_idxs[color],
-                    frame,
-                    rxn_pairs,
-                )
-        pes = self.universe.global_comm.bcast(pes, root=0)
-        forces = self.universe.global_comm.bcast(forces, root=0)
-        if self.SI.scale_box:
-            virials = self.universe.global_comm.bcast(virials, root=0)
-        if self.SI.computes is not None:
-            computes = self.universe.global_comm.bcast(computes, root=0)
-        return pes, forces, computes, virials
+    # def _get_color_info(self, rxn_pairs, systems_idxs, num_systems, frame):
+    #     pes = np.zeros(num_systems)
+    #     forces = np.zeros(shape=(num_systems, len(frame.pos), len(frame.pos[0])))
+    #     virials = None
+    #     computes = None
+    #     if self.SI.scale_box:
+    #         virials = np.zeros((num_systems, 6))
+    #     if self.SI.computes is not None:
+    #         computes = np.zeros((num_systems, len(self.SI.computes)))
+    #     if self.universe.rank.color == 0:
+    #         init_pe = self.lmp.get_thermo("pe")
+    #         # init_forces = self.get_forces()
+    #         init_virial = None
+    #         init_computes = None
+    #         if virials is not None:
+    #             init_virial = self.get_virial()
+    #         if computes is not None:
+    #             init_computes = self._get_computes()
+    #         if self.universe.me == 0:
+    #             pes[0] = init_pe
+    #             self.log(f"Potential energy for color 0: {init_pe}", level="debug")
+    #             forces[0] = init_forces
+    #             if virials is not None and init_virial is not None:
+    #                 virials[0, :] = init_virial
+    #             if computes is not None and init_computes is not None:
+    #                 computes[0, :] = init_computes
+    #             for i in range(1, num_systems):
+    #                 source = MPI.ANY_SOURCE
+    #                 pes[i] = self.universe.global_comm.recv(source=source, tag=i)
+    #                 forces[i, :, :] = self.universe.global_comm.recv(
+    #                     source=source, tag=i + 200
+    #                 )
+    #                 if virials is not None:
+    #                     virials[i, :] = self.universe.global_comm.recv(
+    #                         source=source, tag=i + 300
+    #                     )
+    #                 if computes is not None:
+    #                     computes[i, :] = self.universe.global_comm.recv(
+    #                         source=source, tag=i + 400
+    #                     )
+    #     elif self.universe.colors == (None, None):
+    #         if self.universe.rank.color < len(systems_idxs):
+    #             self._calc_color_pe(
+    #                 self.universe.rank.color,
+    #                 systems_idxs[self.universe.rank.color],
+    #                 frame,
+    #                 rxn_pairs,
+    #             )
+    #     else:
+    #         for color in self.universe.colors:
+    #             self._calc_color_pe(
+    #                 color,
+    #                 systems_idxs[color],
+    #                 frame,
+    #                 rxn_pairs,
+    #             )
+    #     pes = self.universe.global_comm.bcast(pes, root=0)
+    #     forces = self.universe.global_comm.bcast(forces, root=0)
+    #     if self.SI.scale_box:
+    #         virials = self.universe.global_comm.bcast(virials, root=0)
+    #     if self.SI.computes is not None:
+    #         computes = self.universe.global_comm.bcast(computes, root=0)
+    #     return pes, forces, computes, virials
 
     def _get_coupling(
-        self, pair, frame, init_pe, new_pe, forces, init_cmp=None, new_cmp=None
+        self, pair, frame, init_pe, new_pe, init_cmp=None, new_cmp=None
     ):
         pair = tuple(pair)
         h, y = pair
@@ -513,9 +592,9 @@ class Mustard:
             rxn_ids,
             snapshot,
             new_cmp,
-            forces,
+            frame.forces,
         )
-        if cpl_forces.shape != forces.shape:
+        if cpl_forces.shape != frame.forces.shape:
             raise ValueError(
                 "Returned coupling forces shape {cpl_forces.shape} should be the same as forces shape {forces.shape}"
             )
@@ -524,97 +603,69 @@ class Mustard:
         # )
         return cpl_val, cpl_forces
 
-    def _mix_states_single(self, pes, computes, states, frame, rxn_pairs, forces):
-        matrix = np.zeros(shape=(len(pes), len(pes)))
-        cpl_forces = np.zeros(shape=(len(pes) - 1, len(frame.pos), len(frame.pos[0])))
+
+    def _mix_states_single(self, pes, computes, frame, system_info):
+        rxn_pairs, _, pairs_idxs = system_info
+        states = pairs_idxs[0]
+        num_states = len(states)
+        matrix = np.zeros(shape=(num_states, num_states))
+        cpl_forces = np.zeros(shape=(num_states - 1, *frame.forces.shape))
         if self.universe.rank.color == 0:
             if self.universe.me == 0:
                 matrix[0, 0] = pes[0]
-                for i in range(1, len(states)):
-                    _cpl_val = self.universe.global_comm.recv(
-                        source=MPI.ANY_SOURCE, tag=i
+                for state in range(1, num_states):
+                    cpl_val = self.universe.global_comm.recv(
+                        source=MPI.ANY_SOURCE, tag=state
                     )
-                    matrix[i, i] = pes[i]
-                    matrix[i, 0] = _cpl_val
-                    matrix[0, i] = _cpl_val
-                    cpl_forces[i - 1, :, :] = self.universe.global_comm.recv(
-                        source=MPI.ANY_SOURCE, tag=i + 100
+                    matrix[state, state] = pes[state]
+                    matrix[state, 0] = cpl_val
+                    matrix[0, state] = cpl_val
+                    cpl_forces[state - 1, :, :] = self.universe.global_comm.recv(
+                        source=MPI.ANY_SOURCE, tag=state + 100
                     )
-        elif self.universe.colors == (None, None):
-            if self.universe.rank.color < len(states):
-                init_compute, new_compute = None, None
-                if computes is not None:
-                    init_compute = computes[0]
-                    new_compute = computes[self.universe.rank.color]
-                _cpl_val, _cpl_forces = self._get_coupling(
-                    rxn_pairs[states[self.universe.rank.color]],
-                    frame,
-                    pes[0],
-                    pes[self.universe.rank.color],
-                    forces[self.universe.rank.color],
-                    init_compute,
-                    new_compute,
+        elif self.universe.rank.color < num_states:
+            init_compute, new_compute = None, None
+            if computes is not None:
+                init_compute = computes[0]
+                new_compute = computes[self.universe.rank.color]
+            cpl_val, cpl_forces = self._get_coupling(
+                rxn_pairs[states[self.universe.rank.color]],
+                frame,
+                pes[0],
+                pes[self.universe.rank.color],
+                init_compute,
+                new_compute,
+            )
+            if self.universe.sub_rank == 0:
+                self.universe.global_comm.send(
+                    cpl_val, dest=0, tag=self.universe.rank.color
                 )
-                if self.universe.sub_rank == 0:
-                    self.universe.global_comm.send(
-                        _cpl_val, dest=0, tag=self.universe.rank.color
-                    )
-                    self.universe.global_comm.send(
-                        _cpl_forces, dest=0, tag=self.universe.rank.color + 100
-                    )
-        else:
-            for color in self.universe.colors:
-                if color is None:
-                    raise ValueError("Color is None")
-                init_compute, new_compute = None, None
-                if computes is not None:
-                    init_compute = computes[0]
-                    new_compute = computes[color]
-                _cpl_val, _cpl_forces = self._get_coupling(
-                    rxn_pairs[states[color]],
-                    frame,
-                    pes[0],
-                    pes[color],
-                    forces[color],
-                    init_compute,
-                    new_compute,
+                self.universe.global_comm.send(
+                    cpl_forces, dest=0, tag=self.universe.rank.color + 100
                 )
-                if self.universe.sub_rank == 0:
-                    self.universe.global_comm.send(_cpl_val, dest=0, tag=color)
-                    self.universe.global_comm.send(_cpl_forces, dest=0, tag=color + 100)
-
-        h, y = rxn_pairs[states[1]]
-        x = self.topology.bonds[h][
-            0
-        ]  # NOTE assumes transferring atom is only bonded to one other atom
-        self.rxn_ids = {"x_id": x, "h_id": h, "y_id": y}
         min_eval, min_evec_coeffs = None, None
         if self.universe.me == 0:
             min_eval, min_evec_coeffs = self._get_min_EVB_state(matrix)
-        self.log(f"coupling {self.step_count} {matrix[0,1]}")
-        min_eval = self.universe.global_comm.bcast(min_eval, root=0)
-        min_evec_coeffs = self.universe.global_comm.bcast(min_evec_coeffs, root=0)
+        min_eval, min_evec_coeffs, cpl_forces = self.universe.global_comm.bcast((min_eval, min_evec_coeffs, cpl_forces), root=0)
 
         return min_eval, min_evec_coeffs, cpl_forces
 
     def _mix_states_scf(
         self,
-        pairs_idxs,
         pes,
         computes,
         frame,
-        systems_idxs,
-        rxn_pairs,
-        num_sites,
-        forces,
+        system_info,
     ):
+        rxn_pairs, systems_idxs, pairs_idxs = system_info
+        num_sites = len(pairs_idxs)
         us = defaultdict(dict)
         init_idx = pes.argmin()
         matrices = {}
         mixed_computes = {}
         cs = 1
         evals = np.zeros(num_sites)
-        new_forces = np.zeros(shape=forces.shape)
+        new_forces = np.zeros(shape=frame.forces.shape)
         if computes is not None:
             cs = computes.shape[1]
         for n, site in enumerate(pairs_idxs):
@@ -659,7 +710,6 @@ class Mustard:
                         frame,
                         matrix[0, 0],
                         matrix[m, m],
-                        forces,
                         mixed_compute[0],
                         mixed_compute[m],
                     )
@@ -715,19 +765,17 @@ class Mustard:
         num_sites = len(pairs_idxs)
         if num_sites == 1:
             min_eval, min_evec_coeffs, cpl_forces = self._mix_states_single(
-                pes, computes, pairs_idxs[0], frame, rxn_pairs, forces
+                pes, computes, pairs_idxs, frame, rxn_pairs
             )
         else:
             # SCF
             min_eval, min_evec_coeffs, cpl_forces = self._mix_states_scf(
-                pairs_idxs,
                 pes,
                 computes,
+                pairs_idxs,
                 frame,
-                systems_idxs,
                 rxn_pairs,
-                num_sites,
-                forces,
+                systems_idxs,
             )
         amplitudes = min_evec_coeffs**2
         if self.universe.me == 0:
@@ -793,17 +841,18 @@ class Mustard:
         new_imgs = np.floor(uypos / abcabc[:3]).astype(int)
         return new_imgs, yids
 
-    def _out(self, frame, pe):
+    def _out(self, lmp, frame):
         if self.universe.rank.color == 0:
+            pe = lmp.get_termo("pe")
             self.Trajectory.write(
                 self.step_count,
-                self.lmp,
+                lmp,
                 frame.box_data,
                 self.universe,
                 self.topology,
             )
             if self.universe.me == 0:
-                self.Output.write(self.step_count, pe, self.lmp)
+                self.Output.write(self.step_count, pe, lmp)
 
     def _get_mixed_properties(
         self, rxn_pairs, systems_idxs, num_systems, frame, pairs_idxs
@@ -811,10 +860,6 @@ class Mustard:
         pes, init_forces, computes, virials = self._get_color_info(
             rxn_pairs, systems_idxs, num_systems, frame
         )
-        self.forces.current_forces = init_forces
-        # for i in range(20):
-        #     self.log(f"init forces {i} {init_forces[0][i]}")
-        self.forces.current_virial = virials
         return self._mix_all_states(
             pairs_idxs,
             pes,
@@ -913,11 +958,274 @@ class Mustard:
         self.universe.global_comm.Barrier()
         return True
 
-    def _force_step(self):
+    # def _force_step(self):
+    #     self.prev_system = np.array([[None, None]])
+    #     if self.universe.rank.color == 0:
+    #         self._reset_forces_and_virial()
+    #     frame = self._get_frame()
+    #     self.log(f"pos {frame.pos}")
+    #     rxn_pairs, systems_idxs, pairs_idxs = self._get_systems(
+    #         frame.pos, frame.xyz_pbc
+    #     )
+    #     if not rxn_pairs:
+    #         self._redistribute_EVB_states(1, frame)
+    #         pe = self.lmp.get_thermo("pe")
+    #         self._out(frame, pe)
+    #         self.num_colors = 1
+    #         self.rebuild = False
+    #         self.forces.set_mixed_forces(None)
+    #         self.forces.set_mixed_virial(None)
+    #         # self._set_forces()
+    #         return None
+    #     num_systems = len(systems_idxs)
+    #     self.log(f"Reaction systems: {systems_idxs}", level="debug")
+    #     self.log(f"rxn_pairs: {rxn_pairs}", level="debug")
+    #     self.log(f"Starting total colors: {self.universe.total_colors}", level="debug")
+    #     self.log(f"Number of systems: {num_systems}", level="debug")
+    #     self._redistribute_EVB_states(num_systems, frame)
+    #     self.log(f"New total colors: {self.universe.total_colors}", level="debug")
+    #     (
+    #         min_eval,
+    #         min_state_idx,
+    #         mixed_forces,
+    #         mixed_virial,
+    #     ) = self._get_mixed_properties(
+    #         rxn_pairs, systems_idxs, num_systems, frame, pairs_idxs
+    #     )
+    #     self.forces.set_mixed_forces(mixed_forces)
+    #     # if min_state_idx != 0:
+    #     #     self.Output.log("reaction would have occurred")
+    #     # min_state_idx = 0
+    #     self.forces.current_forces = self.forces.current_forces[min_state_idx]
+    #     if self.SI.scale_box:
+    #         self.forces.set_mixed_virial(mixed_virial)
+    #         self.forces.current_virial = self.forces.current_virial[min_state_idx]
+    #     self.log("Minimum eigen value: ", level="debug")
+    #     self.log(min_eval, level="debug")
+    #     self.log("Minimum state: ", level="debug")
+    #     self.log(min_state_idx, level="debug")
+    #     self._out(frame, min_eval)
+    #     # min_state_idx = 0
+    #     eb = self.lmp.get_thermo("ebond")
+    #     ep = self.lmp.get_thermo("epair")
+    #     self.log(f"ebond 0 {self.step_count} {eb}")
+    #     self.log(f"epair 0 {self.step_count} {ep}")
+    #     if min_state_idx == 0:
+    #         self.universe.global_comm.Barrier()
+    #         self.rebuild = False
+    #         return None
+    #
+    #     # reaction has occured - update topology
+    #     min_system_idxs = systems_idxs[min_state_idx]
+    #     min_system = tuple(
+    #         rxn_pairs[pair_idxs]
+    #         for pair_idxs in min_system_idxs
+    #         if pair_idxs is not None
+    #     )
+    #     self.log(f"min system: {min_system}", level="debug")
+    #     new_imgs, yids = [], []
+    #     for h, y in min_system:
+    #         _new_imgs, _yids = self._get_new_imgs(h, y, frame)
+    #         new_imgs += list(_new_imgs)
+    #         yids += list(_yids)
+    #     ke = self.lmp.get_thermo("ke")
+    #     self.log(f"ke before {ke}")
+    #     self.lmp.commands_list(["reset_atoms mol all single yes", "run 0 post no"])
+    #     ke = self.lmp.get_thermo("ke")
+    #     self.log(f"ke after {ke}")
+    #     if self.universe.rank.color == 0:
+    #         self.topology.change_topology_to_system(min_system, frame)
+    #         self.lmp.commands_list(
+    #             [
+    #                 f"set atom {ID} image {imgs[0]} {imgs[1]} {imgs[2]}"
+    #                 for ID, imgs in zip(yids, new_imgs)
+    #             ]
+    #             + [
+    #                 "reset_atoms mol all single yes",
+    #                 "run 0 post no",
+    #             ]
+    #         )
+    #         self.lmp.command(f"write_data /tmp/{self.SI.file} nocoeff")
+    #     self.universe.global_comm.Barrier()
+    #     if self.universe.rank.color != 0:
+    #         self._reset_lmp_topology(frame)
+    #     self.universe.global_comm.Barrier()
+    #     self.topology.build_topology()
+    #     if self.universe.rank.color == 0:
+    #         self.lmp.command("run 0 ")
+    #         ke = self.lmp.get_thermo("ke")
+    #         self.log(f"ke after after {ke}")
+    #         print("post react forces")
+    #         f = self.get_forces()
+    #         h_idxs = self.topology.atoms[self.rxn_ids["h_id"]].idx
+    #         x_idxs = self.topology.atoms[self.rxn_ids["x_id"]].idx
+    #         y_idxs = self.topology.atoms[self.rxn_ids["y_id"]].idx
+    #         self.log(f"forces0 h {f[h_idxs]}")
+    #         self.log(f"forces0 x {f[x_idxs]}")
+    #         self.log(f"forces0 y {f[y_idxs]}")
+    #     #     for i in range(20):
+    #     #         self.log(f"init forces post reaction {i} {f[i]}")
+    #     #     force_diff = self.forces._calc_force_diff()
+    #     #     for i in range(20):
+    #     #         self.log(f"force diff {i} {force_diff[i]}")
+    #     self.safe = False
+    #     print("YES")
+    #     self.prev_system = np.array([[None, None]])
+    #     self.rebuild = True
+    #     self.universe.global_comm.Barrier()
+    #     return min_system
+    
+    def generate_callback(self, system_info):
+        rxn_pairs, systems_idxs, pairs_idxs = system_info
+        num_systems = len(systems_idxs)
+        # self.prev_system = np.array([[None, None]])
+        # frame = None
+        # if self.universe.rank.color == 0:
+        #     frame = self.get_frame(self.lmp)
+        # frame = self.universe.global_comm.bcast(frame, root=0)
+        # rxn_pairs, systems_idxs, pairs_idxs = self._get_systems(
+        #     frame.pos, frame.xyz_pbc
+        # )
+        # if not rxn_pairs:
+        #     self._redistribute_EVB_states(1, frame)
+        #     pe = self.lmp.get_thermo("pe")
+        #     self._out(frame, pe)
+        #     self.num_colors = 1
+        #     self.rebuild = False
+        #     def callback(lmp, ntimestep, nlocal, tag, x, f):
+        #         new_forces = lmp.numpy.fix_external_get_force("ext")
+        #         current_forces = lmp.numpy.extract_atom("f")
+        #         new_forces[:, :] = current_forces
+        #
+        #     return callback
+        #
+        # self.log(f"Reaction systems: {systems_idxs}", level="debug")
+        # self.log(f"rxn_pairs: {rxn_pairs}", level="debug")
+        # self.log(f"Starting total colors: {self.universe.total_colors}", level="debug")
+        # self.log(f"Number of systems: {num_systems}", level="debug")
+        # self._redistribute_EVB_states(num_systems, frame)
+        # self.log(f"New total colors: {self.universe.total_colors}", level="debug")
+        #
+        # system_idxs = systems_idxs[self.universe.rank.color]
+        # system = tuple(
+        #     rxn_pairs[pair_idxs] for pair_idxs in system_idxs if pair_idxs is not None
+        # )
+        # if self.universe.rank.color != 0:
+        #     change_topology = True
+        #     if np.array_equal(self.prev_system, system) and self.safe:
+        #         change_topology = False
+        #     if change_topology:
+        #         self._reset_lmp_topology(frame)
+        #         self.safe = True
+        #     self.set_positions(self.lmp, frame.pos)
+        #     self.set_velocities(self.lmp, frame.vel)
+        #     self.set_images(self.lmp, frame.images)
+        #     if self.SI.scale_box:
+        #         self.set_box_data(self.lmp, frame.box_data)
+        #     if change_topology:
+        #         self.topology.change_topology_to_system(self.lmp, system, frame)
+        #         self.lmp.commands_list(self.restart_commands["fixes"])
+        #
+        # self.prev_system = system
+        # color = self.universe.rank.color
+        num_sites = len(pairs_idxs)
+        self.mix_states = self._mix_states_single
+        if num_sites > 1:
+            mix_states = self._mix_states_scf
+
+        def callback(lmp, ntimestep, nlocal, tag, x, f):
+            # grab the numpified fexternal array
+            new_forces = lmp.numpy.fix_external_get_force("ext")
+            current_forces = self.get_forces(lmp)
+            # synchronise positions across all lammps objects
+            # this method does not require all lammps objects 
+            # to have the same number of processors
+            nx = np.zeros(shape=current_forces.shape)
+            idxs = self.topology.id_to_idx(tag)
+            if self.universe.rank.color == 0:
+                nx[idxs] = x
+            distributed_total_x = np.empty_like(nx)
+            self.universe.global_comm.Allreduce(nx, distributed_total_x, op=MPI.SUM)
+            x[:, :] = distributed_total_x[idxs]
+            pe = lmp.get_thermo("pe")
+            if self.universe.sub_rank == 0:
+                self.log(
+                    f"Potential energy for color {self.universe.rank.color}: {pe}", level="debug", rank=-1
+                )
+            virial = self.get_virial(lmp)
+            cs = self.get_computes(lmp)
+            pes = np.zeros(num_systems, dtype='d')
+            forces = np.zeros(shape=(num_systems, *current_forces.shape), dtype='d')
+            virials = None
+            if self.SI.scale_box:
+                virials = np.zeros((num_systems, 6), dtype='d')
+            computes = None
+            if self.SI.computes is not None:
+                computes = np.zeros((num_systems, len(self.SI.computes)), dtype='d')
+            if self.universe.me == 0:
+                source = MPI.ANY_SOURCE
+                pes[0] = pe
+                forces[0, :, :] = current_forces
+                if virials is not None:
+                    virials[0, :] = virial
+                if computes is not None:
+                    computes[0, :] = cs
+                for system in range(1, num_systems):
+                    pes[system] = self.universe.global_comm.recv(source=source, tag=system)
+                    forces[system, :, :] = self.universe.global_comm.recv(
+                        source=source, tag=system + 200
+                    )
+                    if virials is not None:
+                        virials[system, :] = self.universe.global_comm.recv(
+                            source=source, tag=system + 300
+                        )
+                    if computes is not None:
+                        computes[system, :] = self.universe.global_comm.recv(
+                            source=source, tag=system + 400
+                        )
+            if self.universe.rank.color != 0 and self.universe.sub_rank == 0:
+                self.universe.global_comm.send(pe, dest=0, tag=self.universe.rank.color)
+                self.universe.global_comm.send(current_forces, dest=0, tag=self.universe.rank.color + 200)
+                if virial is not None:
+                    self.universe.global_comm.send(virial, dest=0, tag=self.universe.rank.color + 300)
+                if cs is not None:
+                    self.universe.global_comm.send(cs, dest=0, tag=self.universe.rank.color + 400)
+            pes = self.universe.global_comm.bcast(pes, root=0)
+            forces = self.universe.global_comm.bcast(forces, root=0)
+            if self.SI.scale_box:
+                virials = self.universe.global_comm.bcast(virials, root=0)
+            if self.SI.computes is not None:
+                computes = self.universe.global_comm.bcast(computes, root=0)
+
+            frame = self.get_frame(lmp, pos=distributed_total_x, forces=current_forces)
+            min_eval, min_evec_coeffs, cpl_forces = self.mix_states(pes, computes, frame, (rxn_pairs, systems_idxs, pairs_idxs))
+            print("forces", forces.shape)
+            print("cpl_forces", cpl_forces.shape)
+            self.log(f"Minimum Eigenvalue: {min_eval}", level="debug")
+            amplitudes = min_evec_coeffs**2
+            min_state_idx = np.argmax(amplitudes)
+            self.log(f"Amplitudes: {amplitudes}", level="debug")
+            ondiag_forces = np.einsum("ijk,i->jk", forces, amplitudes)
+            offdiag_forces = np.einsum(
+                "ijk,i->jk", cpl_forces, 2 * min_evec_coeffs[0] * min_evec_coeffs[1:]
+            )
+            mixed_forces = ondiag_forces + offdiag_forces
+            mixed_virial = None
+            if virials is not None:
+                mixed_virial = np.einsum("ij,i->j", virials, amplitudes)
+            if self.universe.rank.color == 0 and min_state_idx != 0:
+                lmp.set_variable("min_state_idx", f"{min_state_idx}")
+            new_forces[:, :] = mixed_forces[idxs]
+            # deal with virial/pressure later
+
+        return callback
+
+    def before_callback(self):
         self.prev_system = np.array([[None, None]])
+        frame = None
         if self.universe.rank.color == 0:
-            self._reset_forces_and_virial()
-        frame = self._get_frame()
+            frame = self.get_frame(self.lmp)
+        frame = self.universe.global_comm.bcast(frame, root=0)
         rxn_pairs, systems_idxs, pairs_idxs = self._get_systems(
             frame.pos, frame.xyz_pbc
         )
@@ -927,108 +1235,158 @@ class Mustard:
             self._out(frame, pe)
             self.num_colors = 1
             self.rebuild = False
-            self.forces.set_mixed_forces(None)
-            self.forces.set_mixed_virial(None)
-            # self._set_forces()
-            return None
-        num_systems = len(systems_idxs)
+            def callback(lmp, ntimestep, nlocal, tag, x, f):
+                new_forces = lmp.numpy.fix_external_get_force("ext")
+                current_forces = lmp.numpy.extract_atom("f")
+                new_forces[:, :] = current_forces
+
+            return callback
+
         self.log(f"Reaction systems: {systems_idxs}", level="debug")
         self.log(f"rxn_pairs: {rxn_pairs}", level="debug")
         self.log(f"Starting total colors: {self.universe.total_colors}", level="debug")
         self.log(f"Number of systems: {num_systems}", level="debug")
         self._redistribute_EVB_states(num_systems, frame)
         self.log(f"New total colors: {self.universe.total_colors}", level="debug")
-        (
-            min_eval,
-            min_state_idx,
-            mixed_forces,
-            mixed_virial,
-        ) = self._get_mixed_properties(
-            rxn_pairs, systems_idxs, num_systems, frame, pairs_idxs
-        )
-        self.forces.set_mixed_forces(mixed_forces)
-        # if min_state_idx != 0:
-        #     self.Output.log("reaction would have occurred")
-        # min_state_idx = 0
-        self.forces.current_forces = self.forces.current_forces[min_state_idx]
-        if self.SI.scale_box:
-            self.forces.set_mixed_virial(mixed_virial)
-            self.forces.current_virial = self.forces.current_virial[min_state_idx]
-        self.log("Minimum eigen value: ", level="debug")
-        self.log(min_eval, level="debug")
-        self.log("Minimum state: ", level="debug")
-        self.log(min_state_idx, level="debug")
-        self._out(frame, min_eval)
-        # min_state_idx = 0
-        eb = self.lmp.get_thermo("ebond")
-        ep = self.lmp.get_thermo("epair")
-        self.log(f"ebond 0 {self.step_count} {eb}")
-        self.log(f"epair 0 {self.step_count} {ep}")
-        if min_state_idx == 0:
-            self.universe.global_comm.Barrier()
-            self.rebuild = False
-            return None
 
-        # reaction has occured - update topology
-        min_system_idxs = systems_idxs[min_state_idx]
-        min_system = tuple(
-            rxn_pairs[pair_idxs]
-            for pair_idxs in min_system_idxs
-            if pair_idxs is not None
+        system_idxs = systems_idxs[self.universe.rank.color]
+        system = tuple(
+            rxn_pairs[pair_idxs] for pair_idxs in system_idxs if pair_idxs is not None
         )
-        self.log(f"min system: {min_system}", level="debug")
-        new_imgs, yids = [], []
-        for h, y in min_system:
-            _new_imgs, _yids = self._get_new_imgs(h, y, frame)
-            new_imgs += list(_new_imgs)
-            yids += list(_yids)
-        ke = self.lmp.get_thermo("ke")
-        self.log(f"ke before {ke}")
-        self.lmp.commands_list(["reset_atoms mol all single yes", "run 0 post no"])
-        ke = self.lmp.get_thermo("ke")
-        self.log(f"ke after {ke}")
-        if self.universe.rank.color == 0:
-            self.topology.change_topology_to_system(min_system, frame)
-            self.lmp.commands_list(
-                [
-                    f"set atom {ID} image {imgs[0]} {imgs[1]} {imgs[2]}"
-                    for ID, imgs in zip(yids, new_imgs)
-                ]
-                + [
-                    "reset_atoms mol all single yes",
-                    "run 0 post no",
-                ]
-            )
-            self.lmp.command(f"write_data /tmp/{self.SI.file} nocoeff")
-        self.universe.global_comm.Barrier()
         if self.universe.rank.color != 0:
-            self._reset_lmp_topology(frame)
-        self.universe.global_comm.Barrier()
-        self.topology.build_topology()
-        if self.universe.rank.color == 0:
-            self.lmp.command("run 0 ")
-            ke = self.lmp.get_thermo("ke")
-            self.log(f"ke after after {ke}")
-            print("post react forces")
-            f = self.get_forces()
-            h_idxs = self.topology.atoms[self.rxn_ids["h_id"]].idx
-            x_idxs = self.topology.atoms[self.rxn_ids["x_id"]].idx
-            y_idxs = self.topology.atoms[self.rxn_ids["y_id"]].idx
-            self.log(f"forces0 h {f[h_idxs]}")
-            self.log(f"forces0 x {f[x_idxs]}")
-            self.log(f"forces0 y {f[y_idxs]}")
-        #     for i in range(20):
-        #         self.log(f"init forces post reaction {i} {f[i]}")
-        #     force_diff = self.forces._calc_force_diff()
-        #     for i in range(20):
-        #         self.log(f"force diff {i} {force_diff[i]}")
-        self.safe = False
-        print("YES")
-        self.prev_system = np.array([[None, None]])
-        self.rebuild = True
-        self.universe.global_comm.Barrier()
-        return min_system
+            change_topology = True
+            if np.array_equal(self.prev_system, system) and self.safe:
+                change_topology = False
+            if change_topology:
+                self._reset_lmp_topology(frame)
+                self.safe = True
+            self.set_positions(self.lmp, frame.pos)
+            self.set_velocities(self.lmp, frame.vel)
+            self.set_images(self.lmp, frame.images)
+            if self.SI.scale_box:
+                self.set_box_data(self.lmp, frame.box_data)
+            if change_topology:
+                self.topology.change_topology_to_system(self.lmp, system, frame)
+                self.lmp.commands_list(self.restart_commands["fixes"])
 
+        self.prev_system = system
+        color = self.universe.rank.color
+
+
+    #     def callback(lmp, ntimestep, nlocal, tag, x, f0, f):
+    #         frame = self._get_frame()
+    #         self.log(f"pos {frame.pos}")
+    #         rxn_pairs, systems_idxs, pairs_idxs = self._get_systems(
+    #             frame.pos, frame.xyz_pbc
+    #         )
+    #         if not rxn_pairs:
+    #             self._redistribute_EVB_states(1, frame)
+    #             pe = self.lmp.get_thermo("pe")
+    #             self._out(frame, pe)
+    #             self.num_colors = 1
+    #             self.rebuild = False
+    #             self.forces.set_mixed_forces(None)
+    #             self.forces.set_mixed_virial(None)
+    #             # self._set_forces()
+    #             return None
+    #         num_systems = len(systems_idxs)
+    #         self.log(f"Reaction systems: {systems_idxs}", level="debug")
+    #         self.log(f"rxn_pairs: {rxn_pairs}", level="debug")
+    #         self.log(f"Starting total colors: {self.universe.total_colors}", level="debug")
+    #         self.log(f"Number of systems: {num_systems}", level="debug")
+    #         self._redistribute_EVB_states(num_systems, frame)
+    #         self.log(f"New total colors: {self.universe.total_colors}", level="debug")
+    #         (
+    #             min_eval,
+    #             min_state_idx,
+    #             mixed_forces,
+    #             mixed_virial,
+    #         ) = self._get_mixed_properties(
+    #             rxn_pairs, systems_idxs, num_systems, frame, pairs_idxs
+    #         )
+    #         self.forces.set_mixed_forces(mixed_forces)
+    #         # if min_state_idx != 0:
+    #         #     self.Output.log("reaction would have occurred")
+    #         # min_state_idx = 0
+    #         self.forces.current_forces = self.forces.current_forces[min_state_idx]
+    #         if self.SI.scale_box:
+    #             self.forces.set_mixed_virial(mixed_virial)
+    #             self.forces.current_virial = self.forces.current_virial[min_state_idx]
+    #         self.log("Minimum eigen value: ", level="debug")
+    #         self.log(min_eval, level="debug")
+    #         self.log("Minimum state: ", level="debug")
+    #         self.log(min_state_idx, level="debug")
+    #         self._out(frame, min_eval)
+    #         # min_state_idx = 0
+    #         eb = self.lmp.get_thermo("ebond")
+    #         ep = self.lmp.get_thermo("epair")
+    #         self.log(f"ebond 0 {self.step_count} {eb}")
+    #         self.log(f"epair 0 {self.step_count} {ep}")
+    #         if min_state_idx == 0:
+    #             self.universe.global_comm.Barrier()
+    #             self.rebuild = False
+    #             return None
+    #
+    #         # reaction has occured - update topology
+    #         min_system_idxs = systems_idxs[min_state_idx]
+    #         min_system = tuple(
+    #             rxn_pairs[pair_idxs]
+    #             for pair_idxs in min_system_idxs
+    #             if pair_idxs is not None
+    #         )
+    #         self.log(f"min system: {min_system}", level="debug")
+    #         new_imgs, yids = [], []
+    #         for h, y in min_system:
+    #             _new_imgs, _yids = self._get_new_imgs(h, y, frame)
+    #             new_imgs += list(_new_imgs)
+    #             yids += list(_yids)
+    #         ke = self.lmp.get_thermo("ke")
+    #         self.log(f"ke before {ke}")
+    #         self.lmp.commands_list(["reset_atoms mol all single yes", "run 0 post no"])
+    #         ke = self.lmp.get_thermo("ke")
+    #         self.log(f"ke after {ke}")
+    #         if self.universe.rank.color == 0:
+    #             self.topology.change_topology_to_system(min_system, frame)
+    #             self.lmp.commands_list(
+    #                 [
+    #                     f"set atom {ID} image {imgs[0]} {imgs[1]} {imgs[2]}"
+    #                     for ID, imgs in zip(yids, new_imgs)
+    #                 ]
+    #                 + [
+    #                     "reset_atoms mol all single yes",
+    #                     "run 0 post no",
+    #                 ]
+    #             )
+    #             self.lmp.command(f"write_data /tmp/{self.SI.file} nocoeff")
+    #         self.universe.global_comm.Barrier()
+    #         if self.universe.rank.color != 0:
+    #             self._reset_lmp_topology(frame)
+    #         self.universe.global_comm.Barrier()
+    #         self.topology.build_topology()
+    #         if self.universe.rank.color == 0:
+    #             self.lmp.command("run 0 ")
+    #             ke = self.lmp.get_thermo("ke")
+    #             self.log(f"ke after after {ke}")
+    #             print("post react forces")
+    #             f = self.get_forces()
+    #             h_idxs = self.topology.atoms[self.rxn_ids["h_id"]].idx
+    #             x_idxs = self.topology.atoms[self.rxn_ids["x_id"]].idx
+    #             y_idxs = self.topology.atoms[self.rxn_ids["y_id"]].idx
+    #             self.log(f"forces0 h {f[h_idxs]}")
+    #             self.log(f"forces0 x {f[x_idxs]}")
+    #             self.log(f"forces0 y {f[y_idxs]}")
+    #         #     for i in range(20):
+    #         #         self.log(f"init forces post reaction {i} {f[i]}")
+    #         #     force_diff = self.forces._calc_force_diff()
+    #         #     for i in range(20):
+    #         #         self.log(f"force diff {i} {force_diff[i]}")
+    #         self.safe = False
+    #         print("YES")
+    #         self.prev_system = np.array([[None, None]])
+    #         self.rebuild = True
+    #         self.universe.global_comm.Barrier()
+    #         return min_system
+    #
     def _step(self, n_step=1, nl_update=None, mini=False):
         self.forces._set_step(n_step)
         rxn = self._force_step()
@@ -1077,11 +1435,11 @@ class Mustard:
             Trajectory.trajectory(filename, write_frequency, rxn)
         )
 
-    def set_box_data(self, box_data):
+    def set_box_data(self, lmp, box_data):
         """
         Assumes box is already triclinic
         """
-        self.lmp.command(
+        lmp.command(
             (
                 "change_box all "
                 f"x final {box_data[0][0]} {box_data[1][0]} "
@@ -1091,26 +1449,55 @@ class Mustard:
             )
         )
 
-    def get_box_data(self):
-        return self.lmp.extract_box()
+    def get_box_data(self, lmp):
+        return lmp.extract_box()
+    
+    def get_images(self, lmp):
+        return np.array(gather_atoms(lmp, "image", 0, 3)).reshape(-1, 3)
+    
+    def get_velocities(self, lmp):
+        return np.array(gather_atoms(lmp, "v", 1, 3)).reshape(-1, 3)
+    
+    def get_positions(self, lmp):
+        return np.array(gather_atoms(lmp, "x", 1, 3)).reshape(-1, 3)
+    
+    def get_frame(self, lmp, pos=None, forces=None):
+        if pos is None:
+            pos = self.get_positions(lmp)
+        vel = self.get_velocities(lmp)
+        box_data = self.box_data
+        xyz_pbc = self.xyz_pbc
+        if self.SI.scale_box:
+            box_data = self.get_box_data(lmp)
+            xyz_pbc = np.array(box_data[1]) - np.array(box_data[0])
+        images = self.get_images(lmp)
+        if forces is None:
+            forces = self.get_forces(lmp)
+        frame = Topology.Frame(
+            pos=pos, box_data=box_data, images=images, xyz_pbc=xyz_pbc, vel=vel, forces=forces
+        )
+        return frame
 
-    def set_images(self, images):
-        self.lmp.scatter_atoms("image", 0, 3, convert_to_c_type(images, c_int))
+    # def get_box_data(self):
+    #     return self.lmp.extract_box()
 
-    def get_images(self):
-        return np.array(gather_atoms(self.lmp, "image", 0, 3)).reshape(-1, 3)
+    def set_images(self, lmp, images):
+        lmp.scatter_atoms("image", 0, 3, convert_to_c_type(images, c_int))
 
-    def set_velocities(self, velocities):
-        self.lmp.scatter_atoms("v", 1, 3, convert_to_c_type(velocities, c_double))
+    # def get_images(self):
+    #     return np.array(gather_atoms(self.lmp, "image", 0, 3)).reshape(-1, 3)
 
-    def get_velocities(self):
-        return np.array(gather_atoms(self.lmp, "v", 1, 3)).reshape(-1, 3)
+    def set_velocities(self, lmp, velocities):
+        lmp.scatter_atoms("v", 1, 3, convert_to_c_type(velocities, c_double))
 
-    def set_positions(self, positions):
-        self.lmp.scatter_atoms("x", 1, 3, convert_to_c_type(positions, c_double))
+    # def get_velocities(self):
+    #     return np.array(gather_atoms(self.lmp, "v", 1, 3)).reshape(-1, 3)
 
-    def get_positions(self):
-        return np.array(gather_atoms(self.lmp, "x", 1, 3)).reshape(-1, 3)
+    def set_positions(self, lmp, positions):
+        lmp.scatter_atoms("x", 1, 3, convert_to_c_type(positions, c_double))
+
+    # def get_positions(self):
+    #     return np.array(gather_atoms(self.lmp, "x", 1, 3)).reshape(-1, 3)
 
     def _set_forces(self):
         force = self.lmp.numpy.fix_external_get_force("ext")
@@ -1121,26 +1508,27 @@ class Mustard:
         if ids is None:
             raise RuntimeError("ids is None")
         idxs = self.topology.id_to_idx(ids)
-        print("current_forces", self.forces.current_forces)
-        force_diff = self.forces._calc_force_diff()
-        print("force_diff", force_diff[idxs])
+        print("mixed_forces", self.forces.mixed_forces)
+        # force_diff = self.forces._calc_force_diff()
+        # print("force_diff", force_diff[idxs])
         # f = self._get_forces()
-        force[:, :] = force_diff[idxs]
+        # force[:, :] = force_diff[idxs]
+        force[:, :] = self.forces.mixed_forces[idxs]
         # force[:, :] = f[idxs] * -1
 
-    def _get_forces(self):
-        return np.array(gather_atoms(self.lmp, "f", 1, 3)).reshape(-1, 3)
+    def get_forces(self, lmp):
+        return np.array(gather_atoms(lmp, "f", 1, 3)).reshape(-1, 3)
 
-    def get_forces(self):
-        # if self.universe.rank.color == 0:
-        #     self.lmp.command("run 0")
-        # f = self._get_forces()
-        # return f
-        f = self._get_forces()
-        if self.universe.rank.color == 0:
-            if not self.forces.has_run_0_been_called:
-                return f - self.forces.force_diff
-        return f
+    # def get_forces(self):
+    #     # if self.universe.rank.color == 0:
+    #     #     self.lmp.command("run 0")
+    #     # f = self._get_forces()
+    #     # return f
+    #     f = self._get_forces()
+    #     if self.universe.rank.color == 0:
+    #         if not self.forces.has_run_0_been_called:
+    #             return f - self.forces.force_diff
+    #     return f
 
     def _set_virial(self):
         if self.forces.mixed_virial is None:
@@ -1150,36 +1538,38 @@ class Mustard:
         virial_diff = self.forces._calc_virial_diff()
         self.lmp.fix_external_set_virial_global("ext", list(virial_diff))
 
-    def get_virial(self, vol=None):
+    def get_virial(self, lmp, vol=None):
+        if not self.SI.scale_box:
+            return None
         if vol is None:
-            vol = self.lmp.get_thermo("vol")
-        p_vir = self.lmp.numpy.extract_compute("pre_vir", 0, 1)
+            vol = lmp.get_thermo("vol")
+        p_vir = lmp.numpy.extract_compute("pre_vir", 0, 1)
         if p_vir is None:
             raise ValueError("Could not extract virial")
         vir = p_vir / self.SI.units["pr2vir"] * vol  # type: ignore
         return vir
 
-    def _get_computes(self):
-        if self.SI.computes is not None:
-            cs = np.zeros(len(self.SI.computes))
-            for n, c_id in enumerate(self.SI.computes):
-                c = self.lmp.extract_compute(c_id, 0, 0)
-                if c is None:
-                    self.log(
-                        f"Extracted compute {c_id} returned None. Setting to 0.0",
-                        level="warn",
-                        rank=-1,
-                    )
-                    c = 0.0
-                try:
-                    c = float(c)
-                except TypeError:
-                    raise TypeError(
-                        f"Could not convert compute {c_id} to type float. Returned type: {type(c)}"
-                    )
-                cs[n] = c
-            return cs
-        return None
+    def get_computes(self, lmp):
+        if self.SI.computes is None:
+            return None
+        cs = np.zeros(len(self.SI.computes))
+        for n, c_id in enumerate(self.SI.computes):
+            c = lmp.extract_compute(c_id, 0, 0)
+            if c is None:
+                self.log(
+                    f"Extracted compute {c_id} returned None. Setting to 0.0",
+                    level="warn",
+                    rank=-1,
+                )
+                c = 0.0
+            try:
+                c = float(c)
+            except TypeError:
+                raise TypeError(
+                    f"Could not convert compute {c_id} to type float. Returned type: {type(c)}"
+                )
+            cs[n] = c
+        return cs
 
     def minimise(self, cmd_list):
         if self.universe.rank.color == 0:
