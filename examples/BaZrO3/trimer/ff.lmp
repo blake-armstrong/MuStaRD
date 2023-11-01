@@ -18,10 +18,10 @@ variable H1  equal 7
 mass  ${Ba}   137.327
 mass  ${Zr}    91.224
 mass  ${Y}     88.910
-# mass  ${O1}    100000
-mass  ${O1}    15.996
-# mass  ${O2}    100000
-mass  ${O2}    15.996
+mass  ${O1}    100000
+# mass  ${O1}    15.996
+mass  ${O2}    100000
+# mass  ${O2}    15.996
 mass  ${O3}    15.996
 mass  ${H1}     1.008
 

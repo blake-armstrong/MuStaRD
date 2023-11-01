@@ -30,11 +30,11 @@ def coupling_value_function(
     h_pos = snapshot.frame.pos[snapshot.atoms[rxn_ids["h_id"]].idx]
     x_pos = snapshot.frame.pos[snapshot.atoms[rxn_ids["x_id"]].idx]
     y_pos = snapshot.frame.pos[snapshot.atoms[rxn_ids["y_id"]].idx]
-    print("h_pos", h_pos, "x_pos", x_pos, "y_pos", y_pos)
+    # print("h_pos", h_pos, "x_pos", x_pos, "y_pos", y_pos)
     rHY = get_dist(h_pos, y_pos, snapshot.frame.xyz_pbc)
     rHX = get_dist(h_pos, x_pos, snapshot.frame.xyz_pbc)
     Q = abs(rHY - rHX)
-    print(snapshot.step, "rHY", rHY, "rHX", rHX, Q)
+    # print(snapshot.step, "rHY", rHY, "rHX", rHX, Q)
     return Raiteri2011_coupling(Q)  # * MDF(rHY, DIST_TAPER, DIST_CUTOFF)
 
 
@@ -70,9 +70,9 @@ def coupling_forces_function(rxn_ids, snapshot, computes, forces):
     cpl_forces[y_idx] -= fHY
     cpl_forces[h_idx] += fHX
     cpl_forces[x_idx] -= fHX
-    print(snapshot.step, "cpl_forces h", cpl_forces[h_idx])
-    print(snapshot.step, "cpl_forces x", cpl_forces[x_idx])
-    print(snapshot.step, "cpl_forces y", cpl_forces[y_idx])
+    # print(snapshot.step, "cpl_forces h", cpl_forces[h_idx])
+    # print(snapshot.step, "cpl_forces x", cpl_forces[x_idx])
+    # print(snapshot.step, "cpl_forces y", cpl_forces[y_idx])
     return cpl_forces
 
 
@@ -178,7 +178,7 @@ def main():
     #     #         0,
     # )
     # msevb.step(200)
-    # msevb.step(1)
+    msevb.step(100)
     # msevb.step(100)
     # msevb.step(50000)
 

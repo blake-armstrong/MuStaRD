@@ -294,12 +294,11 @@ class Output:
         def _header(self):
             self.logger.info(self.header)
 
-        def _write(self, lmp, step, speed, pe):
+        def _write(self, lmp, step, speed, pe, ke):
             props = [lmp.get_thermo(prop) for prop in self.properties]
-            ke = lmp.get_thermo("ke")
             self.logger.info(self.info.format(step, pe, pe + ke, *props, speed))
 
-        def write(self, step, pe, lmp):
+        def write(self, step, pe, ke, lmp):
             if step % self.write_frequency == 0:
                 t1 = time()
                 speed = 0
@@ -308,7 +307,7 @@ class Output:
                         (86400 / (t1 - self.t0))
                         * (self.write_frequency * self.timestep)
                     ) / 1000
-                self._write(lmp, step, speed, pe)
+                self._write(lmp, step, speed, pe, ke)
                 self.t0 = t1
 
         def log(self, info):
