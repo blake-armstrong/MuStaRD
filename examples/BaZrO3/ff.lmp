@@ -93,4 +93,4 @@ pair_coeff      *      *  coul/long
 
 kspace_style pppm 1.0e-5
 kspace_modify fftbench no 
-kspace_modify gewald 0.34497565
+# kspace_modify gewald 0.34497565

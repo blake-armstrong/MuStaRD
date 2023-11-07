@@ -3,13 +3,11 @@ import numpy as np
 from mustard import Mustard
 from mustard.utils import MDF, dMDF
 
-LMB = 0.7998 + 2
+LMB = 0.7998
 ZETA = 16
 
 DIST_CUTOFF = 1.8
 DIST_TAPER = 1.8
-# DIST_CUTOFF = 0.1
-# DIST_TAPER = 0.1
 
 
 def get_dist(pos1, pos2, pbc):
@@ -30,11 +28,9 @@ def coupling_value_function(
     h_pos = snapshot.frame.pos[snapshot.atoms[rxn_ids["h_id"]].idx]
     x_pos = snapshot.frame.pos[snapshot.atoms[rxn_ids["x_id"]].idx]
     y_pos = snapshot.frame.pos[snapshot.atoms[rxn_ids["y_id"]].idx]
-    # print("h_pos", h_pos, "x_pos", x_pos, "y_pos", y_pos)
     rHY = get_dist(h_pos, y_pos, snapshot.frame.xyz_pbc)
     rHX = get_dist(h_pos, x_pos, snapshot.frame.xyz_pbc)
     Q = abs(rHY - rHX)
-    # print(snapshot.step, "rHY", rHY, "rHX", rHX, Q)
     return Raiteri2011_coupling(Q)  # * MDF(rHY, DIST_TAPER, DIST_CUTOFF)
 
 
@@ -70,9 +66,6 @@ def coupling_forces_function(rxn_ids, snapshot, computes, forces):
     cpl_forces[y_idx] -= fHY
     cpl_forces[h_idx] += fHX
     cpl_forces[x_idx] -= fHX
-    # print(snapshot.step, "cpl_forces h", cpl_forces[h_idx])
-    # print(snapshot.step, "cpl_forces x", cpl_forces[x_idx])
-    # print(snapshot.step, "cpl_forces y", cpl_forces[y_idx])
     return cpl_forces
 
 
@@ -83,7 +76,6 @@ def main():
 
     temperature = 1500
     timestep = 1e-3
-    # timestep = 2e-4
     r1 = np.random.randint(1, 99999)
     r2 = np.random.randint(1, 99999)
     commands = [
@@ -95,12 +87,6 @@ def main():
         # "compute cpe all pe"
     ]
     #    commands = ["fix md all nph iso 1 1 1 tchain 5 pchain 5 mtk yes", f"fix tst all temp/csvr {TEMPERATURE} {TEMPERATURE} 0.1 20384", f"timestep {TIMESTEP}", f"velocity all create {TEMPERATURE} 30094 mom yes dist gaussian", "fix com all momentum 100 linear 1 1 1"]
-    minimise = [
-        "min_style cg",
-        "min_modify line quadratic",
-        "minimize 1e-6 1e-6 100 100",
-        "reset_timestep 0",
-    ]
 
     INPUTS = {
         "temperature": temperature,
@@ -116,16 +102,7 @@ def main():
             "O3": -2.000000,
             "H1": 0.308698,
         },
-        "neighbour_list_update": 4,
-        # "type_charges": {
-        #     "Ba": 0.000000,
-        #     "Zr": 0.000000,
-        #     "Y": 0.0,
-        #     "O1": 0.000,
-        #     "O2": 0.0000,
-        #     "O3": 0.00000,
-        #     "H1": 0.0000,
-        # },
+        "neighbour_list_update": 1,
         "lammps_unit_system": "metal",
         # "computes" : ("cpe"),
         "reactions": [
@@ -151,7 +128,6 @@ def main():
         ],
     }
 
-    # msevb = mustard.Mustard(lmp_coord_file, force_field_file, coupling_function, header, commands, INPUTS, msevb_mpi_ranks=[11,11,11,11])
     msevb = Mustard(
         lmp_coord_file,
         force_field_file,
@@ -159,16 +135,15 @@ def main():
         commands,
         INPUTS,
         debug=True,
-        mpi_list=[8, 6, 1, 1],
-        # msevb_mpi_ranks=[1, 1],
+        mpi_list=[1, 1],
     )
-    msevb.add_trajectory(filename="trajectory.dcd", write_frequency=50)
+    msevb.add_trajectory(filename="trajectory.dcd", write_frequency=1)
     msevb.add_trajectory(filename="reaction.xyz", write_frequency=50, rxn=True)
-    msevb.add_output(filename=None, properties=["temp", "pe", "ke"], write_frequency=1)
+    msevb.add_output(filename=None, properties=["temp", "pe", "ke"], write_frequency=50)
     msevb.add_output(
         filename="mustard.log",
         properties=["temp", "pe", "ke"],
-        write_frequency=50,
+        write_frequency=1,
     )
     # msevb.msevb_minimise()
     # msevb.finite_differences(
@@ -178,7 +153,7 @@ def main():
     #     #         0,
     # )
     # msevb.step(200)
-    msevb.step(1000)
+    msevb.step(1000000)
     # msevb.step(100)
     # msevb.step(50000)
 

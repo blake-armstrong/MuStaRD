@@ -1,0 +1,471 @@
+18:29:43-INFO: MuStaRD
+18:29:43-INFO: Running with 2 available processor(s)
+18:29:43-INFO: Using 1 processor(s) for main LAMMPS object.
+18:29:43-INFO: State 1 using 1 processor(s)
+18:29:43-DEBUG: Reaction systems: [[None]
+ [0]]
+18:29:43-INFO: 1 system: [[1 2]]
+18:29:43-INFO: 1 prev_system: []
+18:29:43-INFO: reset lmp called
+18:29:43-DEBUG: rxn_pairs: [array([1, 2])]
+18:29:43-DEBUG: Starting total colors: 2
+18:29:43-DEBUG: Number of systems: 2
+18:29:43-DEBUG: New total colors: 2
+18:29:43-INFO: 0 system: []
+18:29:43-INFO: 0 prev_system: []
+18:29:43-INFO: RUN 1 HAS BEEN CALLED
+18:29:44-DEBUG: Potential energy for color 1: -31397.00431795852
+18:29:44-DEBUG: Potential energy for color 0: -31396.42318333518
+18:29:44-DEBUG: System matrix: 
+18:29:44-DEBUG: [[-3.13964232e+04  7.24842790e-01]
+ [ 7.24842790e-01 -3.13970043e+04]]
+18:29:44-DEBUG: Eigen values: 
+18:29:44-DEBUG: [-31395.9328368  -31397.49466449]
+18:29:44-DEBUG: Occupancies: 
+18:29:44-DEBUG: [0. 1.]
+18:29:44-DEBUG: Minimum Eigenvalue: -31397.494664491936
+18:29:44-DEBUG: Amplitudes: [0.31395687 0.68604313]
+      Step          Pe(mixed)          E_total                Temp                  Pe                  Ke   Speed(ns/day)
+18:29:44-INFO: CALL TO STEP 0
+         0   -31397.4946644919   -31397.4946644919        0.0000000000   -31396.4231833352        0.0000000000      0.00000000
+18:29:44-INFO: 1 system: [[1 2]]
+18:29:44-INFO: 1 prev_system: [[1 2]]
+18:29:44-DEBUG: Reaction systems: [[None]
+ [0]]
+18:29:44-DEBUG: rxn_pairs: [array([1, 2])]
+18:29:44-DEBUG: Starting total colors: 2
+18:29:44-DEBUG: Number of systems: 2
+18:29:44-DEBUG: New total colors: 2
+18:29:44-INFO: 0 system: []
+18:29:44-INFO: 0 prev_system: []
+18:29:44-INFO: RUN 1 HAS BEEN CALLED
+18:29:44-DEBUG: Potential energy for color 1: -31397.00431795852
+18:29:44-DEBUG: Potential energy for color 0: -31396.42318333518
+18:29:44-DEBUG: System matrix: 
+18:29:44-DEBUG: [[-3.13964232e+04  7.24842790e-01]
+ [ 7.24842790e-01 -3.13970043e+04]]
+18:29:44-DEBUG: Eigen values: 
+18:29:44-DEBUG: [-31395.9328368  -31397.49466449]
+18:29:44-DEBUG: Occupancies: 
+18:29:44-DEBUG: [0. 1.]
+18:29:44-DEBUG: Minimum Eigenvalue: -31397.494664491936
+18:29:44-DEBUG: Amplitudes: [0.31395687 0.68604313]
+18:29:44-DEBUG: Potential energy for color 0: -31397.681086104647
+18:29:44-DEBUG: Potential energy for color 1: -31399.719702309085
+18:29:44-DEBUG: System matrix: 
+18:29:44-DEBUG: [[-3.13976811e+04  7.95218889e-01]
+ [ 7.95218889e-01 -3.13997197e+04]]
+18:29:44-DEBUG: Eigen values: 
+18:29:44-DEBUG: [-31397.40758251 -31399.99320591]
+18:29:44-DEBUG: Occupancies: 
+18:29:44-DEBUG: [0. 1.]
+18:29:44-DEBUG: Minimum Eigenvalue: -31399.99320590564
+18:29:44-DEBUG: Amplitudes: [0.10577859 0.89422141]
+reaction occured at step 0 between IDs 1 and 2
+18:29:44-INFO: reset lmp called
+18:29:44-INFO: CALL TO STEP 1
+18:29:44-INFO: 1 system: [[ 1 13]]
+18:29:44-INFO: 1 prev_system: []
+18:29:44-INFO: reset lmp called
+18:29:44-DEBUG: Reaction systems: [[None]
+ [0]]
+18:29:44-DEBUG: rxn_pairs: [array([ 1, 13])]
+18:29:44-DEBUG: Starting total colors: 2
+18:29:44-DEBUG: Number of systems: 2
+18:29:44-DEBUG: New total colors: 2
+18:29:44-INFO: 0 system: []
+18:29:44-INFO: 0 prev_system: []
+18:29:44-INFO: RUN 1 HAS BEEN CALLED
+18:29:44-DEBUG: Potential energy for color 0: -31399.719702309078
+18:29:44-DEBUG: Potential energy for color 1: -31397.681086104647
+18:29:44-DEBUG: System matrix: 
+18:29:44-DEBUG: [[-3.13997197e+04  7.95218889e-01]
+ [ 7.95218889e-01 -3.13976811e+04]]
+18:29:44-DEBUG: Eigen values: 
+18:29:44-DEBUG: [-31399.99320591 -31397.40758251]
+18:29:44-DEBUG: Occupancies: 
+18:29:44-DEBUG: [1. 0.]
+18:29:44-DEBUG: Minimum Eigenvalue: -31399.993205905634
+18:29:44-DEBUG: Amplitudes: [0.89422141 0.10577859]
+18:29:44-DEBUG: Potential energy for color 1: -31400.743593379677
+18:29:44-DEBUG: Potential energy for color 0: -31407.902863598727
+18:29:44-DEBUG: System matrix: 
+18:29:44-DEBUG: [[-3.14079029e+04  7.58900526e-02]
+ [ 7.58900526e-02 -3.14007436e+04]]
+18:29:44-DEBUG: Eigen values: 
+18:29:44-DEBUG: [-31407.90366796 -31400.74278902]
+18:29:44-DEBUG: Occupancies: 
+18:29:44-DEBUG: [1. 0.]
+18:29:44-DEBUG: Minimum Eigenvalue: -31407.903667961866
+18:29:44-DEBUG: Amplitudes: [9.99887673e-01 1.12327432e-04]
+18:29:44-INFO: CALL TO STEP 2
+18:29:44-INFO: 1 system: [[ 1 13]]
+18:29:44-INFO: 1 prev_system: [[ 1 13]]
+18:29:44-DEBUG: Reaction systems: [[None]
+ [0]]
+18:29:44-DEBUG: rxn_pairs: [array([ 1, 13])]
+18:29:44-DEBUG: Starting total colors: 2
+18:29:44-DEBUG: Number of systems: 2
+18:29:44-DEBUG: New total colors: 2
+18:29:44-INFO: 0 system: []
+18:29:44-INFO: 0 prev_system: []
+18:29:44-INFO: RUN 1 HAS BEEN CALLED
+18:29:44-DEBUG: Potential energy for color 1: -31400.74359337968
+18:29:44-DEBUG: Potential energy for color 0: -31407.90286359873
+18:29:44-DEBUG: System matrix: 
+18:29:44-DEBUG: [[-3.14079029e+04  7.58900526e-02]
+ [ 7.58900526e-02 -3.14007436e+04]]
+18:29:44-DEBUG: Eigen values: 
+18:29:44-DEBUG: [-31407.90366796 -31400.74278902]
+18:29:44-DEBUG: Occupancies: 
+18:29:44-DEBUG: [1. 0.]
+18:29:44-DEBUG: Minimum Eigenvalue: -31407.90366796187
+18:29:44-DEBUG: Amplitudes: [9.99887673e-01 1.12327432e-04]
+18:29:44-DEBUG: Potential energy for color 0: -31416.53789983873
+18:29:44-DEBUG: Potential energy for color 1: -31364.395298806405
+18:29:44-DEBUG: System matrix: 
+18:29:44-DEBUG: [[-3.14165379e+04  3.96641061e-06]
+ [ 3.96641061e-06 -3.13643953e+04]]
+18:29:44-DEBUG: Eigen values: 
+18:29:44-DEBUG: [-31416.53789984 -31364.39529881]
+18:29:44-DEBUG: Occupancies: 
+18:29:44-DEBUG: [1. 0.]
+18:29:44-DEBUG: Minimum Eigenvalue: -31416.53789983873
+18:29:44-DEBUG: Amplitudes: [1.00000000e+00 5.78642009e-15]
+18:29:44-INFO: CALL TO STEP 3
+18:29:44-INFO: 1 system: [[ 1 13]]
+18:29:44-INFO: 1 prev_system: [[ 1 13]]
+18:29:44-DEBUG: Reaction systems: [[None]
+ [0]]
+18:29:44-DEBUG: rxn_pairs: [array([ 1, 13])]
+18:29:44-DEBUG: Starting total colors: 2
+18:29:44-DEBUG: Number of systems: 2
+18:29:44-DEBUG: New total colors: 2
+18:29:44-INFO: 0 system: []
+18:29:44-INFO: 0 prev_system: []
+18:29:44-INFO: RUN 1 HAS BEEN CALLED
+18:29:44-DEBUG: Potential energy for color 1: -31364.395298806405
+18:29:44-DEBUG: Potential energy for color 0: -31416.537899838735
+18:29:44-DEBUG: System matrix: 
+18:29:44-DEBUG: [[-3.14165379e+04  3.96641061e-06]
+ [ 3.96641061e-06 -3.13643953e+04]]
+18:29:44-DEBUG: Eigen values: 
+18:29:44-DEBUG: [-31416.53789984 -31364.39529881]
+18:29:44-DEBUG: Occupancies: 
+18:29:44-DEBUG: [1. 0.]
+18:29:44-DEBUG: Minimum Eigenvalue: -31416.537899838735
+18:29:44-DEBUG: Amplitudes: [1.00000000e+00 5.78642009e-15]
+18:29:44-DEBUG: Potential energy for color 1: -30131.959786632106
+18:29:44-DEBUG: Potential energy for color 0: -31425.518308756877
+18:29:44-DEBUG: System matrix: 
+18:29:44-DEBUG: [[-3.14255183e+04  1.53180556e-11]
+ [ 1.53180556e-11 -3.01319598e+04]]
+18:29:44-DEBUG: Eigen values: 
+18:29:44-DEBUG: [-31425.51830876 -30131.95978663]
+18:29:44-DEBUG: Occupancies: 
+18:29:44-DEBUG: [1. 0.]
+18:29:44-DEBUG: Minimum Eigenvalue: -31425.518308756877
+18:29:44-DEBUG: Amplitudes: [1.00000000e+00 1.40228123e-28]
+18:29:44-INFO: CALL TO STEP 4
+18:29:44-INFO: RUN 1 HAS BEEN CALLED
+18:29:44-INFO: CALL TO STEP 5
+18:29:44-INFO: RUN 1 HAS BEEN CALLED
+18:29:44-INFO: CALL TO STEP 6
+18:29:44-INFO: 1 system: [[ 1 13]]
+18:29:44-INFO: 1 prev_system: []
+18:29:44-INFO: reset lmp called
+18:29:44-DEBUG: Reaction systems: [[None]
+ [0]]
+18:29:44-DEBUG: rxn_pairs: [array([ 1, 13])]
+18:29:44-DEBUG: Starting total colors: 2
+18:29:44-DEBUG: Number of systems: 2
+18:29:44-DEBUG: New total colors: 2
+18:29:44-INFO: 0 system: []
+18:29:44-INFO: 0 prev_system: []
+18:29:44-INFO: RUN 1 HAS BEEN CALLED
+18:29:45-DEBUG: Potential energy for color 1: -31295.87841676909
+18:29:45-DEBUG: Potential energy for color 0: -31454.520978781155
+18:29:45-DEBUG: System matrix: 
+18:29:45-DEBUG: [[-3.14545210e+04  1.42314841e-07]
+ [ 1.42314841e-07 -3.12958784e+04]]
+18:29:45-DEBUG: Eigen values: 
+18:29:45-DEBUG: [-31454.52097878 -31295.87841677]
+18:29:45-DEBUG: Occupancies: 
+18:29:45-DEBUG: [1. 0.]
+18:29:45-DEBUG: Minimum Eigenvalue: -31454.520978781155
+18:29:45-DEBUG: Amplitudes: [1.00000000e+00 8.04749947e-19]
+18:29:45-DEBUG: Potential energy for color 1: -31461.308548255314
+18:29:45-DEBUG: Potential energy for color 0: -31469.942746726527
+18:29:45-DEBUG: System matrix: 
+18:29:45-DEBUG: [[-3.14699427e+04  3.02833037e-02]
+ [ 3.02833037e-02 -3.14613085e+04]]
+18:29:45-DEBUG: Eigen values: 
+18:29:45-DEBUG: [-31469.94285294 -31461.30844204]
+18:29:45-DEBUG: Occupancies: 
+18:29:45-DEBUG: [1. 0.]
+18:29:45-DEBUG: Minimum Eigenvalue: -31469.942852939883
+18:29:45-DEBUG: Amplitudes: [9.99987699e-01 1.23011700e-05]
+18:29:45-INFO: CALL TO STEP 7
+18:29:45-INFO: 1 system: [[ 1 13]]
+18:29:45-INFO: 1 prev_system: [[ 1 13]]
+18:29:45-DEBUG: Reaction systems: [[None]
+ [0]]
+18:29:45-DEBUG: rxn_pairs: [array([ 1, 13])]
+18:29:45-DEBUG: Starting total colors: 2
+18:29:45-DEBUG: Number of systems: 2
+18:29:45-DEBUG: New total colors: 2
+18:29:45-INFO: 0 system: []
+18:29:45-INFO: 0 prev_system: []
+18:29:45-INFO: RUN 1 HAS BEEN CALLED
+18:29:45-DEBUG: Potential energy for color 1: -31461.308548255303
+18:29:45-DEBUG: Potential energy for color 0: -31469.942746726505
+18:29:45-DEBUG: System matrix: 
+18:29:45-DEBUG: [[-3.14699427e+04  3.02833037e-02]
+ [ 3.02833037e-02 -3.14613085e+04]]
+18:29:45-DEBUG: Eigen values: 
+18:29:45-DEBUG: [-31469.94285294 -31461.30844204]
+18:29:45-DEBUG: Occupancies: 
+18:29:45-DEBUG: [1. 0.]
+18:29:45-DEBUG: Minimum Eigenvalue: -31469.94285293986
+18:29:45-DEBUG: Amplitudes: [9.99987699e-01 1.23011700e-05]
+18:29:45-DEBUG: Potential energy for color 0: -31480.78089723001
+18:29:45-DEBUG: Potential energy for color 1: -31479.953281230657
+18:29:45-DEBUG: System matrix: 
+18:29:45-DEBUG: [[-3.14807809e+04  7.39345711e-01]
+ [ 7.39345711e-01 -3.14799533e+04]]
+18:29:45-DEBUG: Eigen values: 
+18:29:45-DEBUG: [-31481.21436082 -31479.51981764]
+18:29:45-DEBUG: Occupancies: 
+18:29:45-DEBUG: [1. 0.]
+18:29:45-DEBUG: Minimum Eigenvalue: -31481.214360816597
+18:29:45-DEBUG: Amplitudes: [0.74420033 0.25579967]
+18:29:45-INFO: CALL TO STEP 8
+18:29:45-INFO: 1 system: [[ 1 13]]
+18:29:45-INFO: 1 prev_system: [[ 1 13]]
+18:29:45-DEBUG: Reaction systems: [[None]
+ [0]]
+18:29:45-DEBUG: rxn_pairs: [array([ 1, 13])]
+18:29:45-DEBUG: Starting total colors: 2
+18:29:45-DEBUG: Number of systems: 2
+18:29:45-DEBUG: New total colors: 2
+18:29:45-INFO: 0 system: []
+18:29:45-INFO: 0 prev_system: []
+18:29:45-INFO: RUN 1 HAS BEEN CALLED
+18:29:45-DEBUG: Potential energy for color 1: -31479.95328123065
+18:29:45-DEBUG: Potential energy for color 0: -31480.780897230004
+18:29:45-DEBUG: System matrix: 
+18:29:45-DEBUG: [[-3.14807809e+04  7.39345711e-01]
+ [ 7.39345711e-01 -3.14799533e+04]]
+18:29:45-DEBUG: Eigen values: 
+18:29:45-DEBUG: [-31481.21436082 -31479.51981764]
+18:29:45-DEBUG: Occupancies: 
+18:29:45-DEBUG: [1. 0.]
+18:29:45-DEBUG: Minimum Eigenvalue: -31481.21436081659
+18:29:45-DEBUG: Amplitudes: [0.74420033 0.25579967]
+18:29:45-DEBUG: Potential energy for color 1: -31491.816940488217
+18:29:45-DEBUG: Potential energy for color 0: -31488.297594531115
+18:29:45-DEBUG: System matrix: 
+18:29:45-DEBUG: [[-3.14882976e+04  8.78750438e-02]
+ [ 8.78750438e-02 -3.14918169e+04]]
+18:29:45-DEBUG: Eigen values: 
+18:29:45-DEBUG: [-31488.29540173 -31491.81913329]
+18:29:45-DEBUG: Occupancies: 
+18:29:45-DEBUG: [0. 1.]
+18:29:45-DEBUG: Minimum Eigenvalue: -31491.819133286266
+18:29:45-DEBUG: Amplitudes: [6.22294297e-04 9.99377706e-01]
+reaction occured at step 8 between IDs 1 and 13
+18:29:45-INFO: reset lmp called
+18:29:45-INFO: CALL TO STEP 9
+18:29:45-INFO: 1 system: [[1 2]]
+18:29:45-INFO: 1 prev_system: []
+18:29:45-INFO: reset lmp called
+18:29:45-DEBUG: Reaction systems: [[None]
+ [0]]
+18:29:45-DEBUG: rxn_pairs: [array([1, 2])]
+18:29:45-DEBUG: Starting total colors: 2
+18:29:45-DEBUG: Number of systems: 2
+18:29:45-DEBUG: New total colors: 2
+18:29:45-INFO: 0 system: []
+18:29:45-INFO: 0 prev_system: []
+18:29:45-INFO: RUN 1 HAS BEEN CALLED
+18:29:45-DEBUG: Potential energy for color 1: -31488.297594531134
+18:29:45-DEBUG: Potential energy for color 0: -31491.816940488232
+18:29:45-DEBUG: System matrix: 
+18:29:45-DEBUG: [[-3.14918169e+04  8.78750438e-02]
+ [ 8.78750438e-02 -3.14882976e+04]]
+18:29:45-DEBUG: Eigen values: 
+18:29:45-DEBUG: [-31491.81913329 -31488.29540173]
+18:29:45-DEBUG: Occupancies: 
+18:29:45-DEBUG: [1. 0.]
+18:29:45-DEBUG: Minimum Eigenvalue: -31491.81913328628
+18:29:45-DEBUG: Amplitudes: [9.99377706e-01 6.22294297e-04]
+18:29:45-DEBUG: Potential energy for color 1: -31486.72114406304
+18:29:45-DEBUG: Potential energy for color 0: -31500.853776241973
+18:29:45-DEBUG: System matrix: 
+18:29:45-DEBUG: [[-3.15008538e+04  2.02895377e-04]
+ [ 2.02895377e-04 -3.14867211e+04]]
+18:29:45-DEBUG: Eigen values: 
+18:29:45-DEBUG: [-31500.85377624 -31486.72114406]
+18:29:45-DEBUG: Occupancies: 
+18:29:45-DEBUG: [1. 0.]
+18:29:45-DEBUG: Minimum Eigenvalue: -31500.853776244887
+18:29:45-DEBUG: Amplitudes: [1.00000000e+00 2.06109586e-10]
+18:29:45-INFO: CALL TO STEP 10
+18:29:45-INFO: 1 system: [[1 2]]
+18:29:45-INFO: 1 prev_system: [[1 2]]
+18:29:45-DEBUG: Reaction systems: [[None]
+ [0]]
+18:29:45-DEBUG: rxn_pairs: [array([1, 2])]
+18:29:45-DEBUG: Starting total colors: 2
+18:29:45-DEBUG: Number of systems: 2
+18:29:45-DEBUG: New total colors: 2
+18:29:45-INFO: 0 system: []
+18:29:45-INFO: 0 prev_system: []
+18:29:45-INFO: RUN 1 HAS BEEN CALLED
+18:29:45-DEBUG: Potential energy for color 1: -31486.721144063038
+18:29:45-DEBUG: Potential energy for color 0: -31500.853776241966
+18:29:45-DEBUG: System matrix: 
+18:29:45-DEBUG: [[-3.15008538e+04  2.02895377e-04]
+ [ 2.02895377e-04 -3.14867211e+04]]
+18:29:45-DEBUG: Eigen values: 
+18:29:45-DEBUG: [-31500.85377624 -31486.72114406]
+18:29:45-DEBUG: Occupancies: 
+18:29:45-DEBUG: [1. 0.]
+18:29:45-DEBUG: Minimum Eigenvalue: -31500.85377624488
+18:29:45-DEBUG: Amplitudes: [1.00000000e+00 2.06109586e-10]
+18:29:45-DEBUG: Potential energy for color 1: -31465.525863682196
+18:29:45-DEBUG: Potential energy for color 0: -31507.0351706283
+18:29:45-DEBUG: System matrix: 
+18:29:45-DEBUG: [[-3.15070352e+04  9.36468151e-08]
+ [ 9.36468151e-08 -3.14655259e+04]]
+18:29:45-DEBUG: Eigen values: 
+18:29:45-DEBUG: [-31507.03517063 -31465.52586368]
+18:29:45-DEBUG: Occupancies: 
+18:29:45-DEBUG: [1. 0.]
+18:29:45-DEBUG: Minimum Eigenvalue: -31507.0351706283
+18:29:45-DEBUG: Amplitudes: [1.00000000e+00 5.08973369e-18]
+18:29:45-INFO: CALL TO STEP 11
+18:29:45-INFO: RUN 1 HAS BEEN CALLED
+18:29:45-INFO: CALL TO STEP 12
+18:29:45-INFO: RUN 1 HAS BEEN CALLED
+18:29:45-INFO: CALL TO STEP 13
+18:29:45-INFO: RUN 1 HAS BEEN CALLED
+18:29:46-INFO: CALL TO STEP 14
+18:29:46-INFO: RUN 1 HAS BEEN CALLED
+18:29:46-INFO: CALL TO STEP 15
+18:29:46-INFO: RUN 1 HAS BEEN CALLED
+18:29:46-INFO: CALL TO STEP 16
+18:29:46-INFO: RUN 1 HAS BEEN CALLED
+18:29:46-INFO: CALL TO STEP 17
+18:29:46-INFO: RUN 1 HAS BEEN CALLED
+18:29:46-INFO: CALL TO STEP 18
+18:29:46-INFO: RUN 1 HAS BEEN CALLED
+18:29:46-INFO: CALL TO STEP 19
+18:29:46-INFO: RUN 1 HAS BEEN CALLED
+18:29:46-INFO: CALL TO STEP 20
+18:29:46-INFO: RUN 1 HAS BEEN CALLED
+18:29:46-INFO: CALL TO STEP 21
+18:29:46-INFO: RUN 1 HAS BEEN CALLED
+18:29:46-INFO: CALL TO STEP 22
+18:29:46-INFO: 1 system: [[ 1 12]]
+18:29:46-INFO: 1 prev_system: []
+18:29:46-INFO: reset lmp called
+18:29:46-DEBUG: Reaction systems: [[None]
+ [0]]
+18:29:46-DEBUG: rxn_pairs: [array([ 1, 12])]
+18:29:46-DEBUG: Starting total colors: 2
+18:29:46-DEBUG: Number of systems: 2
+18:29:46-DEBUG: New total colors: 2
+18:29:46-INFO: 0 system: []
+18:29:46-INFO: 0 prev_system: []
+18:29:46-INFO: RUN 1 HAS BEEN CALLED
+18:29:46-DEBUG: Potential energy for color 1: -31481.050404571266
+18:29:46-DEBUG: Potential energy for color 0: -31498.39761843264
+18:29:46-DEBUG: System matrix: 
+18:29:46-DEBUG: [[-3.14983976e+04  1.03881010e-04]
+ [ 1.03881010e-04 -3.14810504e+04]]
+18:29:46-DEBUG: Eigen values: 
+18:29:46-DEBUG: [-31498.39761843 -31481.05040457]
+18:29:46-DEBUG: Occupancies: 
+18:29:46-DEBUG: [1. 0.]
+18:29:46-DEBUG: Minimum Eigenvalue: -31498.39761843326
+18:29:46-DEBUG: Amplitudes: [1.00000000e+00 3.58602128e-11]
+18:29:46-DEBUG: Potential energy for color 1: -31490.205605153562
+18:29:46-DEBUG: Potential energy for color 0: -31498.471818518618
+18:29:46-DEBUG: System matrix: 
+18:29:46-DEBUG: [[-3.14984718e+04  2.05195933e-02]
+ [ 2.05195933e-02 -3.14902056e+04]]
+18:29:46-DEBUG: Eigen values: 
+18:29:46-DEBUG: [-31498.47186946 -31490.20555422]
+18:29:46-DEBUG: Occupancies: 
+18:29:46-DEBUG: [1. 0.]
+18:29:46-DEBUG: Minimum Eigenvalue: -31498.471869455014
+18:29:46-DEBUG: Amplitudes: [9.99993838e-01 6.16192274e-06]
+18:29:46-INFO: CALL TO STEP 23
+18:29:46-INFO: 1 system: [[ 1 12]]
+18:29:46-INFO: 1 prev_system: [[ 1 12]]
+18:29:46-DEBUG: Reaction systems: [[None]
+ [0]]
+18:29:46-DEBUG: rxn_pairs: [array([ 1, 12])]
+18:29:46-DEBUG: Starting total colors: 2
+18:29:46-DEBUG: Number of systems: 2
+18:29:46-DEBUG: New total colors: 2
+18:29:46-INFO: 0 system: []
+18:29:46-INFO: 0 prev_system: []
+18:29:46-INFO: RUN 1 HAS BEEN CALLED
+18:29:46-DEBUG: Potential energy for color 0: -31498.47181851861
+18:29:46-DEBUG: Potential energy for color 1: -31490.205605153547
+18:29:47-DEBUG: System matrix: 
+18:29:47-DEBUG: [[-3.14984718e+04  2.05195933e-02]
+ [ 2.05195933e-02 -3.14902056e+04]]
+18:29:47-DEBUG: Eigen values: 
+18:29:47-DEBUG: [-31498.47186946 -31490.20555422]
+18:29:47-DEBUG: Occupancies: 
+18:29:47-DEBUG: [1. 0.]
+18:29:47-DEBUG: Minimum Eigenvalue: -31498.471869455007
+18:29:47-DEBUG: Amplitudes: [9.99993838e-01 6.16192274e-06]
+18:29:47-DEBUG: Potential energy for color 0: -31498.61511838559
+18:29:47-DEBUG: Potential energy for color 1: -31493.774762012905
+18:29:47-DEBUG: System matrix: 
+18:29:47-DEBUG: [[-3.14986151e+04  2.40470843e-01]
+ [ 2.40470843e-01 -3.14937748e+04]]
+18:29:47-DEBUG: Eigen values: 
+18:29:47-DEBUG: [-31498.62703573 -31493.76284467]
+18:29:47-DEBUG: Occupancies: 
+18:29:47-DEBUG: [1. 0.]
+18:29:47-DEBUG: Minimum Eigenvalue: -31498.627035731875
+18:29:47-DEBUG: Amplitudes: [0.99754998 0.00245002]
+18:29:47-INFO: CALL TO STEP 24
+18:29:47-INFO: 1 system: [[ 1 12]]
+18:29:47-DEBUG: Reaction systems: [[None]
+ [0]]
+18:29:47-INFO: 1 prev_system: [[ 1 12]]
+18:29:47-DEBUG: rxn_pairs: [array([ 1, 12])]
+18:29:47-DEBUG: Starting total colors: 2
+18:29:47-DEBUG: Number of systems: 2
+18:29:47-DEBUG: New total colors: 2
+18:29:47-INFO: 0 system: []
+18:29:47-INFO: 0 prev_system: []
+18:29:47-INFO: RUN 1 HAS BEEN CALLED
+18:29:47-DEBUG: Potential energy for color 1: -31493.7747620129
+18:29:47-DEBUG: Potential energy for color 0: -31498.615118385598
+18:29:47-DEBUG: System matrix: 
+18:29:47-DEBUG: [[-3.14986151e+04  2.40470843e-01]
+ [ 2.40470843e-01 -3.14937748e+04]]
+18:29:47-DEBUG: Eigen values: 
+18:29:47-DEBUG: [-31498.62703573 -31493.76284467]
+18:29:47-DEBUG: Occupancies: 
+18:29:47-DEBUG: [1. 0.]
+18:29:47-DEBUG: Minimum Eigenvalue: -31498.627035731883
+18:29:47-DEBUG: Amplitudes: [0.99754998 0.00245002]
+18:29:47-DEBUG: Potential energy for color 1: -31495.67313527096
+18:29:47-DEBUG: Potential energy for color 0: -31499.5327708398
+18:29:47-DEBUG: System matrix: 
+18:29:47-DEBUG: [[-3.14995328e+04  4.11177072e-01]
+ [ 4.11177072e-01 -3.14956731e+04]]
+18:29:47-DEBUG: Eigen values: 
+18:29:47-DEBUG: [-31499.57608845 -31495.62981767]
+18:29:47-DEBUG: Occupancies: 
+18:29:47-DEBUG: [1. 0.]
+18:29:47-DEBUG: Minimum Eigenvalue: -31499.57608844504
+18:29:47-DEBUG: Amplitudes: [0.98902315 0.01097685]

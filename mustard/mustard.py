@@ -21,7 +21,6 @@ class Mustard:
         force_field_file,
         header,
         commands,
-        # once_off_cmds,
         reaction_parameters,
         # read_restart=None,  # TODO
         mpi_list=None,
@@ -134,11 +133,11 @@ class Mustard:
         self.prev_system = np.array(tuple())
         self.safe = False
         self.rebuild = True
-        # self._step(n_step=0, write=False)
         self._run_step(n_step=0, nl_update=1)
         self.msevb.step_count = 0
 
     def _reset_lmp_topology(self, lmp, frame):
+        self.log("reset lmp called", rank=-1)
         if self.universe.rank.color == 0:
             raise RuntimeError("dont do this")
         lmp.commands_list(
@@ -166,8 +165,6 @@ class Mustard:
             return
         self.log("REDISTRIBUTE CALLED")
         self.log(f"num_total_colors {num_total_colors}")
-        # if self.universe.rank.color != 0:
-        # self.lmp.command(f"run 0 pre yes post no")
         if self.universe.rank.color == 0:
             self.lmp.command(f"write_data /tmp/{self.SI.file} nocoeff")
         self.universe.global_comm.Barrier()
@@ -186,7 +183,6 @@ class Mustard:
             comm=self.universe.lmp_comm,
         )
         self.topology.set_lmp(self.lmp)
-        # self.lmp.commands_list(self.restart_commands)
         self.lmp.commands_list(
             self.restart_commands["header"] + self.restart_commands["read_data"]
         )
@@ -196,98 +192,13 @@ class Mustard:
             self.restart_commands["change_box"]
             + self.restart_commands["force_field"]
             + self.restart_commands["virial"]
+            + self.restart_commands["user"]
         )
         utils.set_box_data(self.lmp, frame.box_data)
+        utils.set_box_data(self.lmp, frame.vel)
         self.lmp.commands_list(self.restart_commands["fixes"])
         self.msevb.run = 2
         self.lmp.command("run 0 pre yes post no")
-
-    # def finite_differences(
-    #     self, file="finite_differences.out", delta=1e-3, index_array=None
-    # ):
-    #     if self.universe.me == 0:
-    #         self.Output.log(
-    #             f"Running finite differences calculating with delta {delta} to file {file}"
-    #         )
-    #     if self.universe.rank.color == 0:
-    #         self.lmp.command("run 0 pre yes post no")
-    #     frame = self._get_frame()
-    #     rxn_pairs, systems_idxs, pairs_idxs = self._get_pairinfo(
-    #         frame.pos, frame.xyz_pbc
-    #     )
-    #     if not rxn_pairs:
-    #         self.log(
-    #             (
-    #                 "Could not complete finite differences as no "
-    #                 "possible reactions were detected with starting configuration."
-    #             ),
-    #             level="warn",
-    #         )
-    #         return False
-    #     num_systems = len(systems_idxs)
-    #     if self.universe.me == 0:
-    #         self.log(f"Reaction systems: {systems_idxs}", level="debug")
-    #         self.log(f"rxn_pairs: {rxn_pairs}", level="debug")
-    #         self.log(
-    #             f"Starting total colors: {self.universe.total_colors}", level="debug"
-    #         )
-    #         self.log(f"Number of systems: {num_systems}", level="debug")
-    #     self._redistribute_EVB_states(num_systems, frame)
-    #     if self.universe.me == 0:
-    #         self.log(f"New total colors: {self.universe.total_colors}", level="debug")
-    #     self.log("START")
-    #     _, _, ref_mixed_forces, _ = self._get_mixed_properties(
-    #         rxn_pairs, systems_idxs, num_systems, frame, pairs_idxs
-    #     )
-    #     pos_orig = None
-    #     if self.universe.rank.color == 0:
-    #         pos_orig = self.get_positions()
-    #     pos_orig = self.universe.global_comm.bcast(pos_orig, root=0)
-    #     check_forces = np.zeros(shape=ref_mixed_forces.shape)
-    #     if index_array is None:
-    #         index_array = range(len(pos_orig))
-    #     if len(index_array) > len(pos_orig):
-    #         raise ValueError("Index array length is greater than number of particles")
-    #
-    #     for particle in index_array:
-    #         for coord in range(3):
-    #             self.Output.log(
-    #                 f"calculating force {particle*3 + coord + 1} / {len(pos_orig) * 3}"
-    #             )
-    #             _pos = copy(pos_orig)
-    #             _pos[particle][coord] = pos_orig[particle][coord] + delta
-    #             self.set_positions(_pos)
-    #             self.lmp.command("run 0 post no")
-    #             frame = self._get_frame(pos=_pos)
-    #             pos_m_eval, _, _, _ = self._get_mixed_properties(
-    #                 rxn_pairs, systems_idxs, num_systems, frame, pairs_idxs
-    #             )
-    #             _pos = copy(pos_orig)
-    #             _pos[particle][coord] = pos_orig[particle][coord] - delta
-    #             self.set_positions(_pos)
-    #             self.lmp.command("run 0 post no")
-    #             frame = self._get_frame(pos=_pos)
-    #             neg_m_eval, _, _, _ = self._get_mixed_properties(
-    #                 rxn_pairs, systems_idxs, num_systems, frame, pairs_idxs
-    #             )
-    #             check_forces[particle][coord] = -(pos_m_eval - neg_m_eval) / (2 * delta)
-    #
-    #     if self.universe.me == 0:
-    #         diff = ref_mixed_forces - check_forces
-    #         norm_diff = abs(diff) / abs(ref_mixed_forces)
-    #         df = pd.DataFrame(
-    #             {
-    #                 "Analytic": ref_mixed_forces.flatten(),
-    #                 "Finite_differences": check_forces.flatten(),
-    #                 "Diff": diff.flatten(),
-    #                 "Abs_diff": abs(diff).flatten(),
-    #                 "Norm_diff": norm_diff.flatten(),
-    #             }
-    #         )
-    #         df.to_csv(file, sep="\t", index=False)
-    #         self.Output.log(f"Finite differences written to {file}")
-    #     self.universe.global_comm.Barrier()
-    #     return True
 
     def identify_pairs(self):
         # self.prev_system = np.array([[None, None]])
@@ -308,6 +219,8 @@ class Mustard:
         self.log(f"New total colors: {self.universe.total_colors}", level="debug")
 
         system = self.topology.grab_system(np.intp(self.universe.rank.color))
+        self.log(f"{self.universe.rank.color} system: {system}", rank=-1)
+        self.log(f"{self.universe.rank.color} prev_system: {self.prev_system}", rank=-1)
         if len(system) != 0:
             change_topology = True
             if np.array_equal(self.prev_system, system) and self.safe:
@@ -436,6 +349,93 @@ class Mustard:
         self.Trajectory.add_trajectory(
             Trajectory.trajectory(filename, write_frequency, rxn)
         )
+
+    # def finite_differences(
+    #     self, file="finite_differences.out", delta=1e-3, index_array=None
+    # ):
+    #     if self.universe.me == 0:
+    #         self.Output.log(
+    #             f"Running finite differences calculating with delta {delta} to file {file}"
+    #         )
+    #     if self.universe.rank.color == 0:
+    #         self.lmp.command("run 0 pre yes post no")
+    #     frame = self._get_frame()
+    #     rxn_pairs, systems_idxs, pairs_idxs = self._get_pairinfo(
+    #         frame.pos, frame.xyz_pbc
+    #     )
+    #     if not rxn_pairs:
+    #         self.log(
+    #             (
+    #                 "Could not complete finite differences as no "
+    #                 "possible reactions were detected with starting configuration."
+    #             ),
+    #             level="warn",
+    #         )
+    #         return False
+    #     num_systems = len(systems_idxs)
+    #     if self.universe.me == 0:
+    #         self.log(f"Reaction systems: {systems_idxs}", level="debug")
+    #         self.log(f"rxn_pairs: {rxn_pairs}", level="debug")
+    #         self.log(
+    #             f"Starting total colors: {self.universe.total_colors}", level="debug"
+    #         )
+    #         self.log(f"Number of systems: {num_systems}", level="debug")
+    #     self._redistribute_EVB_states(num_systems, frame)
+    #     if self.universe.me == 0:
+    #         self.log(f"New total colors: {self.universe.total_colors}", level="debug")
+    #     self.log("START")
+    #     _, _, ref_mixed_forces, _ = self._get_mixed_properties(
+    #         rxn_pairs, systems_idxs, num_systems, frame, pairs_idxs
+    #     )
+    #     pos_orig = None
+    #     if self.universe.rank.color == 0:
+    #         pos_orig = self.get_positions()
+    #     pos_orig = self.universe.global_comm.bcast(pos_orig, root=0)
+    #     check_forces = np.zeros(shape=ref_mixed_forces.shape)
+    #     if index_array is None:
+    #         index_array = range(len(pos_orig))
+    #     if len(index_array) > len(pos_orig):
+    #         raise ValueError("Index array length is greater than number of particles")
+    #
+    #     for particle in index_array:
+    #         for coord in range(3):
+    #             self.Output.log(
+    #                 f"calculating force {particle*3 + coord + 1} / {len(pos_orig) * 3}"
+    #             )
+    #             _pos = copy(pos_orig)
+    #             _pos[particle][coord] = pos_orig[particle][coord] + delta
+    #             self.set_positions(_pos)
+    #             self.lmp.command("run 0 post no")
+    #             frame = self._get_frame(pos=_pos)
+    #             pos_m_eval, _, _, _ = self._get_mixed_properties(
+    #                 rxn_pairs, systems_idxs, num_systems, frame, pairs_idxs
+    #             )
+    #             _pos = copy(pos_orig)
+    #             _pos[particle][coord] = pos_orig[particle][coord] - delta
+    #             self.set_positions(_pos)
+    #             self.lmp.command("run 0 post no")
+    #             frame = self._get_frame(pos=_pos)
+    #             neg_m_eval, _, _, _ = self._get_mixed_properties(
+    #                 rxn_pairs, systems_idxs, num_systems, frame, pairs_idxs
+    #             )
+    #             check_forces[particle][coord] = -(pos_m_eval - neg_m_eval) / (2 * delta)
+    #
+    #     if self.universe.me == 0:
+    #         diff = ref_mixed_forces - check_forces
+    #         norm_diff = abs(diff) / abs(ref_mixed_forces)
+    #         df = pd.DataFrame(
+    #             {
+    #                 "Analytic": ref_mixed_forces.flatten(),
+    #                 "Finite_differences": check_forces.flatten(),
+    #                 "Diff": diff.flatten(),
+    #                 "Abs_diff": abs(diff).flatten(),
+    #                 "Norm_diff": norm_diff.flatten(),
+    #             }
+    #         )
+    #         df.to_csv(file, sep="\t", index=False)
+    #         self.Output.log(f"Finite differences written to {file}")
+    #     self.universe.global_comm.Barrier()
+    #     return True
 
     # def minimise(self, cmd_list):
     #     if self.universe.rank.color == 0:

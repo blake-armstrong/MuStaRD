@@ -7,9 +7,7 @@ LMB = 0.7998
 ZETA = 16
 
 DIST_CUTOFF = 1.8
-DIST_TAPER = 1.8
-# DIST_CUTOFF = 0.1
-# DIST_TAPER = 0.1
+DIST_TAPER = 1.7
 
 
 def get_dist(pos1, pos2, pbc):
@@ -30,12 +28,10 @@ def coupling_value_function(
     h_pos = snapshot.frame.pos[snapshot.atoms[rxn_ids["h_id"]].idx]
     x_pos = snapshot.frame.pos[snapshot.atoms[rxn_ids["x_id"]].idx]
     y_pos = snapshot.frame.pos[snapshot.atoms[rxn_ids["y_id"]].idx]
-    # print("h_pos", h_pos, "x_pos", x_pos, "y_pos", y_pos)
     rHY = get_dist(h_pos, y_pos, snapshot.frame.xyz_pbc)
     rHX = get_dist(h_pos, x_pos, snapshot.frame.xyz_pbc)
     Q = abs(rHY - rHX)
-    # print(snapshot.step, "rHY", rHY, "rHX", rHX, Q)
-    return Raiteri2011_coupling(Q)  # * MDF(rHY, DIST_TAPER, DIST_CUTOFF)
+    return Raiteri2011_coupling(Q) * MDF(rHY, DIST_TAPER, DIST_CUTOFF)
 
 
 def coupling_forces_function(rxn_ids, snapshot, computes, forces):
@@ -56,11 +52,10 @@ def coupling_forces_function(rxn_ids, snapshot, computes, forces):
     Q = abs(drHYHX)
     cpl = Raiteri2011_coupling(Q)
     taper = MDF(rHY, DIST_TAPER, DIST_CUTOFF)
-    taper = 1
     taper_derivative = 0
-    # if rHY < DIST_CUTOFF and rHY > DIST_TAPER:
-    #     _dHY = dHY.flatten()
-    #     taper_derivative = dMDF(_dHY[0], _dHY[1], _dHY[2], DIST_TAPER, DIST_CUTOFF)
+    if rHY < DIST_CUTOFF and rHY > DIST_TAPER:
+        _dHY = dHY.flatten()
+        taper_derivative = dMDF(_dHY[0], _dHY[1], _dHY[2], DIST_TAPER, DIST_CUTOFF)
     prefactor = -2 * ZETA * cpl * drHYHX
     derivHY = prefactor * (dHY.flatten() / rHY) * taper + taper_derivative * cpl
     derivHX = prefactor * -(dHX.flatten() / rHX) * taper
@@ -70,9 +65,6 @@ def coupling_forces_function(rxn_ids, snapshot, computes, forces):
     cpl_forces[y_idx] -= fHY
     cpl_forces[h_idx] += fHX
     cpl_forces[x_idx] -= fHX
-    # print(snapshot.step, "cpl_forces h", cpl_forces[h_idx])
-    # print(snapshot.step, "cpl_forces x", cpl_forces[x_idx])
-    # print(snapshot.step, "cpl_forces y", cpl_forces[y_idx])
     return cpl_forces
 
 
@@ -145,7 +137,6 @@ def main():
         ],
     }
 
-    # msevb = mustard.Mustard(lmp_coord_file, force_field_file, coupling_function, header, commands, INPUTS, msevb_mpi_ranks=[11,11,11,11])
     msevb = Mustard(
         lmp_coord_file,
         force_field_file,
@@ -153,12 +144,11 @@ def main():
         commands,
         INPUTS,
         debug=True,
-        mpi_list=[1, 1],
-        # msevb_mpi_ranks=[1, 1],
+        mpi_list=[8, 6, 1, 1],
     )
-    msevb.add_trajectory(filename="trajectory.dcd", write_frequency=1)
+    msevb.add_trajectory(filename="trajectory.dcd", write_frequency=50)
     msevb.add_trajectory(filename="reaction.xyz", write_frequency=50, rxn=True)
-    msevb.add_output(filename=None, properties=["temp", "pe", "ke"], write_frequency=1)
+    msevb.add_output(filename=None, properties=["temp", "pe", "ke"], write_frequency=25)
     msevb.add_output(
         filename="mustard.log",
         properties=["temp", "pe", "ke"],

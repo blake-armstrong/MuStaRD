@@ -4,6 +4,7 @@ from .topology import Topology
 from .io import SystemInfo
 from .mpi import Universe
 from . import utils
+from copy import copy
 
 
 class MSEVB:
@@ -40,6 +41,7 @@ class MSEVB:
     def callback_none(self, lmp, ntimestep, nlocal, tag, x, f):
         new_forces = lmp.numpy.fix_external_get_force("ext")
         current_forces = utils.get_forces(lmp)
+        current_forces[:, :] = self.universe.global_comm.bcast(current_forces, root=0)
         idxs = self.topology.id_to_idx(tag)
         total_x, total_v = self.sync_x_v(lmp, current_forces.shape, x, idxs)
         self.frame(lmp, pos=total_x, vel=total_v, forces=current_forces)
@@ -50,13 +52,14 @@ class MSEVB:
 
     def callback(self, lmp, ntimestep, nlocal, tag, x, f):
         # grab the numpified fexternal array
+        tag1 = copy(tag)
         new_forces = lmp.numpy.fix_external_get_force("ext")
         current_forces = utils.get_forces(lmp)
         idxs = self.topology.id_to_idx(tag)
         total_x, total_v = self.sync_x_v(lmp, current_forces.shape, x, idxs)
         pe = lmp.extract_compute("get_pe", 0, 0)
         if self.universe.sub_rank == 0:
-            self.log(f"Forces: {current_forces}", level="debug", rank=-1)
+            # self.log(f"Forces: {current_forces}", level="debug", rank=-1)
             self.log(
                 f"Potential energy for color {self.universe.rank.color}: {pe}",
                 level="debug",
@@ -144,6 +147,7 @@ class MSEVB:
             mixed_virial = np.einsum("ij,i->j", virials, amplitudes)
         self.min_state_idx = min_state_idx
         self.min_eval = min_eval
+        ids = lmp.numpy.extract_atom("id")
         if len(idxs) > 0:
             new_forces[:, :] = mixed_forces[idxs]
         # TODO: deal with virial/pressure later

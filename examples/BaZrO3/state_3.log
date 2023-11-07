@@ -22,7 +22,7 @@ Finding 1-2 1-3 1-4 neighbors ...
      0 = max # of 1-4 neighbors
      1 = max # of special neighbors
   special bonds CPU = 0.000 seconds
-  read_data CPU = 0.008 seconds
+  read_data CPU = 0.006 seconds
 change_box all triclinic
 Changing box ...
   triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
@@ -191,18 +191,23 @@ pair_coeff      *      *  coul/long
 
 kspace_style pppm 1.0e-5
 kspace_modify fftbench no
-kspace_modify gewald 0.34497565
+# kspace_modify gewald 0.34497565
+
+fix md all nve
+fix tst all temp/csvr 1500 1500 0.1 41133
+timestep 0.001
+velocity all create 1500 92983 mom yes dist gaussian
+fix com all momentum 100 linear 1 1 1
 
 run 0 post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
 WARNING: System is not charge neutral, net charge = 1 (src/kspace.cpp:327)
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
@@ -230,8 +235,8 @@ Neighbor list info ...
       bin: standard
 Per MPI rank memory allocation (min/avg/max) = 21.19 | 21.19 | 21.19 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-         0   0             -31399.552      3.129277      -31396.423     -15075.469    
-Loop time of 1.382e-06 on 1 procs for 0 steps with 1081 atoms
+         0   1500          -31399.552      3.129277      -31187.022     -1295.1558    
+Loop time of 1.232e-06 on 1 procs for 0 steps with 1081 atoms
 
 fix ux all store/state 1 xu yu zu
 fix ext all external pf/callback 1 1
@@ -240,972 +245,85 @@ fix_modify ext virial no
 compute get_pe all pe
 
 run 0 post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-         0   0             -31399.552      3.129277      -31396.423     -15075.469    
-Loop time of 1.322e-06 on 1 procs for 0 steps with 1081 atoms
+         0   1500          -31399.552      3.129277      -31187.022     -1295.1558    
+Loop time of 1.011e-06 on 1 procs for 0 steps with 1081 atoms
 
 run 0 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-         0   0             -31399.552      3.129277      -31396.423     -15075.469    
-Loop time of 1.082e-06 on 1 procs for 0 steps with 1081 atoms
+         0   1500          -31399.552      3.129277      -31187.022     -1295.1558    
+Loop time of 1.083e-06 on 1 procs for 0 steps with 1081 atoms
 
 run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-         0   0             -31399.552      3.129277      -31396.423     -15075.469    
-         1   0             -31399.552      3.129277      -31396.423     -15075.469    
-Loop time of 0.0394062 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         1   0             -31401.49       4.1556497     -31397.334     -15452.491    
-         2   0             -31401.49       4.1556497     -31397.334     -15452.491    
-Loop time of 0.0390479 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         2   0             -31407.73       3.5935088     -31404.137     -16261.035    
-         3   0             -31407.73       3.5935088     -31404.137     -16261.035    
-Loop time of 0.0387083 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         3   0             -31416.608      1.0312129     -31415.577     -17304.404    
-         4   0             -31416.608      1.0312129     -31415.577     -17304.404    
-Loop time of 0.0394589 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         4   0             -31428.104      0.68188239    -31427.422     -18964.715    
-         5   0             -31428.104      0.68188239    -31427.422     -18964.715    
-Loop time of 0.0400068 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         5   0             -31441.19       1.9114078     -31439.279     -20915.094    
-         6   0             -31441.19       1.9114078     -31439.279     -20915.094    
-Loop time of 0.0400742 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         6   0             -31454.932      1.5000404     -31453.432     -22883.972    
-         7   0             -31454.932      1.5000404     -31453.432     -22883.972    
-Loop time of 0.0390004 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         7   0             -31468.488      0.31701619    -31468.171     -24672.365    
-         8   0             -31468.488      0.31701619    -31468.171     -24672.365    
-Loop time of 0.0393444 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         8   0             -31481.394      0.18855252    -31481.206     -26291.86     
-         9   0             -31481.394      0.18855252    -31481.206     -26291.86     
-Loop time of 0.0392233 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         9   0             -31492.877      0.52074847    -31492.356     -27668.002    
-        10   0             -31492.877      0.52074847    -31492.356     -27668.002    
-Loop time of 0.0394168 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        10   0             -31501.244      2.3432269     -31498.9       -28305.418    
-        11   0             -31501.244      2.3432269     -31498.9       -28305.418    
-Loop time of 0.0402521 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        11   0             -31508.779      1.9732869     -31506.806     -29358.542    
-        12   0             -31508.779      1.9732869     -31506.806     -29358.542    
-Loop time of 0.0396562 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        12   0             -31512.435      0.39024018    -31512.045     -29421.699    
-        13   0             -31512.435      0.39024018    -31512.045     -29421.699    
-Loop time of 0.0404088 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        13   0             -31513.623      3.6069899e-05 -31513.623     -29001.423    
-        14   0             -31513.623      3.6069899e-05 -31513.623     -29001.423    
-Loop time of 0.0394448 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        14   0             -31513.623      3.6069899e-05 -31513.623     -29001.423    
-        15   0             -31513.111      0.087825028   -31513.023     -28407.23     
-Loop time of 0.0376661 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        15   0             -31513.111      0.087825028   -31513.023     -28407.23     
-        16   0             -31511.262      0.027000744   -31511.235     -27734.397    
-Loop time of 0.0388932 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        16   0             -31508.506      0.078619228   -31508.427     -27055.786    
-        17   0             -31508.506      0.078619228   -31508.427     -27055.786    
-Loop time of 0.0367755 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        17   0             -31508.506      0.078619228   -31508.427     -27055.786    
-        18   0             -31505.317      0.5844268     -31504.733     -26406.114    
-Loop time of 0.0373665 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        18   0             -31505.317      0.5844268     -31504.733     -26406.114    
-        19   0             -31502.035      1.0579402     -31500.977     -25747.198    
-Loop time of 0.0645531 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        19   0             -31502.035      1.0579402     -31500.977     -25747.198    
-        20   0             -31498.986      0.85377756    -31498.132     -25058.796    
-Loop time of 0.0420092 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        20   0             -31496.575      0.21993856    -31496.355     -24418.484    
-        21   0             -31496.575      0.21993856    -31496.355     -24418.484    
-Loop time of 0.038868 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        21   0             -31496.575      0.21993856    -31496.355     -24418.484    
-        22   0             -31495.141      0.024702567   -31495.117     -23971.956    
-Loop time of 0.0394655 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        22   0             -31495.141      0.024702567   -31495.117     -23971.956    
-        23   0             -31494.753      0.44891787    -31494.304     -23825.913    
-Loop time of 0.0392726 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        23   0             -31494.753      0.44891787    -31494.304     -23825.913    
-        24   0             -31495.33       0.61751139    -31494.712     -23997.312    
-Loop time of 0.0392497 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        24   0             -31496.788      0.14006738    -31496.648     -24472.422    
-        25   0             -31496.788      0.14006738    -31496.648     -24472.422    
-Loop time of 0.0396506 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        25   0             -31496.788      0.14006738    -31496.648     -24472.422    
-        26   0             -31498.916      0.18971237    -31498.726     -25237.282    
-Loop time of 0.0390331 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        26   0             -31498.916      0.18971237    -31498.726     -25237.282    
-        27   0             -31501.158      1.6404893     -31499.518     -26165.054    
-Loop time of 0.0393688 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        27   0             -31501.158      1.6404893     -31499.518     -26165.054    
-        28   0             -31503.177      4.9023968     -31498.275     -27190.368    
-Loop time of 0.0388294 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        28   0             -31504.476      3.7760809     -31500.7       -27771        
-        29   0             -31504.476      3.7760809     -31500.7       -27771        
-Loop time of 0.0392878 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        29   0             -31504.476      3.7760809     -31500.7       -27771        
-        30   0             -31504.905      0.91701148    -31503.988     -27905.554    
-Loop time of 0.0399163 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        30   0             -31504.905      0.91701148    -31503.988     -27905.554    
-        31   0             -31504.814      0.040627192   -31504.773     -28002.441    
-Loop time of 0.039891 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        31   0             -31504.814      0.040627192   -31504.773     -28002.441    
-        32   0             -31504.38       1.101233      -31503.279     -28242.875    
-Loop time of 0.0370643 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        32   0             -31503.697      1.2857573     -31502.411     -28594.218    
-        33   0             -31503.697      1.2857573     -31502.411     -28594.218    
-Loop time of 0.0373696 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        33   0             -31503.697      1.2857573     -31502.411     -28594.218    
-        34   0             -31502.78       0.17913371    -31502.601     -29042.615    
-Loop time of 0.0376946 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        34   0             -31502.78       0.17913371    -31502.601     -29042.615    
-        35   0             -31501.684      0.44152969    -31501.243     -29643.996    
-Loop time of 0.0371288 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        35   0             -31501.684      0.44152969    -31501.243     -29643.996    
-        36   0             -31500.49       2.4374954     -31498.053     -30265.696    
-Loop time of 0.0379801 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        36   0             -31499.166      3.3995173     -31495.766     -30615.613    
-        37   0             -31499.166      3.3995173     -31495.766     -30615.613    
-Loop time of 0.0390168 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        37   0             -31499.166      3.3995173     -31495.766     -30615.613    
-        38   0             -31497.753      1.9018411     -31495.851     -30571.052    
-Loop time of 0.037827 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        38   0             -31497.753      1.9018411     -31495.851     -30571.052    
-        39   0             -31496.523      0.13491213    -31496.389     -30342.797    
-Loop time of 0.037683 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        39   0             -31496.523      0.13491213    -31496.389     -30342.797    
-        40   0             -31495.703      0.54094728    -31495.162     -30229.2      
-Loop time of 0.0368374 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        40   0             -31495.289      1.9743065     -31493.315     -30300.245    
-        41   0             -31495.289      1.9743065     -31493.315     -30300.245    
-Loop time of 0.0383138 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        41   0             -31495.289      1.9743065     -31493.315     -30300.245    
-        42   0             -31495.197      1.7045424     -31493.492     -30460.121    
-Loop time of 0.0403343 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        42   0             -31495.197      1.7045424     -31493.492     -30460.121    
-        43   0             -31495.305      0.25235233    -31495.053     -30705.128    
-Loop time of 0.039438 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        43   0             -31495.305      0.25235233    -31495.053     -30705.128    
-        44   0             -31495.487      0.34558016    -31495.141     -31069.943    
-Loop time of 0.037041 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        44   0             -31495.625      2.0644049     -31493.56      -31383.44     
-        45   0             -31495.625      2.0644049     -31493.56      -31383.44     
-Loop time of 0.0368399 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        45   0             -31495.625      2.0644049     -31493.56      -31383.44     
-        46   0             -31495.569      2.6953949     -31492.873     -31333.793    
-Loop time of 0.0372563 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        46   0             -31495.569      2.6953949     -31492.873     -31333.793    
-        47   0             -31495.196      1.2385735     -31493.957     -30823.875    
-Loop time of 0.0381396 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        47   0             -31495.196      1.2385735     -31493.957     -30823.875    
-        48   0             -31494.497      0.010479891   -31494.487     -30090.56     
-Loop time of 0.0374257 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        48   0             -31493.51       0.81181335    -31492.698     -29420.028    
-        49   0             -31493.51       0.81181335    -31492.698     -29420.028    
-Loop time of 0.0371294 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        49   0             -31493.51       0.81181335    -31492.698     -29420.028    
-        50   0             -31492.313      1.9203874     -31490.393     -28885.461    
-Loop time of 0.038043 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        50   0             -31492.313      1.9203874     -31490.393     -28885.461    
-        51   0             -31491.068      1.1877819     -31489.88      -28467.71     
-Loop time of 0.0382785 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        51   0             -31491.068      1.1877819     -31489.88      -28467.71     
-        52   0             -31489.96       0.029864724   -31489.93      -28254.131    
-Loop time of 0.0378111 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        52   0             -31489.131      0.81113937    -31488.32      -28295.476    
-        53   0             -31489.131      0.81113937    -31488.32      -28295.476    
-Loop time of 0.0372975 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        53   0             -31489.131      0.81113937    -31488.32      -28295.476    
-        54   0             -31488.642      2.6096722     -31486.032     -28400.088    
-Loop time of 0.0373789 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        54   0             -31488.642      2.6096722     -31486.032     -28400.088    
-        55   0             -31488.527      2.6516654     -31485.875     -28300.682    
-Loop time of 0.0383192 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        55   0             -31488.527      2.6516654     -31485.875     -28300.682    
-        56   0             -31488.835      0.87409837    -31487.961     -28001.621    
-Loop time of 0.0372377 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        56   0             -31489.622      0.018418649   -31489.604     -27782.939    
-        57   0             -31489.622      0.018418649   -31489.604     -27782.939    
-Loop time of 0.0391459 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        57   0             -31489.622      0.018418649   -31489.604     -27782.939    
-        58   0             -31490.926      1.1550511     -31489.771     -27856.362    
-Loop time of 0.0404157 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        58   0             -31490.926      1.1550511     -31489.771     -27856.362    
-        59   0             -31492.664      2.0419976     -31490.622     -28182.934    
-Loop time of 0.0375762 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        59   0             -31492.664      2.0419976     -31490.622     -28182.934    
-        60   0             -31494.674      1.0751952     -31493.599     -28665.186    
-Loop time of 0.0374987 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        60   0             -31496.802      0.010423816   -31496.792     -29305.574    
-        61   0             -31496.802      0.010423816   -31496.792     -29305.574    
-Loop time of 0.0369552 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        61   0             -31496.802      0.010423816   -31496.792     -29305.574    
-        62   0             -31498.9        0.86842362    -31498.031     -30048.163    
-Loop time of 0.0401108 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        62   0             -31498.9        0.86842362    -31498.031     -30048.163    
-        63   0             -31500.645      2.5798054     -31498.065     -30631.017    
-Loop time of 0.0620362 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        63   0             -31500.645      2.5798054     -31498.065     -30631.017    
-        64   0             -31501.602      2.6484555     -31498.953     -30756.944    
-Loop time of 0.0387591 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        64   0             -31501.599      1.0765411     -31500.522     -30414.933    
-        65   0             -31501.599      1.0765411     -31500.522     -30414.933    
-Loop time of 0.0400468 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        65   0             -31501.599      1.0765411     -31500.522     -30414.933    
-        66   0             -31500.695      0.0021767329  -31500.693     -29802.958    
-Loop time of 0.037666 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        66   0             -31500.695      0.0021767329  -31500.693     -29802.958    
-        67   0             -31499.044      0.79962533    -31498.244     -29165.942    
-Loop time of 0.0377176 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        67   0             -31499.044      0.79962533    -31498.244     -29165.942    
-        68   0             -31496.78       1.8082923     -31494.972     -28565.066    
-Loop time of 0.0385383 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        68   0             -31494.07       1.1758077     -31492.894     -27990.213    
-        69   0             -31494.07       1.1758077     -31492.894     -27990.213    
-Loop time of 0.0381302 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        69   0             -31494.07       1.1758077     -31492.894     -27990.213    
-        70   0             -31491.102      0.052278257   -31491.05      -27533.744    
-Loop time of 0.0376787 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        70   0             -31491.102      0.052278257   -31491.05      -27533.744    
-        71   0             -31488.013      0.66301008    -31487.35      -27273.577    
-Loop time of 0.0376583 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        71   0             -31488.013      0.66301008    -31487.35      -27273.577    
-        72   0             -31484.888      2.3964888     -31482.491     -27069.418    
-Loop time of 0.0630732 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        72   0             -31481.884      2.6242016     -31479.26      -26689.241    
-        73   0             -31481.884      2.6242016     -31479.26      -26689.241    
-Loop time of 0.0402124 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        73   0             -31481.884      2.6242016     -31479.26      -26689.241    
-        74   0             -31479.171      0.9910928     -31478.18      -26139.583    
-Loop time of 0.0373462 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        74   0             -31479.171      0.9910928     -31478.18      -26139.583    
-        75   0             -31476.898      0.0005301314  -31476.898     -25704.485    
-Loop time of 0.0376551 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        75   0             -31476.898      0.0005301314  -31476.898     -25704.485    
-        76   0             -31475.241      0.88037687    -31474.361     -25628.873    
-Loop time of 0.0370265 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        76   0             -31474.342      1.6813485     -31472.661     -25916.521    
-        77   0             -31474.342      1.6813485     -31472.661     -25916.521    
-Loop time of 0.0381359 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        77   0             -31474.342      1.6813485     -31472.661     -25916.521    
-        78   0             -31474.213      0.83220183    -31473.381     -26492.61     
-Loop time of 0.0371861 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        78   0             -31474.213      0.83220183    -31473.381     -26492.61     
-        79   0             -31474.696      0.0011204421  -31474.695     -27363.264    
-Loop time of 0.0607636 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        79   0             -31474.696      0.0011204421  -31474.695     -27363.264    
-        80   0             -31475.456      1.1871529     -31474.269     -28454.625    
-Loop time of 0.0405327 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        80   0             -31476.072      3.1114523     -31472.961     -29459.933    
-        81   0             -31476.072      3.1114523     -31472.961     -29459.933    
-Loop time of 0.0395545 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        81   0             -31476.072      3.1114523     -31472.961     -29459.933    
-        82   0             -31476.552      5.0579304     -31471.494     -30310.071    
-Loop time of 0.0389795 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        82   0             -31476.552      5.0579304     -31471.494     -30310.071    
-        83   0             -31476.206      3.0009841     -31473.205     -30472.147    
-Loop time of 0.0397384 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        83   0             -31476.206      3.0009841     -31473.205     -30472.147    
-        84   0             -31475.171      0.73277591    -31474.438     -30366.625    
-Loop time of 0.0398161 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        84   0             -31473.794      0.36293314    -31473.431     -30342.735    
-        85   0             -31473.794      0.36293314    -31473.431     -30342.735    
-Loop time of 0.0398803 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        85   0             -31473.794      0.36293314    -31473.431     -30342.735    
-        86   0             -31471.958      1.1798107     -31470.778     -30288.936    
-Loop time of 0.0402735 on 1 procs for 1 steps with 1081 atoms
+         0   1500          -31399.552      3.129277      -31187.022     -1295.1558    
+         1   1493.4753     -31399.492      3.173201      -31187.828     -1412.1227    
+Loop time of 0.0265719 on 1 procs for 1 steps with 1081 atoms
 
 run 0 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-        86   0             -31469.203      3.3806973     -31465.822     -29976.493    
-Loop time of 1.402e-06 on 1 procs for 0 steps with 1081 atoms
+         1   1493.4753     -31399.492      3.173201      -31187.828     -1412.1227    
+Loop time of 1.442e-06 on 1 procs for 0 steps with 1081 atoms
 
 run 0 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-        86   0             -31469.203      3.3806973     -31465.822     -29976.493    
-Loop time of 1.082e-06 on 1 procs for 0 steps with 1081 atoms
+         1   1493.4753     -31399.492      3.173201      -31187.828     -1412.1227    
+Loop time of 1.062e-06 on 1 procs for 0 steps with 1081 atoms
 
 clear
 OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (src/comm.cpp:98)
@@ -1213,7 +331,7 @@ OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (src/comm.cpp:98
 units metal
 atom_style full
 boundary p p p
-read_data /tmp/mustard.640189c1f8674eabab74225cc7efa77b
+read_data /tmp/mustard.d77df68586b247abb8f15194cc6da8e2
 Reading data file ...
   triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
   1 by 1 by 1 MPI processor grid
@@ -1233,7 +351,7 @@ Finding 1-2 1-3 1-4 neighbors ...
      0 = max # of 1-4 neighbors
      1 = max # of special neighbors
   special bonds CPU = 0.000 seconds
-  read_data CPU = 0.010 seconds
+  read_data CPU = 0.007 seconds
 
 change_box all triclinic
 Changing box ...
@@ -1403,7 +521,12 @@ pair_coeff      *      *  coul/long
 
 kspace_style pppm 1.0e-5
 kspace_modify fftbench no
-kspace_modify gewald 0.34497565
+# kspace_modify gewald 0.34497565
+fix md all nve
+fix tst all temp/csvr 1500 1500 0.1 41133
+timestep 0.001
+velocity all create 1500 92983 mom yes dist gaussian
+fix com all momentum 100 linear 1 1 1
 
 change_box all x final 0.0 25.319 y final 0.0 25.319 z final 0.0 25.319 xy final 0.0 xz final 0.0 yz final 0.0
 Changing box ...
@@ -1420,15 +543,14 @@ fix_modify ext virial no
 compute get_pe all pe
 
 run 0 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
 WARNING: System is not charge neutral, net charge = 1 (src/kspace.cpp:327)
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
@@ -1456,1856 +578,396 @@ Neighbor list info ...
       bin: standard
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-         0   1086.8206     -31467.628      0.42613397    -31315.481     -20010.095    
-Loop time of 1.362e-06 on 1 procs for 0 steps with 1081 atoms
+         0   1501.3983     -31401.501      4.4563562     -31187.448     -1498.3993    
+Loop time of 1.283e-06 on 1 procs for 0 steps with 1081 atoms
 
 run 0 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-         0   1086.8206     -31467.628      0.42613397    -31315.481     -20010.095    
-Loop time of 1.211e-06 on 1 procs for 0 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         0   1086.8206     -31467.628      0.42613397    -31315.481     -20010.095    
-         1   1086.8206     -31467.628      0.42613397    -31315.481     -20010.095    
-Loop time of 0.0391064 on 1 procs for 1 steps with 1081 atoms
-
-run 0 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         1   1086.8206     -31465.003      0.67138298    -31312.61      -19573.368    
-Loop time of 2.193e-06 on 1 procs for 0 steps with 1081 atoms
-
-run 0 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         1   1086.8206     -31465.003      0.67138298    -31312.61      -19573.368    
-Loop time of 1.353e-06 on 1 procs for 0 steps with 1081 atoms
-
-clear
-OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (src/comm.cpp:98)
-  using 1 OpenMP thread(s) per MPI task
-units metal
-atom_style full
-boundary p p p
-read_data /tmp/mustard.640189c1f8674eabab74225cc7efa77b
-Reading data file ...
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-  1 by 1 by 1 MPI processor grid
-  reading atoms ...
-  1081 atoms
-  reading velocities ...
-  1081 velocities
-  scanning bonds ...
-  1 = max bonds/atom
-  reading bonds ...
-  1 bonds
-Finding 1-2 1-3 1-4 neighbors ...
-  special bond factors lj:    0        0        0       
-  special bond factors coul:  0        0        0       
-     1 = max # of 1-2 neighbors
-     0 = max # of 1-3 neighbors
-     0 = max # of 1-4 neighbors
-     1 = max # of special neighbors
-  special bonds CPU = 0.000 seconds
-  read_data CPU = 0.011 seconds
-
-change_box all triclinic
-Changing box ...
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-include ff.lmp
-##############################################################################################
-#### Atoms' types - mass - charge
-##############################################################################################
-#@ 7   atom types
-
-variable Ba  equal 1
-variable Zr  equal 2
-variable  Y  equal 3
-variable O1  equal 4
-variable O2  equal 5
-variable O3  equal 6
-variable H1  equal 7
-
-##############################################################################################
-#### Atoms' masses
-##############################################################################################
-
-mass  ${Ba}   137.327
-mass  1   137.327
-mass  ${Zr}    91.224
-mass  2    91.224
-mass  ${Y}     88.910
-mass  3     88.910
-mass  ${O1}    15.996
-mass  4    15.996
-mass  ${O2}    15.996
-mass  5    15.996
-mass  ${O3}    15.996
-mass  6    15.996
-mass  ${H1}     1.008
-mass  7     1.008
-
-##############################################################################################
-#### Atoms' charges
-##############################################################################################
-
-set type ${Ba}  charge     2.000000
-set type 1  charge     2.000000
-Setting atom values ...
-  216 settings made for charge
-set type ${Zr}  charge     4.000000
-set type 2  charge     4.000000
-Setting atom values ...
-  216 settings made for charge
-set type ${Y}   charge     3.000000
-set type 3   charge     3.000000
-Setting atom values ...
-  0 settings made for charge
-set type ${O1}  charge    -1.308698
-set type 4  charge    -1.308698
-Setting atom values ...
-  1 settings made for charge
-set type ${O2}  charge    -2.000000
-set type 5  charge    -2.000000
-Setting atom values ...
-  647 settings made for charge
-set type ${O3}  charge    -2.000000
-set type 6  charge    -2.000000
-Setting atom values ...
-  0 settings made for charge
-set type ${H1}  charge     0.308698
-set type 7  charge     0.308698
-Setting atom values ...
-  1 settings made for charge
-
-##############################################################################################
-#### Covalent bonds parameters
-##############################################################################################
-#@  1   bond types
-
-bond_style harmonic
-#@ O1 - H1
-# bond_coeff   1      11.504000      0.985357
-bond_coeff   1      23.008000      0.985357
-
-##############################################################################################
-# Pair potentials
-##############################################################################################
-
-variable rmin  equal  8.
-variable rmax  equal 10.
-
-pair_style hybrid/overlay buck/mdf ${rmin} ${rmax} lennard/mdf ${rmin} ${rmax} coul/long ${rmax}
-pair_style hybrid/overlay buck/mdf 8 ${rmax} lennard/mdf ${rmin} ${rmax} coul/long ${rmax}
-pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf ${rmin} ${rmax} coul/long ${rmax}
-pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf 8 ${rmax} coul/long ${rmax}
-pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf 8 10 coul/long ${rmax}
-pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf 8 10 coul/long 10
-
-##############################################################################################
-# Buckingham interaction potentials
-pair_coeff  ${Ba}  ${O1}  buck/mdf   688.21662   0.392014   0.000
-pair_coeff  1  ${O1}  buck/mdf   688.21662   0.392014   0.000
-pair_coeff  1  4  buck/mdf   688.21662   0.392014   0.000
-pair_coeff  ${Ba}  ${O2}  buck/mdf   972.19945   0.392014   0.000
-pair_coeff  1  ${O2}  buck/mdf   972.19945   0.392014   0.000
-pair_coeff  1  5  buck/mdf   972.19945   0.392014   0.000
-pair_coeff  ${Ba}  ${O3}  buck/mdf   972.19945   0.392014   0.000
-pair_coeff  1  ${O3}  buck/mdf   972.19945   0.392014   0.000
-pair_coeff  1  6  buck/mdf   972.19945   0.392014   0.000
-
-pair_coeff  ${Y}   ${O1}  buck/mdf   2972.3808   0.267317   0.000
-pair_coeff  3   ${O1}  buck/mdf   2972.3808   0.267317   0.000
-pair_coeff  3   4  buck/mdf   2972.3808   0.267317   0.000
-pair_coeff  ${Y}   ${O2}  buck/mdf   4121.8373   0.280386   0.000
-pair_coeff  3   ${O2}  buck/mdf   4121.8373   0.280386   0.000
-pair_coeff  3   5  buck/mdf   4121.8373   0.280386   0.000
-pair_coeff  ${Y}   ${O3}  buck/mdf   4121.8373   0.280386   0.000
-pair_coeff  3   ${O3}  buck/mdf   4121.8373   0.280386   0.000
-pair_coeff  3   6  buck/mdf   4121.8373   0.280386   0.000
-
-pair_coeff  ${Zr}  ${O1}  buck/mdf   2195.8712   0.298760   0.000
-pair_coeff  2  ${O1}  buck/mdf   2195.8712   0.298760   0.000
-pair_coeff  2  4  buck/mdf   2195.8712   0.298760   0.000
-pair_coeff  ${Zr}  ${O2}  buck/mdf   3250.8545   0.298760   0.000
-pair_coeff  2  ${O2}  buck/mdf   3250.8545   0.298760   0.000
-pair_coeff  2  5  buck/mdf   3250.8545   0.298760   0.000
-pair_coeff  ${Zr}  ${O3}  buck/mdf   3250.8545   0.298760   0.000
-pair_coeff  2  ${O3}  buck/mdf   3250.8545   0.298760   0.000
-pair_coeff  2  6  buck/mdf   3250.8545   0.298760   0.000
-
-pair_coeff  ${O1}  ${O1}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  4  ${O1}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  4  4  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  ${O1}  ${O2}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  4  ${O2}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  4  5  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  ${O1}  ${O3}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  4  ${O3}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  4  6  buck/mdf   22764.000   0.149000   0.000
-
-pair_coeff  ${O2}  ${O2}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  5  ${O2}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  5  5  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  ${O2}  ${O3}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  5  ${O3}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  5  6  buck/mdf   22764.000   0.149000   0.000
-
-pair_coeff  ${O3}  ${O3}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  6  ${O3}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  6  6  buck/mdf   22764.000   0.149000   0.000
-
-##############################################################################################
-# 12-6 Lennard-Jones potentials
-pair_coeff  ${O1}  ${H1}  lennard/mdf    6.391   0.000
-pair_coeff  4  ${H1}  lennard/mdf    6.391   0.000
-pair_coeff  4  7  lennard/mdf    6.391   0.000
-pair_coeff  ${O2}  ${H1}  lennard/mdf    6.391   0.000
-pair_coeff  5  ${H1}  lennard/mdf    6.391   0.000
-pair_coeff  5  7  lennard/mdf    6.391   0.000
-pair_coeff  ${O3}  ${H1}  lennard/mdf    7.800   0.000
-pair_coeff  6  ${H1}  lennard/mdf    7.800   0.000
-pair_coeff  6  7  lennard/mdf    7.800   0.000
-
-##############################################################################################
-# Coulombic interaction
-pair_coeff      *      *  coul/long
-
-#########################################################################################################
-# Parameters for reciprocal space electrostatics
-#########################################################################################################
-
-kspace_style pppm 1.0e-5
-kspace_modify fftbench no
-kspace_modify gewald 0.34497565
-
-change_box all x final 0.0 25.319 y final 0.0 25.319 z final 0.0 25.319 xy final 0.0 xz final 0.0 yz final 0.0
-Changing box ...
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-fix ux all store/state 1 xu yu zu
-fix ext all external pf/callback 1 1
-fix_modify ext energy no
-fix_modify ext virial no
-compute get_pe all pe
-
-run 0 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-WARNING: System is not charge neutral, net charge = 1 (src/kspace.cpp:327)
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Neighbor list info ...
-  update: every = 1 steps, delay = 0 steps, check = yes
-  max neighbors/atom: 2000, page size: 100000
-  master list distance cutoff = 12
-  ghost atom cutoff = 12
-  binsize = 6, bins = 5 5 5
-  3 neighbor lists, perpetual/occasional/extra = 3 0 0
-  (1) pair buck/mdf, perpetual, skip from (3)
-      attributes: half, newton on
-      pair build: skip
-      stencil: none
-      bin: none
-  (2) pair lennard/mdf, perpetual, skip from (3)
-      attributes: half, newton on
-      pair build: skip
-      stencil: none
-      bin: none
-  (3) pair coul/long, perpetual
-      attributes: half, newton on
-      pair build: half/bin/newton/tri
-      stencil: half/bin/3d/tri
-      bin: standard
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         0   1081.0998     -31467.029      4.8266925     -31311.28      -19921.295    
-Loop time of 1.352e-06 on 1 procs for 0 steps with 1081 atoms
-
-run 0 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         0   1081.0998     -31467.029      4.8266925     -31311.28      -19921.295    
-Loop time of 7.92e-07 on 1 procs for 0 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         0   1081.0998     -31467.029      4.8266925     -31311.28      -19921.295    
-         1   1081.0998     -31467.029      4.8266925     -31311.28      -19921.295    
-Loop time of 0.0394326 on 1 procs for 1 steps with 1081 atoms
-
-run 0 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         1   1081.0998     -31464.677      2.9858901     -31310.769     -19320.721    
-Loop time of 1.202e-06 on 1 procs for 0 steps with 1081 atoms
-
-run 0 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         1   1081.0998     -31464.677      2.9858901     -31310.769     -19320.721    
-Loop time of 1.293e-06 on 1 procs for 0 steps with 1081 atoms
-
-clear
-OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (src/comm.cpp:98)
-  using 1 OpenMP thread(s) per MPI task
-units metal
-atom_style full
-boundary p p p
-read_data /tmp/mustard.640189c1f8674eabab74225cc7efa77b
-Reading data file ...
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-  1 by 1 by 1 MPI processor grid
-  reading atoms ...
-  1081 atoms
-  reading velocities ...
-  1081 velocities
-  scanning bonds ...
-  1 = max bonds/atom
-  reading bonds ...
-  1 bonds
-Finding 1-2 1-3 1-4 neighbors ...
-  special bond factors lj:    0        0        0       
-  special bond factors coul:  0        0        0       
-     1 = max # of 1-2 neighbors
-     0 = max # of 1-3 neighbors
-     0 = max # of 1-4 neighbors
-     1 = max # of special neighbors
-  special bonds CPU = 0.000 seconds
-  read_data CPU = 0.010 seconds
-
-change_box all triclinic
-Changing box ...
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-include ff.lmp
-##############################################################################################
-#### Atoms' types - mass - charge
-##############################################################################################
-#@ 7   atom types
-
-variable Ba  equal 1
-variable Zr  equal 2
-variable  Y  equal 3
-variable O1  equal 4
-variable O2  equal 5
-variable O3  equal 6
-variable H1  equal 7
-
-##############################################################################################
-#### Atoms' masses
-##############################################################################################
-
-mass  ${Ba}   137.327
-mass  1   137.327
-mass  ${Zr}    91.224
-mass  2    91.224
-mass  ${Y}     88.910
-mass  3     88.910
-mass  ${O1}    15.996
-mass  4    15.996
-mass  ${O2}    15.996
-mass  5    15.996
-mass  ${O3}    15.996
-mass  6    15.996
-mass  ${H1}     1.008
-mass  7     1.008
-
-##############################################################################################
-#### Atoms' charges
-##############################################################################################
-
-set type ${Ba}  charge     2.000000
-set type 1  charge     2.000000
-Setting atom values ...
-  216 settings made for charge
-set type ${Zr}  charge     4.000000
-set type 2  charge     4.000000
-Setting atom values ...
-  216 settings made for charge
-set type ${Y}   charge     3.000000
-set type 3   charge     3.000000
-Setting atom values ...
-  0 settings made for charge
-set type ${O1}  charge    -1.308698
-set type 4  charge    -1.308698
-Setting atom values ...
-  1 settings made for charge
-set type ${O2}  charge    -2.000000
-set type 5  charge    -2.000000
-Setting atom values ...
-  647 settings made for charge
-set type ${O3}  charge    -2.000000
-set type 6  charge    -2.000000
-Setting atom values ...
-  0 settings made for charge
-set type ${H1}  charge     0.308698
-set type 7  charge     0.308698
-Setting atom values ...
-  1 settings made for charge
-
-##############################################################################################
-#### Covalent bonds parameters
-##############################################################################################
-#@  1   bond types
-
-bond_style harmonic
-#@ O1 - H1
-# bond_coeff   1      11.504000      0.985357
-bond_coeff   1      23.008000      0.985357
-
-##############################################################################################
-# Pair potentials
-##############################################################################################
-
-variable rmin  equal  8.
-variable rmax  equal 10.
-
-pair_style hybrid/overlay buck/mdf ${rmin} ${rmax} lennard/mdf ${rmin} ${rmax} coul/long ${rmax}
-pair_style hybrid/overlay buck/mdf 8 ${rmax} lennard/mdf ${rmin} ${rmax} coul/long ${rmax}
-pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf ${rmin} ${rmax} coul/long ${rmax}
-pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf 8 ${rmax} coul/long ${rmax}
-pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf 8 10 coul/long ${rmax}
-pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf 8 10 coul/long 10
-
-##############################################################################################
-# Buckingham interaction potentials
-pair_coeff  ${Ba}  ${O1}  buck/mdf   688.21662   0.392014   0.000
-pair_coeff  1  ${O1}  buck/mdf   688.21662   0.392014   0.000
-pair_coeff  1  4  buck/mdf   688.21662   0.392014   0.000
-pair_coeff  ${Ba}  ${O2}  buck/mdf   972.19945   0.392014   0.000
-pair_coeff  1  ${O2}  buck/mdf   972.19945   0.392014   0.000
-pair_coeff  1  5  buck/mdf   972.19945   0.392014   0.000
-pair_coeff  ${Ba}  ${O3}  buck/mdf   972.19945   0.392014   0.000
-pair_coeff  1  ${O3}  buck/mdf   972.19945   0.392014   0.000
-pair_coeff  1  6  buck/mdf   972.19945   0.392014   0.000
-
-pair_coeff  ${Y}   ${O1}  buck/mdf   2972.3808   0.267317   0.000
-pair_coeff  3   ${O1}  buck/mdf   2972.3808   0.267317   0.000
-pair_coeff  3   4  buck/mdf   2972.3808   0.267317   0.000
-pair_coeff  ${Y}   ${O2}  buck/mdf   4121.8373   0.280386   0.000
-pair_coeff  3   ${O2}  buck/mdf   4121.8373   0.280386   0.000
-pair_coeff  3   5  buck/mdf   4121.8373   0.280386   0.000
-pair_coeff  ${Y}   ${O3}  buck/mdf   4121.8373   0.280386   0.000
-pair_coeff  3   ${O3}  buck/mdf   4121.8373   0.280386   0.000
-pair_coeff  3   6  buck/mdf   4121.8373   0.280386   0.000
-
-pair_coeff  ${Zr}  ${O1}  buck/mdf   2195.8712   0.298760   0.000
-pair_coeff  2  ${O1}  buck/mdf   2195.8712   0.298760   0.000
-pair_coeff  2  4  buck/mdf   2195.8712   0.298760   0.000
-pair_coeff  ${Zr}  ${O2}  buck/mdf   3250.8545   0.298760   0.000
-pair_coeff  2  ${O2}  buck/mdf   3250.8545   0.298760   0.000
-pair_coeff  2  5  buck/mdf   3250.8545   0.298760   0.000
-pair_coeff  ${Zr}  ${O3}  buck/mdf   3250.8545   0.298760   0.000
-pair_coeff  2  ${O3}  buck/mdf   3250.8545   0.298760   0.000
-pair_coeff  2  6  buck/mdf   3250.8545   0.298760   0.000
-
-pair_coeff  ${O1}  ${O1}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  4  ${O1}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  4  4  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  ${O1}  ${O2}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  4  ${O2}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  4  5  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  ${O1}  ${O3}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  4  ${O3}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  4  6  buck/mdf   22764.000   0.149000   0.000
-
-pair_coeff  ${O2}  ${O2}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  5  ${O2}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  5  5  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  ${O2}  ${O3}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  5  ${O3}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  5  6  buck/mdf   22764.000   0.149000   0.000
-
-pair_coeff  ${O3}  ${O3}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  6  ${O3}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  6  6  buck/mdf   22764.000   0.149000   0.000
-
-##############################################################################################
-# 12-6 Lennard-Jones potentials
-pair_coeff  ${O1}  ${H1}  lennard/mdf    6.391   0.000
-pair_coeff  4  ${H1}  lennard/mdf    6.391   0.000
-pair_coeff  4  7  lennard/mdf    6.391   0.000
-pair_coeff  ${O2}  ${H1}  lennard/mdf    6.391   0.000
-pair_coeff  5  ${H1}  lennard/mdf    6.391   0.000
-pair_coeff  5  7  lennard/mdf    6.391   0.000
-pair_coeff  ${O3}  ${H1}  lennard/mdf    7.800   0.000
-pair_coeff  6  ${H1}  lennard/mdf    7.800   0.000
-pair_coeff  6  7  lennard/mdf    7.800   0.000
-
-##############################################################################################
-# Coulombic interaction
-pair_coeff      *      *  coul/long
-
-#########################################################################################################
-# Parameters for reciprocal space electrostatics
-#########################################################################################################
-
-kspace_style pppm 1.0e-5
-kspace_modify fftbench no
-kspace_modify gewald 0.34497565
-
-change_box all x final 0.0 25.319 y final 0.0 25.319 z final 0.0 25.319 xy final 0.0 xz final 0.0 yz final 0.0
-Changing box ...
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-fix ux all store/state 1 xu yu zu
-fix ext all external pf/callback 1 1
-fix_modify ext energy no
-fix_modify ext virial no
-compute get_pe all pe
-
-run 0 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-WARNING: System is not charge neutral, net charge = 1 (src/kspace.cpp:327)
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Neighbor list info ...
-  update: every = 1 steps, delay = 0 steps, check = yes
-  max neighbors/atom: 2000, page size: 100000
-  master list distance cutoff = 12
-  ghost atom cutoff = 12
-  binsize = 6, bins = 5 5 5
-  3 neighbor lists, perpetual/occasional/extra = 3 0 0
-  (1) pair buck/mdf, perpetual, skip from (3)
-      attributes: half, newton on
-      pair build: skip
-      stencil: none
-      bin: none
-  (2) pair lennard/mdf, perpetual, skip from (3)
-      attributes: half, newton on
-      pair build: skip
-      stencil: none
-      bin: none
-  (3) pair coul/long, perpetual
-      attributes: half, newton on
-      pair build: half/bin/newton/tri
-      stencil: half/bin/3d/tri
-      bin: standard
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         0   1081.5728     -31463.29       3.205383      -31309.096     -19390.404    
-Loop time of 1.572e-06 on 1 procs for 0 steps with 1081 atoms
-
-run 0 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         0   1081.5728     -31463.29       3.205383      -31309.096     -19390.404    
+         0   1501.3983     -31401.501      4.4563562     -31187.448     -1498.3993    
 Loop time of 1.383e-06 on 1 procs for 0 steps with 1081 atoms
 
 run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-         0   1081.5728     -31463.29       3.205383      -31309.096     -19390.404    
-         1   1081.5728     -31463.29       3.205383      -31309.096     -19390.404    
-Loop time of 0.0396919 on 1 procs for 1 steps with 1081 atoms
-
-run 0 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         1   1081.5728     -31461.782      6.7775774     -31304.016     -18942.826    
-Loop time of 1.353e-06 on 1 procs for 0 steps with 1081 atoms
-
-run 0 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         1   1081.5728     -31461.782      6.7775774     -31304.016     -18942.826    
-Loop time of 1.702e-06 on 1 procs for 0 steps with 1081 atoms
-
-clear
-OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (src/comm.cpp:98)
-  using 1 OpenMP thread(s) per MPI task
-units metal
-atom_style full
-boundary p p p
-read_data /tmp/mustard.640189c1f8674eabab74225cc7efa77b
-Reading data file ...
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-  1 by 1 by 1 MPI processor grid
-  reading atoms ...
-  1081 atoms
-  reading velocities ...
-  1081 velocities
-  scanning bonds ...
-  1 = max bonds/atom
-  reading bonds ...
-  1 bonds
-Finding 1-2 1-3 1-4 neighbors ...
-  special bond factors lj:    0        0        0       
-  special bond factors coul:  0        0        0       
-     1 = max # of 1-2 neighbors
-     0 = max # of 1-3 neighbors
-     0 = max # of 1-4 neighbors
-     1 = max # of special neighbors
-  special bonds CPU = 0.000 seconds
-  read_data CPU = 0.010 seconds
-
-change_box all triclinic
-Changing box ...
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-include ff.lmp
-##############################################################################################
-#### Atoms' types - mass - charge
-##############################################################################################
-#@ 7   atom types
-
-variable Ba  equal 1
-variable Zr  equal 2
-variable  Y  equal 3
-variable O1  equal 4
-variable O2  equal 5
-variable O3  equal 6
-variable H1  equal 7
-
-##############################################################################################
-#### Atoms' masses
-##############################################################################################
-
-mass  ${Ba}   137.327
-mass  1   137.327
-mass  ${Zr}    91.224
-mass  2    91.224
-mass  ${Y}     88.910
-mass  3     88.910
-mass  ${O1}    15.996
-mass  4    15.996
-mass  ${O2}    15.996
-mass  5    15.996
-mass  ${O3}    15.996
-mass  6    15.996
-mass  ${H1}     1.008
-mass  7     1.008
-
-##############################################################################################
-#### Atoms' charges
-##############################################################################################
-
-set type ${Ba}  charge     2.000000
-set type 1  charge     2.000000
-Setting atom values ...
-  216 settings made for charge
-set type ${Zr}  charge     4.000000
-set type 2  charge     4.000000
-Setting atom values ...
-  216 settings made for charge
-set type ${Y}   charge     3.000000
-set type 3   charge     3.000000
-Setting atom values ...
-  0 settings made for charge
-set type ${O1}  charge    -1.308698
-set type 4  charge    -1.308698
-Setting atom values ...
-  1 settings made for charge
-set type ${O2}  charge    -2.000000
-set type 5  charge    -2.000000
-Setting atom values ...
-  647 settings made for charge
-set type ${O3}  charge    -2.000000
-set type 6  charge    -2.000000
-Setting atom values ...
-  0 settings made for charge
-set type ${H1}  charge     0.308698
-set type 7  charge     0.308698
-Setting atom values ...
-  1 settings made for charge
-
-##############################################################################################
-#### Covalent bonds parameters
-##############################################################################################
-#@  1   bond types
-
-bond_style harmonic
-#@ O1 - H1
-# bond_coeff   1      11.504000      0.985357
-bond_coeff   1      23.008000      0.985357
-
-##############################################################################################
-# Pair potentials
-##############################################################################################
-
-variable rmin  equal  8.
-variable rmax  equal 10.
-
-pair_style hybrid/overlay buck/mdf ${rmin} ${rmax} lennard/mdf ${rmin} ${rmax} coul/long ${rmax}
-pair_style hybrid/overlay buck/mdf 8 ${rmax} lennard/mdf ${rmin} ${rmax} coul/long ${rmax}
-pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf ${rmin} ${rmax} coul/long ${rmax}
-pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf 8 ${rmax} coul/long ${rmax}
-pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf 8 10 coul/long ${rmax}
-pair_style hybrid/overlay buck/mdf 8 10 lennard/mdf 8 10 coul/long 10
-
-##############################################################################################
-# Buckingham interaction potentials
-pair_coeff  ${Ba}  ${O1}  buck/mdf   688.21662   0.392014   0.000
-pair_coeff  1  ${O1}  buck/mdf   688.21662   0.392014   0.000
-pair_coeff  1  4  buck/mdf   688.21662   0.392014   0.000
-pair_coeff  ${Ba}  ${O2}  buck/mdf   972.19945   0.392014   0.000
-pair_coeff  1  ${O2}  buck/mdf   972.19945   0.392014   0.000
-pair_coeff  1  5  buck/mdf   972.19945   0.392014   0.000
-pair_coeff  ${Ba}  ${O3}  buck/mdf   972.19945   0.392014   0.000
-pair_coeff  1  ${O3}  buck/mdf   972.19945   0.392014   0.000
-pair_coeff  1  6  buck/mdf   972.19945   0.392014   0.000
-
-pair_coeff  ${Y}   ${O1}  buck/mdf   2972.3808   0.267317   0.000
-pair_coeff  3   ${O1}  buck/mdf   2972.3808   0.267317   0.000
-pair_coeff  3   4  buck/mdf   2972.3808   0.267317   0.000
-pair_coeff  ${Y}   ${O2}  buck/mdf   4121.8373   0.280386   0.000
-pair_coeff  3   ${O2}  buck/mdf   4121.8373   0.280386   0.000
-pair_coeff  3   5  buck/mdf   4121.8373   0.280386   0.000
-pair_coeff  ${Y}   ${O3}  buck/mdf   4121.8373   0.280386   0.000
-pair_coeff  3   ${O3}  buck/mdf   4121.8373   0.280386   0.000
-pair_coeff  3   6  buck/mdf   4121.8373   0.280386   0.000
-
-pair_coeff  ${Zr}  ${O1}  buck/mdf   2195.8712   0.298760   0.000
-pair_coeff  2  ${O1}  buck/mdf   2195.8712   0.298760   0.000
-pair_coeff  2  4  buck/mdf   2195.8712   0.298760   0.000
-pair_coeff  ${Zr}  ${O2}  buck/mdf   3250.8545   0.298760   0.000
-pair_coeff  2  ${O2}  buck/mdf   3250.8545   0.298760   0.000
-pair_coeff  2  5  buck/mdf   3250.8545   0.298760   0.000
-pair_coeff  ${Zr}  ${O3}  buck/mdf   3250.8545   0.298760   0.000
-pair_coeff  2  ${O3}  buck/mdf   3250.8545   0.298760   0.000
-pair_coeff  2  6  buck/mdf   3250.8545   0.298760   0.000
-
-pair_coeff  ${O1}  ${O1}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  4  ${O1}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  4  4  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  ${O1}  ${O2}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  4  ${O2}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  4  5  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  ${O1}  ${O3}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  4  ${O3}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  4  6  buck/mdf   22764.000   0.149000   0.000
-
-pair_coeff  ${O2}  ${O2}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  5  ${O2}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  5  5  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  ${O2}  ${O3}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  5  ${O3}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  5  6  buck/mdf   22764.000   0.149000   0.000
-
-pair_coeff  ${O3}  ${O3}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  6  ${O3}  buck/mdf   22764.000   0.149000   0.000
-pair_coeff  6  6  buck/mdf   22764.000   0.149000   0.000
-
-##############################################################################################
-# 12-6 Lennard-Jones potentials
-pair_coeff  ${O1}  ${H1}  lennard/mdf    6.391   0.000
-pair_coeff  4  ${H1}  lennard/mdf    6.391   0.000
-pair_coeff  4  7  lennard/mdf    6.391   0.000
-pair_coeff  ${O2}  ${H1}  lennard/mdf    6.391   0.000
-pair_coeff  5  ${H1}  lennard/mdf    6.391   0.000
-pair_coeff  5  7  lennard/mdf    6.391   0.000
-pair_coeff  ${O3}  ${H1}  lennard/mdf    7.800   0.000
-pair_coeff  6  ${H1}  lennard/mdf    7.800   0.000
-pair_coeff  6  7  lennard/mdf    7.800   0.000
-
-##############################################################################################
-# Coulombic interaction
-pair_coeff      *      *  coul/long
-
-#########################################################################################################
-# Parameters for reciprocal space electrostatics
-#########################################################################################################
-
-kspace_style pppm 1.0e-5
-kspace_modify fftbench no
-kspace_modify gewald 0.34497565
-
-change_box all x final 0.0 25.319 y final 0.0 25.319 z final 0.0 25.319 xy final 0.0 xz final 0.0 yz final 0.0
-Changing box ...
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-  triclinic box = (0 0 0) to (25.319 25.319 25.319) with tilt (0 0 0)
-fix ux all store/state 1 xu yu zu
-fix ext all external pf/callback 1 1
-fix_modify ext energy no
-fix_modify ext virial no
-compute get_pe all pe
-
-run 0 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-WARNING: System is not charge neutral, net charge = 1 (src/kspace.cpp:327)
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Neighbor list info ...
-  update: every = 1 steps, delay = 0 steps, check = yes
-  max neighbors/atom: 2000, page size: 100000
-  master list distance cutoff = 12
-  ghost atom cutoff = 12
-  binsize = 6, bins = 5 5 5
-  3 neighbor lists, perpetual/occasional/extra = 3 0 0
-  (1) pair buck/mdf, perpetual, skip from (3)
-      attributes: half, newton on
-      pair build: skip
-      stencil: none
-      bin: none
-  (2) pair lennard/mdf, perpetual, skip from (3)
-      attributes: half, newton on
-      pair build: skip
-      stencil: none
-      bin: none
-  (3) pair coul/long, perpetual
-      attributes: half, newton on
-      pair build: half/bin/newton/tri
-      stencil: half/bin/3d/tri
-      bin: standard
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         0   1071.2385     -31462.162      1.2398571     -31311.376     -18334.932    
-Loop time of 1.272e-06 on 1 procs for 0 steps with 1081 atoms
-
-run 0 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         0   1071.2385     -31462.162      1.2398571     -31311.376     -18334.932    
-Loop time of 9.02e-07 on 1 procs for 0 steps with 1081 atoms
+         0   1493.4753     -31401.501      4.4563562     -31188.554     -1571.1866    
+         1   1497.0476     -31401.146      2.1546363     -31190.002     -1291.8366    
+Loop time of 0.0261153 on 1 procs for 1 steps with 1081 atoms
 
 run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-         0   1071.2385     -31462.162      1.2398571     -31311.376     -18334.932    
-         1   1071.2385     -31462.162      1.2398571     -31311.376     -18334.932    
-Loop time of 0.0385874 on 1 procs for 1 steps with 1081 atoms
+         1   1513.8167     -31401.146      2.1546363     -31187.661     -1137.7807    
+         2   1531.7309     -31400.543      0.15207717    -31186.56      -620.42334    
+Loop time of 0.0275694 on 1 procs for 1 steps with 1081 atoms
 
 run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-         1   1071.2385     -31459.913      0.0041689912  -31310.363     -17044.109    
-         2   1071.2385     -31459.913      0.0041689912  -31310.363     -17044.109    
-Loop time of 0.0396472 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         2   1071.2385     -31459.913      0.0041689912  -31310.363     -17044.109    
-         3   1071.2385     -31458.196      0.63370938    -31308.017     -15909.854    
-Loop time of 0.0381775 on 1 procs for 1 steps with 1081 atoms
+         2   1519.1012     -31400.543      0.15207717    -31188.323     -736.45053    
+         3   1510.8855     -31399.976      0.49738121    -31188.557     -608.7518     
+Loop time of 0.0392333 on 1 procs for 1 steps with 1081 atoms
 
 run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-         3   1071.2385     -31457.251      0.93926225    -31306.766     -15010.042    
-         4   1071.2385     -31457.251      0.93926225    -31306.766     -15010.042    
-Loop time of 0.0380769 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         4   1071.2385     -31457.251      0.93926225    -31306.766     -15010.042    
-         5   1071.2385     -31457.22       0.13628546    -31307.538     -14376.453    
-Loop time of 0.0380139 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         5   1071.2385     -31457.22       0.13628546    -31307.538     -14376.453    
-         6   1071.2385     -31458.143      0.37962932    -31308.217     -14067.586    
-Loop time of 0.0379211 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         6   1071.2385     -31458.143      0.37962932    -31308.217     -14067.586    
-         7   1071.2385     -31459.953      2.0862648     -31308.32      -13961.729    
-Loop time of 0.037905 on 1 procs for 1 steps with 1081 atoms
+         3   1525.6852     -31399.976      0.49738121    -31186.491     -472.78898    
+         4   1527.8695     -31399.646      1.7503151     -31184.603     -466.42177    
+Loop time of 0.0386432 on 1 procs for 1 steps with 1081 atoms
 
 run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-         7   1071.2385     -31462.416      2.8772231     -31309.992     -13776.061    
-         8   1071.2385     -31462.416      2.8772231     -31309.992     -13776.061    
-Loop time of 0.0388062 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         8   1071.2385     -31462.416      2.8772231     -31309.992     -13776.061    
-         9   1071.2385     -31465.225      1.5701223     -31314.109     -13385.159    
-Loop time of 0.0379851 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-         9   1071.2385     -31465.225      1.5701223     -31314.109     -13385.159    
-        10   1071.2385     -31468.113      0.11240053    -31318.455     -12962.891    
-Loop time of 0.0380709 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        10   1071.2385     -31468.113      0.11240053    -31318.455     -12962.891    
-        11   1071.2385     -31470.85       0.34535563    -31320.958     -12749.694    
-Loop time of 0.03815 on 1 procs for 1 steps with 1081 atoms
+         4   1523.9788     -31399.646      1.7503151     -31185.147     -502.16564    
+         5   1533.3969     -31399.509      1.3969048     -31184.048     -561.64804    
+Loop time of 0.0340717 on 1 procs for 1 steps with 1081 atoms
 
 run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-        11   1071.2385     -31473.284      1.0956471     -31322.642     -12786.008    
-        12   1071.2385     -31473.284      1.0956471     -31322.642     -12786.008    
-Loop time of 0.0394549 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        12   1071.2385     -31473.284      1.0956471     -31322.642     -12786.008    
-        13   1071.2385     -31475.228      0.70655727    -31324.975     -12993.891    
-Loop time of 0.0379576 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        13   1071.2385     -31475.228      0.70655727    -31324.975     -12993.891    
-        14   1071.2385     -31476.533      0.022254331   -31326.965     -13340.741    
-Loop time of 0.0357131 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        14   1071.2385     -31476.533      0.022254331   -31326.965     -13340.741    
-        15   1071.2385     -31477.276      0.39040558    -31327.34      -13765.076    
-Loop time of 0.0475541 on 1 procs for 1 steps with 1081 atoms
+         5   1524.0771     -31399.509      1.3969048     -31185.349     -647.26706    
+         6   1530.8619     -31399.543      0.13332183    -31185.699     -876.6296     
+Loop time of 0.0345193 on 1 procs for 1 steps with 1081 atoms
 
 run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-        15   1071.2385     -31477.681      1.2183584     -31326.916     -14094.303    
-        16   1071.2385     -31477.681      1.2183584     -31326.916     -14094.303    
-Loop time of 0.0390584 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        16   1071.2385     -31477.681      1.2183584     -31326.916     -14094.303    
-        17   1071.2385     -31477.744      1.226213      -31326.972     -14171.898    
-Loop time of 0.0389001 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        17   1071.2385     -31477.744      1.226213      -31326.972     -14171.898    
-        18   1071.2385     -31477.241      0.51214975    -31327.183     -14011.221    
-Loop time of 0.0389983 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        18   1071.2385     -31477.241      0.51214975    -31327.183     -14011.221    
-        19   1071.2385     -31476.069      0.037974691   -31326.485     -13745.441    
-Loop time of 0.03958 on 1 procs for 1 steps with 1081 atoms
+         6   1534.5076     -31399.543      0.13332183    -31185.19      -843.13657    
+         7   1535.0824     -31399.697      0.54007536    -31184.858     -1317.1238    
+Loop time of 0.0240082 on 1 procs for 1 steps with 1081 atoms
 
 run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-        19   1071.2385     -31474.348      0.011574005   -31324.79      -13495.529    
-        20   1071.2385     -31474.348      0.011574005   -31324.79      -13495.529    
-Loop time of 0.0372512 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        20   1071.2385     -31474.348      0.011574005   -31324.79      -13495.529    
-        21   1071.2385     -31472.28       0.00071351279 -31322.733     -13309.331    
-Loop time of 0.0368342 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        21   1071.2385     -31472.28       0.00071351279 -31322.733     -13309.331    
-        22   1071.2385     -31470.038      0.26913253    -31320.223     -13191.185    
-Loop time of 0.0374673 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        22   1071.2385     -31470.038      0.26913253    -31320.223     -13191.185    
-        23   1071.2385     -31467.762      1.124347      -31317.092     -13079.729    
-Loop time of 0.0373294 on 1 procs for 1 steps with 1081 atoms
+         7   1533.8701     -31399.697      0.54007536    -31185.027     -1328.2613    
+         8   1522.4938     -31399.75       2.5680102     -31184.641     -1927.3208    
+Loop time of 0.0269611 on 1 procs for 1 steps with 1081 atoms
 
 run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-        23   1071.2385     -31465.548      1.7834584     -31314.219     -12840.633    
-        24   1071.2385     -31465.548      1.7834584     -31314.219     -12840.633    
-Loop time of 0.0371036 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        24   1071.2385     -31465.548      1.7834584     -31314.219     -12840.633    
-        25   1071.2385     -31463.437      1.4166339     -31312.474     -12385.699    
-Loop time of 0.0368227 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        25   1071.2385     -31463.437      1.4166339     -31312.474     -12385.699    
-        26   1071.2385     -31461.448      0.4870729     -31311.415     -11780.464    
-Loop time of 0.0374364 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        26   1071.2385     -31461.448      0.4870729     -31311.415     -11780.464    
-        27   1071.2385     -31459.628      0.012079076   -31310.07      -11179.168    
-Loop time of 0.0381858 on 1 procs for 1 steps with 1081 atoms
+         8   1515.6974     -31399.75       2.5680102     -31185.589     -1989.7579    
+         9   1504.1089     -31399.542      3.3291017     -31186.238     -2285.2303    
+Loop time of 0.0264281 on 1 procs for 1 steps with 1081 atoms
 
 run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-        27   1071.2385     -31458.016      0.082153987   -31308.388     -10679.898    
-        28   1071.2385     -31458.016      0.082153987   -31308.388     -10679.898    
-Loop time of 0.0384736 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        28   1071.2385     -31458.016      0.082153987   -31308.388     -10679.898    
-        29   1071.2385     -31456.542      0.11148014    -31306.884     -10289.318    
-Loop time of 0.0367893 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        29   1071.2385     -31456.542      0.11148014    -31306.884     -10289.318    
-        30   1071.2385     -31455.031      0.0083322881  -31305.477     -9974.0636    
-Loop time of 0.0364885 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        30   1071.2385     -31455.031      0.0083322881  -31305.477     -9974.0636    
-        31   1071.2385     -31453.389      0.046899581   -31303.796     -9680.9444    
-Loop time of 0.0362821 on 1 procs for 1 steps with 1081 atoms
+         9   1519.3721     -31399.542      3.3291017     -31184.107     -2145.0094    
+        10   1536.9548     -31399.112      1.6606365     -31182.891     -1760.7545    
+Loop time of 0.0265751 on 1 procs for 1 steps with 1081 atoms
 
 run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-        31   1071.2385     -31451.647      0.12390429    -31301.977     -9330.4293    
-        32   1071.2385     -31451.647      0.12390429    -31301.977     -9330.4293    
-Loop time of 0.0391063 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        32   1071.2385     -31451.647      0.12390429    -31301.977     -9330.4293    
-        33   1071.2385     -31449.829      0.040078374   -31300.243     -8874.6832    
-Loop time of 0.0355743 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        33   1071.2385     -31449.829      0.040078374   -31300.243     -8874.6832    
-        34   1071.2385     -31447.777      0.027615394   -31298.203     -8347.2409    
-Loop time of 0.0357561 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        34   1071.2385     -31447.777      0.027615394   -31298.203     -8347.2409    
-        35   1071.2385     -31445.272      0.2829188     -31295.443     -7823.2853    
-Loop time of 0.0363671 on 1 procs for 1 steps with 1081 atoms
+        10   1534.9053     -31399.112      1.6606365     -31183.177     -1779.5824    
+        11   1549.6557     -31398.625      0.056644696   -31182.235     -1257.277     
+Loop time of 0.0245617 on 1 procs for 1 steps with 1081 atoms
 
 run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-        35   1071.2385     -31442.27       0.43478339    -31292.289     -7358.3464    
-        36   1071.2385     -31442.27       0.43478339    -31292.289     -7358.3464    
-Loop time of 0.0375162 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        36   1071.2385     -31442.27       0.43478339    -31292.289     -7358.3464    
-        37   1071.2385     -31438.896      0.17855868    -31289.172     -6986.274     
-Loop time of 0.0373303 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        37   1071.2385     -31438.896      0.17855868    -31289.172     -6986.274     
-        38   1071.2385     -31435.364      0.014046909   -31285.804     -6741.524     
-Loop time of 0.0367087 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        38   1071.2385     -31435.364      0.014046909   -31285.804     -6741.524     
-        39   1071.2385     -31431.829      0.55323792    -31281.73      -6615.2989    
-Loop time of 0.0477904 on 1 procs for 1 steps with 1081 atoms
+        11   1531.3967     -31398.625      0.056644696   -31184.784     -1425.0204    
+        12   1515.1481     -31398.314      0.69483335    -31186.104     -1331.7171    
+Loop time of 0.0248872 on 1 procs for 1 steps with 1081 atoms
 
 run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-        39   1071.2385     -31428.291      1.4005893     -31277.345     -6508.7064    
-        40   1071.2385     -31428.291      1.4005893     -31277.345     -6508.7064    
-Loop time of 0.0396031 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        40   1071.2385     -31428.291      1.4005893     -31277.345     -6508.7064    
-        41   1071.2385     -31424.826      1.520671      -31273.759     -6304.1042    
-Loop time of 0.0398514 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        41   1071.2385     -31424.826      1.520671      -31273.759     -6304.1042    
-        42   1071.2385     -31421.633      0.74740777    -31271.34      -5993.8687    
-Loop time of 0.0390761 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        42   1071.2385     -31421.633      0.74740777    -31271.34      -5993.8687    
-        43   1071.2385     -31418.963      0.062779395   -31269.355     -5705.557     
-Loop time of 0.0389825 on 1 procs for 1 steps with 1081 atoms
+        12   1529.9184     -31398.314      0.69483335    -31184.042     -1196.0241    
+        13   1526.156      -31398.319      2.0347052     -31183.231     -1193.9995    
+Loop time of 0.0244469 on 1 procs for 1 steps with 1081 atoms
 
 run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-        43   1071.2385     -31417.006      0.093205477   -31267.367     -5578.3761    
-        44   1071.2385     -31417.006      0.093205477   -31267.367     -5578.3761    
-Loop time of 0.0369019 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        44   1071.2385     -31417.006      0.093205477   -31267.367     -5578.3761    
-        45   1071.2385     -31415.865      0.26626704    -31266.052     -5659.0149    
-Loop time of 0.0366925 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        45   1071.2385     -31415.865      0.26626704    -31266.052     -5659.0149    
-        46   1071.2385     -31415.57       0.077406118   -31265.947     -5934.897     
-Loop time of 0.0370592 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        46   1071.2385     -31415.57       0.077406118   -31265.947     -5934.897     
-        47   1071.2385     -31416.104      0.067495301   -31266.49      -6379.3137    
-Loop time of 0.0368944 on 1 procs for 1 steps with 1081 atoms
+        13   1517.9572     -31398.319      2.0347052     -31184.376     -1269.3211    
+        14   1519.4375     -31398.648      1.5681056     -31184.965     -1349.2236    
+Loop time of 0.0239566 on 1 procs for 1 steps with 1081 atoms
 
 run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-        47   1071.2385     -31417.384      0.65232851    -31267.186     -6908.8133    
-        48   1071.2385     -31417.384      0.65232851    -31267.186     -6908.8133    
-Loop time of 0.0393386 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        48   1071.2385     -31417.384      0.65232851    -31267.186     -6908.8133    
-        49   1071.2385     -31419.234      1.1892879     -31268.498     -7369.1247    
-Loop time of 0.0398419 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        49   1071.2385     -31419.234      1.1892879     -31268.498     -7369.1247    
-        50   1071.2385     -31421.411      0.95147912    -31270.913     -7644.0622    
-Loop time of 0.0392171 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        50   1071.2385     -31421.411      0.95147912    -31270.913     -7644.0622    
-        51   1071.2385     -31423.721      0.26857616    -31273.906     -7748.259     
-Loop time of 0.0385502 on 1 procs for 1 steps with 1081 atoms
+        14   1523.3119     -31398.648      1.5681056     -31184.424     -1313.6296    
+        15   1535.9296     -31399.208      0.15894082    -31184.631     -1444.0893    
+Loop time of 0.0240078 on 1 procs for 1 steps with 1081 atoms
 
 run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-        51   1071.2385     -31426.061      0.0057348561  -31276.509     -7779.6433    
-        52   1071.2385     -31426.061      0.0057348561  -31276.509     -7779.6433    
-Loop time of 0.0391283 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        52   1071.2385     -31426.061      0.0057348561  -31276.509     -7779.6433    
-        53   1071.2385     -31428.344      0.29721984    -31278.501     -7809.812     
-Loop time of 0.0353006 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        53   1071.2385     -31428.344      0.29721984    -31278.501     -7809.812     
-        54   1071.2385     -31430.453      0.48380629    -31280.424     -7844.7629    
-Loop time of 0.0258468 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        54   1071.2385     -31430.453      0.48380629    -31280.424     -7844.7629    
-        55   1071.2385     -31432.284      0.23336205    -31282.505     -7871.9592    
-Loop time of 0.0489884 on 1 procs for 1 steps with 1081 atoms
+        15   1552.431      -31399.208      0.15894082    -31182.328     -1292.4928    
+        16   1570.4222     -31399.767      0.51006916    -31180.024     -1559.0825    
+Loop time of 0.0239098 on 1 procs for 1 steps with 1081 atoms
 
 run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-        55   1071.2385     -31433.809      0.00050178055 -31284.262     -7889.69      
-        56   1071.2385     -31433.809      0.00050178055 -31284.262     -7889.69      
-Loop time of 0.0284697 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        56   1071.2385     -31433.809      0.00050178055 -31284.262     -7889.69      
-        57   1071.2385     -31435.052      0.22851272    -31285.278     -7872.1672    
-Loop time of 0.0282697 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        57   1071.2385     -31435.052      0.22851272    -31285.278     -7872.1672    
-        58   1071.2385     -31435.998      0.66215372    -31285.79      -7756.409     
-Loop time of 0.0284363 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        58   1071.2385     -31435.998      0.66215372    -31285.79      -7756.409     
-        59   1071.2385     -31436.574      0.84636296    -31286.181     -7518.7424    
-Loop time of 0.0277054 on 1 procs for 1 steps with 1081 atoms
+        16   1557.8122     -31399.767      0.51006916    -31181.784     -1674.929     
+        17   1552.8526     -31400.137      2.3301761     -31181.027     -2130.2876    
+Loop time of 0.0241288 on 1 procs for 1 steps with 1081 atoms
 
 run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-        59   1071.2385     -31436.756      0.81230222    -31286.397     -7217.8966    
-        60   1071.2385     -31436.756      0.81230222    -31286.397     -7217.8966    
-Loop time of 0.0269135 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        60   1071.2385     -31436.756      0.81230222    -31286.397     -7217.8966    
-        61   1071.2385     -31436.533      0.63184606    -31286.355     -6883.9538    
-Loop time of 0.0269332 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        61   1071.2385     -31436.533      0.63184606    -31286.355     -6883.9538    
-        62   1071.2385     -31435.914      0.30842404    -31286.06      -6513.4902    
-Loop time of 0.0272426 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        62   1071.2385     -31435.914      0.30842404    -31286.06      -6513.4902    
-        63   1071.2385     -31435.025      0.058266719   -31285.421     -6152.8193    
-Loop time of 0.0272812 on 1 procs for 1 steps with 1081 atoms
+        17   1555.9546     -31400.137      2.3301761     -31180.594     -2101.7905    
+        18   1562.3678     -31400.346      2.6492449     -31179.589     -2102.1036    
+Loop time of 0.0242304 on 1 procs for 1 steps with 1081 atoms
 
 run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-        63   1071.2385     -31434.006      4.8098532e-05 -31284.46      -5868.6698    
-        64   1071.2385     -31434.006      4.8098532e-05 -31284.46      -5868.6698    
-Loop time of 0.0266963 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        64   1071.2385     -31434.006      4.8098532e-05 -31284.46      -5868.6698    
-        65   1071.2385     -31432.931      0.0060131925  -31283.379     -5698.3591    
-Loop time of 0.0248537 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        65   1071.2385     -31432.931      0.0060131925  -31283.379     -5698.3591    
-        66   1071.2385     -31431.842      0.002985494   -31282.294     -5652.4573    
-Loop time of 0.0248506 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        66   1071.2385     -31431.842      0.002985494   -31282.294     -5652.4573    
-        67   1071.2385     -31430.75       0.099831489   -31281.104     -5716.8438    
-Loop time of 0.0247961 on 1 procs for 1 steps with 1081 atoms
+        18   1554.5352     -31400.346      2.6492449     -31180.682     -2174.0614    
+        19   1564.4126     -31400.359      0.93114768    -31181.035     -1735.3516    
+Loop time of 0.0240835 on 1 procs for 1 steps with 1081 atoms
 
 run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-        67   1071.2385     -31429.636      0.33009685    -31279.76      -5848.831     
-        68   1071.2385     -31429.636      0.33009685    -31279.76      -5848.831     
-Loop time of 0.0258456 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        68   1071.2385     -31429.636      0.33009685    -31279.76      -5848.831     
-        69   1071.2385     -31428.477      0.50228342    -31278.429     -5992.634     
-Loop time of 0.0486541 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        69   1071.2385     -31428.477      0.50228342    -31278.429     -5992.634     
-        70   1071.2385     -31427.229      0.44526154    -31277.238     -6112.4704    
-Loop time of 0.0277759 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        70   1071.2385     -31427.229      0.44526154    -31277.238     -6112.4704    
-        71   1071.2385     -31425.872      0.24059574    -31276.085     -6216.679     
-Loop time of 0.027557 on 1 procs for 1 steps with 1081 atoms
+        19   1564.7332     -31400.359      0.93114768    -31180.99      -1732.4064    
+        20   1567.6087     -31400.031      0.016016792   -31181.175     -1236.7686    
+Loop time of 0.023983 on 1 procs for 1 steps with 1081 atoms
 
 run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-        71   1071.2385     -31424.413      0.080603237   -31274.786     -6342.8714    
-        72   1071.2385     -31424.413      0.080603237   -31274.786     -6342.8714    
-Loop time of 0.0281919 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        72   1071.2385     -31424.413      0.080603237   -31274.786     -6342.8714    
-        73   1071.2385     -31422.874      0.024255626   -31273.303     -6518.2634    
-Loop time of 0.0284032 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        73   1071.2385     -31422.874      0.024255626   -31273.303     -6518.2634    
-        74   1071.2385     -31421.29       0.023828932   -31271.72      -6741.7506    
-Loop time of 0.0303631 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        74   1071.2385     -31421.29       0.023828932   -31271.72      -6741.7506    
-        75   1071.2385     -31419.689      0.058836718   -31270.084     -6989.1747    
-Loop time of 0.0295443 on 1 procs for 1 steps with 1081 atoms
+        20   1566.7519     -31400.031      0.016016792   -31181.294     -1244.6402    
+        21   1553.6679     -31399.416      1.2140804     -31181.309     -1034.8681    
+Loop time of 0.0243325 on 1 procs for 1 steps with 1081 atoms
 
 run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
 PPPM initialization ...
   using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
   G vector (1/distance) = 0.34497565
   grid = 40 40 40
   stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
+  estimated absolute RMS force accuracy = 0.00013990511
+  estimated relative force accuracy = 9.7158722e-06
   using double precision KISS FFT
   3d grid and FFT values/proc = 117649 64000
 Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
 Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
    Step          Temp          E_pair         E_mol          TotEng         Press     
-        75   1071.2385     -31418.135      0.10735598    -31268.482     -7220.7408    
-        76   1071.2385     -31418.135      0.10735598    -31268.482     -7220.7408    
-Loop time of 0.0288228 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        76   1071.2385     -31418.135      0.10735598    -31268.482     -7220.7408    
-        77   1071.2385     -31416.728      0.10368154    -31267.079     -7400.8648    
-Loop time of 0.0285895 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        77   1071.2385     -31416.728      0.10368154    -31267.079     -7400.8648    
-        78   1071.2385     -31415.566      0.038484636   -31265.982     -7518.1341    
-Loop time of 0.0279772 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        78   1071.2385     -31415.566      0.038484636   -31265.982     -7518.1341    
-        79   1071.2385     -31414.717      1.7482465e-07 -31265.171     -7594.0522    
-Loop time of 0.0280164 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        79   1071.2385     -31414.225      0.024752707   -31264.655     -7668.5698    
-        80   1071.2385     -31414.225      0.024752707   -31264.655     -7668.5698    
-Loop time of 0.0275754 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        80   1071.2385     -31414.225      0.024752707   -31264.655     -7668.5698    
-        81   1071.2385     -31414.129      0.027745559   -31264.556     -7775.7554    
-Loop time of 0.0247651 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        81   1071.2385     -31414.129      0.027745559   -31264.556     -7775.7554    
-        82   1071.2385     -31414.459      0.00040193989 -31264.913     -7935.0003    
-Loop time of 0.0246804 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        82   1071.2385     -31414.459      0.00040193989 -31264.913     -7935.0003    
-        83   1071.2385     -31415.2        0.11920196    -31265.535     -8142.1708    
-Loop time of 0.0246389 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        83   1071.2385     -31416.293      0.44562107    -31266.302     -8357.1121    
-        84   1071.2385     -31416.293      0.44562107    -31266.302     -8357.1121    
-Loop time of 0.0247744 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        84   1071.2385     -31416.293      0.44562107    -31266.302     -8357.1121    
-        85   1071.2385     -31417.663      0.69066277    -31267.426     -8508.9359    
-Loop time of 0.0246893 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        85   1071.2385     -31417.663      0.69066277    -31267.426     -8508.9359    
-        86   1071.2385     -31419.254      0.57084897    -31269.137     -8551.876     
-Loop time of 0.0246575 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        86   1071.2385     -31419.254      0.57084897    -31269.137     -8551.876     
-        87   1071.2385     -31421.016      0.23488067    -31271.235     -8507.104     
-Loop time of 0.0250592 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        87   1071.2385     -31422.89       0.02844517    -31273.316     -8441.3163    
-        88   1071.2385     -31422.89       0.02844517    -31273.316     -8441.3163    
-Loop time of 0.0246657 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        88   1071.2385     -31422.89       0.02844517    -31273.316     -8441.3163    
-        89   1071.2385     -31424.834      0.00019755078 -31275.287     -8412.2232    
-Loop time of 0.0256282 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        89   1071.2385     -31424.834      0.00019755078 -31275.287     -8412.2232    
-        90   1071.2385     -31426.809      0.0019267803  -31277.261     -8445.0605    
-Loop time of 0.0255774 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        90   1071.2385     -31426.809      0.0019267803  -31277.261     -8445.0605    
-        91   1071.2385     -31428.775      0.09769083    -31279.132     -8539.6118    
-Loop time of 0.0245413 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre yes post no
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-  G vector (1/distance) = 0.34497565
-  grid = 40 40 40
-  stencil order = 5
-  estimated absolute RMS force accuracy = 0.00013990509
-  estimated relative force accuracy = 9.7158711e-06
-  using double precision KISS FFT
-  3d grid and FFT values/proc = 117649 64000
-Generated 0 of 21 mixed pair_coeff terms from geometric mixing rule
-Per MPI rank memory allocation (min/avg/max) = 21.94 | 21.94 | 21.94 Mbytes
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        91   1071.2385     -31430.673      0.41891847    -31280.708     -8664.4034    
-        92   1071.2385     -31430.673      0.41891847    -31280.708     -8664.4034    
-Loop time of 0.0254313 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        92   1071.2385     -31430.673      0.41891847    -31280.708     -8664.4034    
-        93   1071.2385     -31432.417      0.75435241    -31282.117     -8755.8188    
-Loop time of 0.0535383 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        93   1071.2385     -31432.417      0.75435241    -31282.117     -8755.8188    
-        94   1071.2385     -31433.962      0.73340135    -31283.683     -8757.8889    
-Loop time of 0.0248909 on 1 procs for 1 steps with 1081 atoms
-
-run 1 pre no post no
-   Step          Temp          E_pair         E_mol          TotEng         Press     
-        94   1071.2385     -31433.962      0.73340135    -31283.683     -8757.8889    
-        95   1071.2385     -31435.321      0.35873593    -31285.417     -8671.9347    
-Loop time of 0.024408 on 1 procs for 1 steps with 1081 atoms
+        21   1551.2026     -31399.416      1.2140804     -31181.653     -1057.5164    
+        22   1536.6147     -31398.721      2.1737354     -31182.035     -1010.6391    
+Loop time of 0.0282331 on 1 procs for 1 steps with 1081 atoms
 
