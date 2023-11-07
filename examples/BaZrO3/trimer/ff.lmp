@@ -93,5 +93,5 @@ pair_coeff      *      *  coul/long
 # Parameters for reciprocal space electrostatics
 #########################################################################################################
 
-kspace_style pppm 1.0e-7
+kspace_style pppm 1.0e-5
 kspace_modify fftbench no 

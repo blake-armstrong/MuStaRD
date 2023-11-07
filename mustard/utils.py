@@ -1,4 +1,5 @@
 import numpy as np
+from ctypes import c_int, c_double
 import math
 
 
@@ -74,9 +75,6 @@ def dMDF(dx, dy, dz, rm, rc):
     return np.array([ddx, ddy, ddz])
 
 
-from mpi4py import MPI
-
-
 def get_pairs(positions, xyz_pbc, cutoffs, X, H_idxs, Y_idxs, Topology):
     dist_cut, ang_cut = (
         cutoffs["distance"],
@@ -94,18 +92,6 @@ def get_pairs(positions, xyz_pbc, cutoffs, X, H_idxs, Y_idxs, Topology):
         for id in Topology.residues[Topology.atoms[Topology.ids[idx]].molecule]
         if Topology.atoms[id].type == X
     ][0]
-    H_pos0 = positions[H_idxs[0]]
-    X_pos0 = positions[X_ready_idx]
-    if MPI.COMM_WORLD.Get_rank() == 0:
-
-        def get_dist(pos1, pos2, pbc):
-            d_pos = pos1 - pos2
-            d_pos -= pbc * (d_pos / pbc).round()
-            dist = np.linalg.norm(d_pos, axis=-1)
-            return dist
-
-        # print("rHX", get_dist(H_pos0, X_pos0, xyz_pbc))
-        # print("erHX", 23.008 * (get_dist(H_pos0, X_pos0, xyz_pbc) - 0.985357) ** 2)
     if not dists_bool.any():
         return None
     pair_dists = dists[dists_bool.nonzero()[0], dists_bool.nonzero()[1]]
@@ -161,3 +147,64 @@ def extract_box(box_data):
     gamma = math.acos(xy / b) * 180 / math.pi
 
     return np.array([a, b, c, alpha, beta, gamma]), [lx, 0, 0, xy, ly, 0, xz, yz, lz]
+
+
+def get_box_data(lmp):
+    return lmp.extract_box()
+
+
+def set_box_data(lmp, box_data):
+    """
+    Assumes box is already triclinic
+    """
+    lmp.command(
+        (
+            "change_box all "
+            f"x final {box_data[0][0]} {box_data[1][0]} "
+            f"y final {box_data[0][1]} {box_data[1][1]} "
+            f"z final {box_data[0][2]} {box_data[1][2]} "
+            f"xy final {box_data[2]} xz final {box_data[4]} yz final {box_data[3]}"
+        )
+    )
+
+
+def get_images(lmp):
+    return np.array(gather_atoms(lmp, "image", 0, 3)).reshape(-1, 3)
+
+
+def get_velocities(lmp):
+    return np.array(gather_atoms(lmp, "v", 1, 3)).reshape(-1, 3)
+
+
+def get_positions(lmp):
+    return np.array(gather_atoms(lmp, "x", 1, 3)).reshape(-1, 3)
+
+
+def set_images(lmp, images):
+    lmp.scatter_atoms("image", 0, 3, convert_to_c_type(images, c_int))
+
+
+def set_velocities(lmp, velocities):
+    lmp.scatter_atoms("v", 1, 3, convert_to_c_type(velocities, c_double))
+
+
+def set_positions(lmp, positions):
+    lmp.scatter_atoms("x", 1, 3, convert_to_c_type(positions, c_double))
+
+
+def get_forces(lmp):
+    return np.array(gather_atoms(lmp, "f", 1, 3)).reshape(-1, 3)
+
+
+def get_virial(lmp, pr2vir, vol=None):
+    if vol is None:
+        vol = lmp.get_thermo("vol")
+    p_vir = lmp.numpy.extract_compute("pre_vir", 0, 1)
+    if p_vir is None:
+        raise ValueError("Could not extract virial")
+    vir = p_vir / pr2vir * vol
+    return vir
+
+
+def set_virial(lmp, virial_diff):
+    lmp.fix_external_set_virial_global("ext", list(virial_diff))

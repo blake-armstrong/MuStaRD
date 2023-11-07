@@ -1,6 +1,8 @@
 from typing import NamedTuple
 from itertools import combinations, product
-from .utils import gather_atoms, extract_box
+
+# from .utils import gather_atoms, extract_box
+from . import utils
 import numpy as np
 import warnings
 
@@ -10,6 +12,10 @@ class Topology:
         self.SI = SystemInfo
         self.lmp = lmp_obj
         self.build_topology()
+        self.rxn_pairs: list
+        self.systems_idxs: np.ndarray
+        self.pairs_idxs: list
+        self.num_systems: int
 
     def build_topology(self):
         (
@@ -23,15 +29,20 @@ class Topology:
         self.xyz_types = np.vectorize(lambda x: self.SI.reverse_atom_types[x])(
             self.types
         )
-        self.id_to_idx = np.vectorize(lambda x: self.atoms[x].idx)
+        self._id_to_idx = np.vectorize(lambda x: self.atoms[x].idx)
         self.id_to_mass = np.vectorize(lambda x: self.atoms[x].mass)
         self.masses = self.id_to_mass(self.ids)
 
+    def id_to_idx(self, id_arr):
+        if len(id_arr) == 0:
+            return np.array([])
+        return self._id_to_idx(id_arr)
+
     def generate_generic_topology(self, lmp):
-        ids = np.array(gather_atoms(lmp, "id", 0, 1))
-        types = np.array(gather_atoms(lmp, "type", 0, 1))
-        qs = np.array(gather_atoms(lmp, "q", 1, 1))
-        mols = np.array(gather_atoms(lmp, "molecule", 0, 1))
+        ids = np.array(utils.gather_atoms(lmp, "id", 0, 1))
+        types = np.array(utils.gather_atoms(lmp, "type", 0, 1))
+        qs = np.array(utils.gather_atoms(lmp, "q", 1, 1))
+        mols = np.array(utils.gather_atoms(lmp, "molecule", 0, 1))
         masses = lmp.numpy.extract_atom("mass")[types]
 
         # dict stores per-ID info
@@ -113,6 +124,56 @@ class Topology:
 
         return systems_idxs, pairs_idxs
 
+    def get_pairs(self, pos, xyz_pbc):
+        rxn_pairs = []
+        rxn_nums = []
+        pair_dists = []
+        hxy_angles = []
+        systems_idxs = []
+        pairs_idxs = []
+        for rxn_num, rxn in enumerate(self.SI.reactions):
+            rxn_info = utils.get_pairs(
+                pos,
+                xyz_pbc,
+                rxn.cutoffs,
+                rxn.X,
+                self.ST[rxn_num].H_idxs,
+                self.ST[rxn_num].Y_idxs,
+                self,
+            )
+            if rxn_info is not None:
+                rxn_pairs.append(rxn_info[0])
+                rxn_nums.append([rxn_num] * len(rxn_info[0]))
+                pair_dists.append(rxn_info[1])
+                hxy_angles.append(rxn_info[2])
+        if rxn_pairs:
+            rxn_pairs = np.concatenate(rxn_pairs, axis=0)
+            rxn_nums = np.concatenate(rxn_nums, axis=0)
+            pair_dists = np.concatenate(pair_dists, axis=0)
+            hxy_angles = np.concatenate(hxy_angles, axis=0)
+            systems_idxs, pairs_idxs = self.rxn_pairs_to_systems(
+                rxn_pairs,
+                rxn_nums,
+                pair_dists,
+                hxy_angles,
+            )
+        self.rxn_pairs = list(rxn_pairs)
+        self.systems_idxs = np.array(systems_idxs)
+        self.pairs_idxs = pairs_idxs
+        self.num_systems = len(systems_idxs)
+
+    def grab_system(self, system_idx: np.intp):
+        if system_idx >= len(self.systems_idxs):
+            return np.array(tuple())
+        system_idxs = self.systems_idxs[system_idx]
+        return np.array(
+            tuple(
+                self.rxn_pairs[pair_idxs]
+                for pair_idxs in system_idxs
+                if pair_idxs is not None
+            )
+        )
+
     def set_lmp(self, lmp_obj):
         self.lmp = lmp_obj
 
@@ -139,7 +200,7 @@ class Topology:
         ypos = frame.pos[yidxs]
         disp = ypos - hpos
         disp -= frame.xyz_pbc * (disp / frame.xyz_pbc).round()
-        abcabc, _ = extract_box(frame.box_data)
+        abcabc, _ = utils.extract_box(frame.box_data)
         uhpos = himg * abcabc[:3] + hpos
         uypos = uhpos + disp
         new_imgs = np.floor(uypos / abcabc[:3]).astype(int)
@@ -297,13 +358,129 @@ class Topology:
                 )
         return cmd_list
 
-    class Frame(NamedTuple):
-        pos: np.ndarray
-        images: np.ndarray
-        box_data: tuple
-        xyz_pbc: np.ndarray
-        vel: np.ndarray
-        forces: np.ndarray
+    def get_new_imgs(self, h, y, frame):
+        yids = self.residues[self.atoms[y].molecule]
+        yidxs = [self.atoms[ID].idx for ID in yids]
+        hpos = frame.pos[self.atoms[h].idx]
+        himg = frame.images[self.atoms[h].idx]
+        ypos = frame.pos[yidxs]
+        disp = ypos - hpos
+        disp -= frame.xyz_pbc * (disp / frame.xyz_pbc).round()
+        abcabc, _ = utils.extract_box(frame.box_data)
+        uhpos = himg * abcabc[:3] + hpos
+        uypos = uhpos + disp
+        new_imgs = np.floor(uypos / abcabc[:3]).astype(int)
+        return new_imgs, yids
+
+    class Frame:
+        def __init__(self, lmp, natoms: int, dim: int, scale_box=False):
+            self._pos: np.ndarray = np.zeros((natoms, dim))
+            self._images: np.ndarray = np.zeros((natoms, dim))
+            self._box_data: tuple = (None, None, None, None, None, None)
+            self._xyz_pbc: np.ndarray = np.zeros(3)
+            self._vel: np.ndarray = np.zeros((natoms, dim))
+            self._forces: np.ndarray = np.zeros((natoms, dim))
+            self.scale_box = scale_box
+            # self.__call__ = self._generate_call()
+            self._generate_call()
+            self._get_one(lmp)
+            self._get_two(lmp)
+
+        def __call__(self, lmp, pos=None, vel=None, forces=None):
+            return self.call(self, lmp, pos=pos, vel=vel, forces=forces)
+
+        def _generate_call(self):
+            if self.scale_box:
+
+                def call(self, lmp, pos=None, vel=None, forces=None):
+                    self._get_one(lmp, pos=pos, vel=vel, forces=forces)
+                    self._get_two(lmp)
+
+                self.call = call
+                return
+
+            def call(self, lmp, pos=None, vel=None, forces=None):
+                self._get_one(lmp, pos=pos, vel=vel, forces=forces)
+
+            self.call = call
+
+        def _get_one(self, lmp, pos=None, vel=None, forces=None):
+            if pos is None:
+                pos = utils.get_positions(lmp)
+            self._pos = pos
+            if vel is None:
+                vel = utils.get_velocities(lmp)
+            self._vel = vel
+            self._images = utils.get_images(lmp)
+            if forces is None:
+                forces = utils.get_forces(lmp)
+            self._forces = forces
+            return self
+
+        def _get_two(self, lmp):
+            self._box_data = utils.get_box_data(lmp)
+            self._xyz_pbc = np.array(self._box_data[1]) - np.array(self._box_data[0])
+
+        def _update_vel(self, vel):
+            self._vel = vel
+
+        @property
+        def pos(self):
+            return self._pos
+
+        @pos.setter
+        def pos(self, pos):
+            self.err()
+            self.pos = pos
+
+        @property
+        def images(self):
+            return self._images
+
+        @images.setter
+        def images(self, images):
+            self.err()
+            self.images = images
+
+        @property
+        def box_data(self):
+            return self._box_data
+
+        @box_data.setter
+        def box_data(self, box_data):
+            self.err()
+            self.box_data = box_data
+
+        @property
+        def xyz_pbc(self):
+            return self._xyz_pbc
+
+        @xyz_pbc.setter
+        def xyz_pbc(self, xyz_pbc):
+            self.err()
+            self.xyz_pbx = xyz_pbc
+
+        @property
+        def vel(self):
+            return self._vel
+
+        @vel.setter
+        def vel(self, vel):
+            self.err()
+            self.vel = vel
+
+        @property
+        def forces(self):
+            return self._forces
+
+        @forces.setter
+        def forces(self, forces):
+            self.err()
+            self.forces = forces
+
+        @staticmethod
+        def err():
+            raise RuntimeWarning("Frame attributes should not be externally modified.")
 
     class Snapshot(NamedTuple):
         frame: "Topology.Frame"

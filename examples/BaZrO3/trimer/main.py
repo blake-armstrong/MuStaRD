@@ -3,7 +3,7 @@ import numpy as np
 from mustard import Mustard
 from mustard.utils import MDF, dMDF
 
-LMB = 0.7998 * 0
+LMB = 0.7998
 ZETA = 16
 
 DIST_CUTOFF = 1.8
@@ -95,12 +95,6 @@ def main():
         # "compute cpe all pe"
     ]
     #    commands = ["fix md all nph iso 1 1 1 tchain 5 pchain 5 mtk yes", f"fix tst all temp/csvr {TEMPERATURE} {TEMPERATURE} 0.1 20384", f"timestep {TIMESTEP}", f"velocity all create {TEMPERATURE} 30094 mom yes dist gaussian", "fix com all momentum 100 linear 1 1 1"]
-    minimise = [
-        "min_style cg",
-        "min_modify line quadratic",
-        "minimize 1e-6 1e-6 100 100",
-        "reset_timestep 0",
-    ]
 
     INPUTS = {
         "temperature": temperature,
@@ -178,7 +172,7 @@ def main():
     #     #         0,
     # )
     # msevb.step(200)
-    msevb.step(100)
+    msevb.step(1000)
     # msevb.step(100)
     # msevb.step(50000)
 

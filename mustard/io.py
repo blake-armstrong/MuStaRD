@@ -7,6 +7,7 @@ from .constants import UNITS
 from time import time
 from typing import NamedTuple
 from .utils import extract_box
+from .mixing import get_FD_occupancies
 
 _DEFAULTS = {
     "atom_types": {},
@@ -42,14 +43,6 @@ _DEFAULTS = {
 
 
 class SystemInfo:
-    class Reaction(NamedTuple):
-        X: str
-        H: str
-        Y: str
-        type_changes0: dict
-        type_changes1: dict
-        cutoffs: dict
-
     def __init__(self, input_params):
         params = _DEFAULTS.copy()
         params.update(input_params)
@@ -77,6 +70,7 @@ class SystemInfo:
         self.computes = self._set_computes(params.pop("computes"))
         self.units = self._set_unit_system(params.pop("lammps_unit_system"))
         self.FM = self._set_fermi_mixing(params.pop("fermi_mixing"))
+        self.get_occupancies = self._set_get_occupancies()
         self.nl_update = self._set_nl_update(params.pop("neighbour_list_update"))
         self.scf_tol = float(params.pop("scf_tol"))
         self.scf_max_iter = int(params.pop("scf_max_iter"))
@@ -226,6 +220,14 @@ class SystemInfo:
                 )
             )
 
+    class Reaction(NamedTuple):
+        X: str
+        H: str
+        Y: str
+        type_changes0: dict
+        type_changes1: dict
+        cutoffs: dict
+
     def _set_temperature(self, _temp):
         self.temperature = float(_temp)
 
@@ -257,6 +259,24 @@ class SystemInfo:
 
     def _set_fermi_mixing(self, fm):
         return bool(fm)
+
+    def _set_get_occupancies(self):
+        if self.FM:
+            # fermi mixing
+
+            def get_occupancies_FM(eig_vals, SI):
+                return get_FD_occupancies(eig_vals, SI.temperature, SI.fd_tols, SI.RT)
+
+            return get_occupancies_FM
+
+        else:
+
+            def get_occupancies_NO_FM(eig_vals, _):
+                occupancies = np.zeros(len(eig_vals))
+                occupancies[np.argmin(eig_vals)] = 1.0
+                return occupancies
+
+            return get_occupancies_NO_FM
 
     def _set_nl_update(self, nl_update):
         return int(nl_update)
@@ -298,7 +318,7 @@ class Output:
             props = [lmp.get_thermo(prop) for prop in self.properties]
             self.logger.info(self.info.format(step, pe, pe + ke, *props, speed))
 
-        def write(self, step, pe, ke, lmp):
+        def write(self, step, pe, lmp):
             if step % self.write_frequency == 0:
                 t1 = time()
                 speed = 0
@@ -307,6 +327,7 @@ class Output:
                         (86400 / (t1 - self.t0))
                         * (self.write_frequency * self.timestep)
                     ) / 1000
+                ke = lmp.get_thermo("ke")
                 self._write(lmp, step, speed, pe, ke)
                 self.t0 = t1
 
