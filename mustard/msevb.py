@@ -5,6 +5,7 @@ from .io import SystemInfo
 from .mpi import Universe
 from . import utils
 from copy import copy
+from time import time
 
 
 class MSEVB:
@@ -24,42 +25,61 @@ class MSEVB:
         self.min_eval: float = 0.0
         self.min_state_idx: np.intp = np.intp(0)
         self.step_count: int = 0
+        self.forces_shape = utils.get_forces(self.topology.lmp).shape
+        self.ntimestep = 0
 
     def __call__(self, lmp, ntimestep, nlocal, tag, x, f):
+        self.ntimestep = ntimestep
+        callback = self.callback_main
         if self.run == 0:
-            return self.callback_none(lmp, ntimestep, nlocal, tag, x, f)
+            callback = self.callback_none
         if self.run == 2:
-            return self.callback_update(lmp, ntimestep, nlocal, tag, x, f)
-        return self.callback(lmp, ntimestep, nlocal, tag, x, f)
+            callback = self.callback_update
+        return callback(lmp, ntimestep, nlocal, tag, x, f)
 
     def callback_update(self, lmp, ntimestep, nlocal, tag, x, f):
-        new_forces = lmp.numpy.fix_external_get_force("ext")
-        current_forces = lmp.numpy.extract_atom("f")
-        if len(current_forces) > 0:
-            new_forces[:, :] = current_forces
+        # self.log("callback update")
+        pass
 
     def callback_none(self, lmp, ntimestep, nlocal, tag, x, f):
+        # self.log("call back none")
         new_forces = lmp.numpy.fix_external_get_force("ext")
         current_forces = utils.get_forces(lmp)
-        current_forces[:, :] = self.universe.global_comm.bcast(current_forces, root=0)
+        mixed_forces = np.empty_like(current_forces)
+        mixed_forces[:, :] = self.universe.global_comm.bcast(current_forces, root=0)
         idxs = self.topology.id_to_idx(tag)
-        total_x, total_v = self.sync_x_v(lmp, current_forces.shape, x, idxs)
+        total_x, total_v = self.sync_x_v(lmp, x, idxs)
         self.frame(lmp, pos=total_x, vel=total_v, forces=current_forces)
         pe = lmp.extract_compute("get_pe", 0, 0)
+        if self.universe.sub_rank == 0:
+            self.log(
+                f"Potential energy for color {self.universe.rank.color}: {pe}",
+                level="debug",
+                rank=-1,
+            )
         self.min_eval = pe
         if len(idxs) > 0:
-            new_forces[:, :] = current_forces[idxs]
+            new_forces[:, :] = mixed_forces[idxs] - current_forces[idxs]
 
-    def callback(self, lmp, ntimestep, nlocal, tag, x, f):
+    def callback_main(self, lmp, ntimestep, nlocal, tag, x, f):
+        t0m = time()
+        # self.log("call back main")
         # grab the numpified fexternal array
-        tag1 = copy(tag)
         new_forces = lmp.numpy.fix_external_get_force("ext")
+        t_0 = time()
         current_forces = utils.get_forces(lmp)
+        t_1 = time()
+        # print(f"grab force time: {t_1 - t_0}")
         idxs = self.topology.id_to_idx(tag)
-        total_x, total_v = self.sync_x_v(lmp, current_forces.shape, x, idxs)
+        t_0 = time()
+        total_x, total_v = self.sync_x_v(lmp, x, idxs)
+        t_1 = time()
+        # print(f"sync time: {t_1 - t_0}")
+        t_0 = time()
         pe = lmp.extract_compute("get_pe", 0, 0)
+        t_1 = time()
+        # print(f"get_pe: {t_1 - t_0}")
         if self.universe.sub_rank == 0:
-            # self.log(f"Forces: {current_forces}", level="debug", rank=-1)
             self.log(
                 f"Potential energy for color {self.universe.rank.color}: {pe}",
                 level="debug",
@@ -68,36 +88,21 @@ class MSEVB:
         virial = None
         if self.SI.scale_box:
             virial = utils.get_virial(lmp, pr2vir=self.SI.units["pr2vir"])
-        cs = self.get_computes(lmp)
         pes = np.zeros(self.topology.num_systems, dtype="d")
-        forces = np.zeros(
-            shape=(self.topology.num_systems, *current_forces.shape), dtype="d"
-        )
-        virials = None
-        if self.SI.scale_box:
-            virials = np.zeros((self.topology.num_systems, 6), dtype="d")
+        cs = self.get_computes(lmp)
         computes = None
-        if self.SI.computes is not None:
-            computes = np.zeros(
-                (self.topology.num_systems, len(self.SI.computes)), dtype="d"
-            )
+        if cs is not None:
+            computes = np.zeros((self.topology.num_systems, len(cs)), dtype="d")
+        t2a = time()
+        # print(f"init time: {t2a - t0m}")
+        t0a = time()
         if self.universe.me == 0:
             source = MPI.ANY_SOURCE
             pes[0] = pe
-            forces[0, :, :] = current_forces
-            if virials is not None:
-                virials[0, :] = virial
             if computes is not None:
                 computes[0, :] = cs
             for system in range(1, self.topology.num_systems):
                 pes[system] = self.universe.global_comm.recv(source=source, tag=system)
-                forces[system, :, :] = self.universe.global_comm.recv(
-                    source=source, tag=system + 200
-                )
-                if virials is not None:
-                    virials[system, :] = self.universe.global_comm.recv(
-                        source=source, tag=system + 300
-                    )
                 if computes is not None:
                     computes[system, :] = self.universe.global_comm.recv(
                         source=source, tag=system + 400
@@ -108,25 +113,14 @@ class MSEVB:
             and self.universe.sub_rank == 0
         ):
             self.universe.global_comm.send(pe, dest=0, tag=self.universe.rank.color)
-            self.universe.global_comm.send(
-                current_forces, dest=0, tag=self.universe.rank.color + 200
-            )
-            if virial is not None:
-                self.universe.global_comm.send(
-                    virial, dest=0, tag=self.universe.rank.color + 300
-                )
             if cs is not None:
                 self.universe.global_comm.send(
                     cs, dest=0, tag=self.universe.rank.color + 400
                 )
-        pes = self.universe.global_comm.bcast(pes, root=0)
-        forces = self.universe.global_comm.bcast(forces, root=0)
-        if self.SI.scale_box:
-            virials = self.universe.global_comm.bcast(virials, root=0)
-        if self.SI.computes is not None:
-            computes = self.universe.global_comm.bcast(computes, root=0)
-
         self.frame(lmp, pos=total_x, vel=total_v, forces=current_forces)
+        t1a = time()
+        # print(f"comm time: {t1a - t0a}")
+        t0 = time()
         mix_states = self.mix_states()
         min_eval, min_evec_coeffs, cpl_forces = mix_states(
             pes,
@@ -134,37 +128,52 @@ class MSEVB:
             self.frame,
         )
         self.log(f"Minimum Eigenvalue: {min_eval}", level="debug")
+        min_evec_coeffs = self.universe.global_comm.bcast(min_evec_coeffs, root=0)
         amplitudes = min_evec_coeffs**2
-        min_state_idx = np.argmax(amplitudes)
         self.log(f"Amplitudes: {amplitudes}", level="debug")
-        ondiag_forces = np.einsum("ijk,i->jk", forces, amplitudes)
-        offdiag_forces = np.einsum(
-            "ijk,i->jk", cpl_forces, 2 * min_evec_coeffs[0] * min_evec_coeffs[1:]
-        )
+        min_state_idx = np.argmax(amplitudes)
+        min_evec_coeff = 0
+        if (
+            self.universe.rank.color < self.topology.num_systems
+            and self.universe.sub_rank == 0
+        ):
+            min_evec_coeff = min_evec_coeffs[self.universe.rank.color]
+        ondiag_forces = current_forces * min_evec_coeff**2
+        offdiag_forces = cpl_forces * 2 * min_evec_coeffs[0] * min_evec_coeff
         mixed_forces = ondiag_forces + offdiag_forces
-        mixed_virial = None
-        if virials is not None:
-            mixed_virial = np.einsum("ij,i->j", virials, amplitudes)
+        force_commbuff = np.empty_like(mixed_forces)
+        self.universe.global_comm.Allreduce(mixed_forces, force_commbuff, op=MPI.SUM)
+        t1 = time()
+        tfa = time()
+        # print(f"mix single time: {t1 - t0}")
+        # mixed_virial = None
+        # if virials is not None:
+        #     mixed_virial = np.einsum("ij,i->j", virials, amplitudes)
         self.min_state_idx = min_state_idx
-        self.min_eval = min_eval
-        ids = lmp.numpy.extract_atom("id")
+        self.min_eval = float(min_eval)
         if len(idxs) > 0:
-            new_forces[:, :] = mixed_forces[idxs]
+            new_forces[:, :] = force_commbuff[idxs] - current_forces[idxs]
+        self.log(f"Mixed forces: {force_commbuff}", level="debug")
+        t1m = time()
+        # print(f"end time: {tfa - t1}")
+        # print(f"total time: {t1m - t0m}")
         # TODO: deal with virial/pressure later
 
-    def sync_x_v(self, lmp, shape, pos, idxs):
-        nx = np.zeros(shape=shape)
+    def sync_x_v(self, lmp, pos, idxs):
+        # nx = np.zeros(shape=self.forces_shape)
+        nx = utils.get_positions(lmp)
+        nx = self.universe.global_comm.bcast(nx, root=0)
         vel = utils.get_velocities(lmp)
-        if self.universe.rank.color == 0:
-            if len(idxs) > 0:
-                nx[idxs] = pos
-        distributed_total_x = np.empty_like(nx)
-        self.universe.global_comm.Allreduce(nx, distributed_total_x, op=MPI.SUM)
-        if len(idxs) > 0:
-            pos[:, :] = distributed_total_x[idxs]
         vel = self.universe.global_comm.bcast(vel, root=0)
         utils.set_velocities(lmp, vel)
-        return distributed_total_x, vel
+        # if self.universe.rank.color == 0:
+        #     if len(idxs) > 0:
+        #         nx[idxs] = pos
+        # distributed_total_x = np.empty_like(nx)
+        # self.universe.global_comm.Allreduce(nx, distributed_total_x, op=MPI.SUM)
+        if len(idxs) > 0:
+            pos[:, :] = nx[idxs]
+        return nx, vel
 
     def get_computes(self, lmp):
         if self.SI.computes is None:
@@ -255,7 +264,8 @@ class MSEVB:
         states = self.topology.pairs_idxs[0]
         num_states = len(states)
         matrix = np.zeros(shape=(num_states, num_states))
-        cpl_forces = np.zeros(shape=(num_states - 1, *frame.forces.shape))
+        # cpl_forces = np.zeros(shape=(num_states - 1, *frame.forces.shape))
+        cpl_forces = np.zeros(shape=frame.forces.shape)
         if self.universe.rank.color == 0:
             if self.universe.me == 0:
                 matrix[0, 0] = pes[0]
@@ -266,9 +276,9 @@ class MSEVB:
                     matrix[state, state] = pes[state]
                     matrix[state, 0] = cpl_val
                     matrix[0, state] = cpl_val
-                    cpl_forces[state - 1, :, :] = self.universe.global_comm.recv(
-                        source=MPI.ANY_SOURCE, tag=state + 100
-                    )
+                    # cpl_forces[state - 1, :, :] = self.universe.global_comm.recv(
+                    #     source=MPI.ANY_SOURCE, tag=state + 100
+                    # )
         elif self.universe.rank.color < num_states:
             init_compute, new_compute = None, None
             if computes is not None:
@@ -286,15 +296,18 @@ class MSEVB:
                 self.universe.global_comm.send(
                     cpl_val, dest=0, tag=self.universe.rank.color
                 )
-                self.universe.global_comm.send(
-                    cpl_forces, dest=0, tag=self.universe.rank.color + 100
-                )
-        min_eval, min_evec_coeffs = None, None
+                # self.universe.global_comm.send(
+                #     _cpl_forces, dest=0, tag=self.universe.rank.color + 100
+                # )
+        min_eval = 0.0
+        min_evec_coeffs = np.zeros(shape=num_states)
         if self.universe.me == 0:
             min_eval, min_evec_coeffs = self.get_min_EVB_state(matrix)
-        min_eval, min_evec_coeffs, cpl_forces = self.universe.global_comm.bcast(
-            (min_eval, min_evec_coeffs, cpl_forces), root=0
-        )
+        # t0 = time()
+        # min_eval = self.universe.global_comm.bcast(min_eval, root=0)
+        # min_evec_coeffs[:] = self.universe.global_comm.bcast(min_evec_coeffs, root=0)
+        # cpl_forces[:, :, :] = self.universe.global_comm.bcast(cpl_forces, root=0)
+        # t1 = time()
 
         return min_eval, min_evec_coeffs, cpl_forces
 

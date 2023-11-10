@@ -8,3 +8,8 @@ __pychache__
 *.xyz
 *restart*
 out*
+log*
+.log*
+new*
+*new
+examples

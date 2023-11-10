@@ -82,7 +82,7 @@ def main():
         "fix md all nve",
         f"fix tst all temp/csvr {temperature} {temperature} 0.1 {r1}",
         f"timestep {timestep}",
-        # f"velocity all create {temperature} {r2} mom yes dist gaussian",
+        f"velocity all create {temperature} {r2} mom yes dist gaussian",
         "fix com all momentum 100 linear 1 1 1",
         # "compute cpe all pe"
     ]
@@ -102,7 +102,7 @@ def main():
             "O3": -2.000000,
             "H1": 0.308698,
         },
-        "neighbour_list_update": 1,
+        "neighbour_list_update": 2,
         "lammps_unit_system": "metal",
         # "computes" : ("cpe"),
         "reactions": [
@@ -134,16 +134,16 @@ def main():
         header,
         commands,
         INPUTS,
-        debug=True,
-        mpi_list=[1, 1],
+        debug=False,
+        mpi_list=[4, 4, 2, 2],
     )
-    msevb.add_trajectory(filename="trajectory.dcd", write_frequency=1)
+    msevb.add_trajectory(filename="trajectory.dcd", write_frequency=50)
     msevb.add_trajectory(filename="reaction.xyz", write_frequency=50, rxn=True)
     msevb.add_output(filename=None, properties=["temp", "pe", "ke"], write_frequency=50)
     msevb.add_output(
         filename="mustard.log",
         properties=["temp", "pe", "ke"],
-        write_frequency=1,
+        write_frequency=50,
     )
     # msevb.msevb_minimise()
     # msevb.finite_differences(

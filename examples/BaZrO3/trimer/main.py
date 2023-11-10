@@ -82,6 +82,7 @@ def main():
         "fix md all nve",
         # f"fix tst all temp/csvr {temperature} {temperature} 0.1 {r1}",
         f"timestep {timestep}",
+        # "neigh_modify every 5 delay 5"
         # f"velocity all create {temperature} {r2} mom yes dist gaussian",
         # "fix com all momentum 100 linear 1 1 1",
         # "compute cpe all pe"
@@ -102,16 +103,7 @@ def main():
             "O3": -2.000000,
             "H1": 0.308698,
         },
-        "neighbour_list_update": 1,
-        # "type_charges": {
-        #     "Ba": 0.000000,
-        #     "Zr": 0.000000,
-        #     "Y": 0.0,
-        #     "O1": 0.000,
-        #     "O2": 0.0000,
-        #     "O3": 0.00000,
-        #     "H1": 0.0000,
-        # },
+        "neighbour_list_update": 10,
         "lammps_unit_system": "metal",
         # "computes" : ("cpe"),
         "reactions": [
@@ -144,7 +136,7 @@ def main():
         commands,
         INPUTS,
         debug=True,
-        mpi_list=[8, 6, 1, 1],
+        mpi_list=[2, 2, 2, 2],
     )
     msevb.add_trajectory(filename="trajectory.dcd", write_frequency=50)
     msevb.add_trajectory(filename="reaction.xyz", write_frequency=50, rxn=True)
@@ -169,3 +161,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # main()

@@ -2,7 +2,6 @@ from lammps import lammps
 from scipy.optimize import minimize
 from collections import defaultdict
 import numpy as np
-import os
 import uuid
 
 from copy import copy
@@ -126,18 +125,19 @@ class Mustard:
             frame=frame,
         )
         self.lmp.set_fix_external_callback("ext", self.msevb, self.lmp)
-        self.msevb.run = 0
+        self.msevb.run = 2
         self.lmp.command("run 0 post no")
         self.Trajectory = Trajectory()
         self.Output = Output()
         self.prev_system = np.array(tuple())
         self.safe = False
         self.rebuild = True
-        self._run_step(n_step=0, nl_update=1)
+        self.identify_pairs()
+        self.msevb.run = 3
+        self.lmp.command("run 0 pre yes post no")
         self.msevb.step_count = 0
 
     def _reset_lmp_topology(self, lmp, frame):
-        self.log("reset lmp called", rank=-1)
         if self.universe.rank.color == 0:
             raise RuntimeError("dont do this")
         lmp.commands_list(
@@ -155,6 +155,31 @@ class Mustard:
         )
         utils.set_velocities(lmp, frame.vel)
         utils.set_box_data(lmp, frame.box_data)
+        self.lmp.command(f"reset_timestep {self.msevb.ntimestep}")
+        self.lmp.commands_list(self.restart_commands["fixes"])
+        self.lmp.set_fix_external_callback("ext", self.msevb, self.lmp)
+        self.msevb.run = 2
+        lmp.command("run 0 pre yes post no")
+
+    def _new_reset_lmp_topology(self, lmp, frame):
+        if self.universe.rank.color == 0:
+            raise RuntimeError("dont do this")
+        lmp.commands_list(
+            ["clear"]
+            + self.restart_commands["header"]
+            + self.restart_commands["read_data"]
+        )
+        utils.set_positions(lmp, frame.pos)
+        utils.set_images(lmp, frame.images)
+        lmp.commands_list(
+            self.restart_commands["change_box"]
+            + self.restart_commands["force_field"]
+            + self.restart_commands["virial"]
+            + self.restart_commands["user"]
+        )
+        utils.set_velocities(lmp, frame.vel)
+        utils.set_box_data(lmp, frame.box_data)
+        self.lmp.command(f"reset_timestep {self.msevb.ntimestep}")
         self.lmp.commands_list(self.restart_commands["fixes"])
         self.lmp.set_fix_external_callback("ext", self.msevb, self.lmp)
         self.msevb.run = 2
@@ -195,7 +220,7 @@ class Mustard:
             + self.restart_commands["user"]
         )
         utils.set_box_data(self.lmp, frame.box_data)
-        utils.set_box_data(self.lmp, frame.vel)
+        utils.set_velocities(self.lmp, frame.vel)
         self.lmp.commands_list(self.restart_commands["fixes"])
         self.msevb.run = 2
         self.lmp.command("run 0 pre yes post no")
@@ -207,7 +232,7 @@ class Mustard:
         if not self.topology.rxn_pairs:
             self._redistribute_EVB_states(1, self.msevb.frame)
             self.num_colors = 1
-            self.rebuild = False
+            # self.rebuild = False
             self.prev_system = np.array(tuple())
             return False
 
@@ -219,8 +244,6 @@ class Mustard:
         self.log(f"New total colors: {self.universe.total_colors}", level="debug")
 
         system = self.topology.grab_system(np.intp(self.universe.rank.color))
-        self.log(f"{self.universe.rank.color} system: {system}", rank=-1)
-        self.log(f"{self.universe.rank.color} prev_system: {self.prev_system}", rank=-1)
         if len(system) != 0:
             change_topology = True
             if np.array_equal(self.prev_system, system) and self.safe:
@@ -272,6 +295,8 @@ class Mustard:
         self.universe.global_comm.Barrier()
         self.msevb.run = 2
         self.lmp.command(f"run 0 pre yes post no")
+        # self.universe.global_comm.Barrier()
+        # self._run_step(n_step=0, nl_update=1)
         self.universe.global_comm.Barrier()
         self.topology.build_topology()
         self.safe = False
@@ -279,21 +304,8 @@ class Mustard:
         self.rebuild = True
         self.universe.global_comm.Barrier()
 
-    def _run_step(self, n_step=1, nl_update=None):
-        any_pairs = self.identify_pairs()
-        run = f"run {n_step} pre yes post no"
-        if nl_update is None:
-            nl_update = self.SI.nl_update
-        if self.msevb.step_count % nl_update != 0 and not self.rebuild:
-            # pre no stops computing neighlist
-            # run = f"run {n_step} pre no post no"
-            run.replace("pre yes", "pre no")
-        self.log("RUN 1 HAS BEEN CALLED")
-        self.msevb.run = int(any_pairs)
-        self.lmp.command(run)
-
-    def _step(self, n_step=1, nl_update=None):
-        self.log(f"CALL TO STEP {self.msevb.step_count}")
+    def _step(self, n_step=1):
+        # self.log(f"step {self.msevb.step_count}")
         if self.universe.rank.color == 0:
             if self.universe.me == 0:
                 self.Output.write(
@@ -306,7 +318,22 @@ class Mustard:
                 self.universe,
                 self.topology,
             )
-        self._run_step(n_step, nl_update)
+        any_pairs = self.identify_pairs()
+        self.msevb.ntimestep = self.universe.global_comm.bcast(
+            self.msevb.ntimestep, root=0
+        )
+        self.msevb.run = int(any_pairs)
+        # update = "yes"
+        do = "no"
+        update = "no"
+        if self.msevb.step_count % self.SI.nl_update == 0 or self.rebuild:
+            # pre yes recomputes neighlist
+            # update = "no"
+            do = "yes"
+            # if self.rebuild:
+            #     update = "yes"
+            self.rebuild = False
+        self.lmp.command(f"run {n_step} pre {do} post no update {update}")
         if self.msevb.min_state_idx == 0:
             return None
         # reaction has occured - update topology
@@ -558,7 +585,9 @@ class Mustard:
     #     self.step_count = 0
 
     def __del__(self):
-        if hasattr(self, "data_io"):
+        if hasattr(self, "SI"):
+            import os
+
             try:
                 os.remove(f"/tmp/{self.SI.file}")
             except OSError:
