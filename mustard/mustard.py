@@ -226,13 +226,11 @@ class Mustard:
         self.lmp.command("run 0 pre yes post no")
 
     def identify_pairs(self):
-        # self.prev_system = np.array([[None, None]])
         self.msevb.frame._update_vel(utils.get_velocities(self.lmp))
         self.topology.get_pairs(self.msevb.frame.pos, self.msevb.frame.xyz_pbc)
         if not self.topology.rxn_pairs:
             self._redistribute_EVB_states(1, self.msevb.frame)
             self.num_colors = 1
-            # self.rebuild = False
             self.prev_system = np.array(tuple())
             return False
 
@@ -295,8 +293,6 @@ class Mustard:
         self.universe.global_comm.Barrier()
         self.msevb.run = 2
         self.lmp.command(f"run 0 pre yes post no")
-        # self.universe.global_comm.Barrier()
-        # self._run_step(n_step=0, nl_update=1)
         self.universe.global_comm.Barrier()
         self.topology.build_topology()
         self.safe = False
@@ -305,7 +301,6 @@ class Mustard:
         self.universe.global_comm.Barrier()
 
     def _step(self, n_step=1):
-        # self.log(f"step {self.msevb.step_count}")
         if self.universe.rank.color == 0:
             if self.universe.me == 0:
                 self.Output.write(
@@ -323,24 +318,25 @@ class Mustard:
             self.msevb.ntimestep, root=0
         )
         self.msevb.run = int(any_pairs)
-        # update = "yes"
-        do = "no"
-        update = "no"
+        pre = "no"
         if self.msevb.step_count % self.SI.nl_update == 0 or self.rebuild:
-            # pre yes recomputes neighlist
-            # update = "no"
-            do = "yes"
-            # if self.rebuild:
-            #     update = "yes"
+            # pre = yes recomputes neighlist
+            pre = "yes"
             self.rebuild = False
-        self.lmp.command(f"run {n_step} pre {do} post no update {update}")
+        self.lmp.command(f"run {n_step} pre {pre} post no update no")
         if self.msevb.min_state_idx == 0:
             return None
         # reaction has occured - update topology
         min_system = self.topology.grab_system(self.msevb.min_state_idx)
         for pair in min_system:
+            h, y = pair
+            try:
+                # NOTE assumes transferring atom is only bonded to one other atom
+                x = self.topology.bonds[h][0]
+            except KeyError:
+                x = None
             self.Output.log(
-                f"reaction occured at step {self.msevb.step_count} between IDs {pair[0]} and {pair[1]}"
+                f"reaction occured at step {self.msevb.step_count} between IDs(xhy) {x} {h} {y}"
             )
         self.update_topology(min_system)
         return min_system

@@ -8,7 +8,7 @@ timer timeout 23:55:00 every 1000
 
 # ------ Simulation files --------------------------
 variable ff_file        index           ff.lmp   # force field file
-variable coord_file     index             coord.lmp   # coordinates file
+variable coord_file     index       bazryo3-1.0.lmp   # coordinates file
 variable runID          index                     0   # run ID for final restart
 variable rstID          equal            ${runID}-1   # ID of previous  restart
 variable traj_file      index   trajectory.${runID}   # trajectory file - no extension
@@ -26,14 +26,14 @@ variable ti             index                   no    # thermodynamic integratio
 variable multiRun       index                   no    # task farming of runs
 
 # ------ Molecular dynamics variables --------------
-variable ens            index                  nvt    # ensemble (nve, nph, nvt, npt)
+variable ens            index                  npt    # ensemble (nve, nph, nvt, npt)
 variable timestep       index                0.001    # simulation timestep (time units)
 variable nsteps         index               100000    # number of MD steps
 variable nequil         index               100000    # equilibration steps - FEP only
 
 # ------ Thermostat --------------------------------
 variable tst            index                 csvr    # thermostat (nh, ber, lang, csvr)
-variable temp           index                 1500.    # starting temperature (K)
+variable temp           index                 1000.    # starting temperature (K)
 variable trel           index                  0.1    # thermostat relaxation time (time units)
 
 # ------ Barostat (NPT runs only) ------------------
@@ -42,8 +42,8 @@ variable pres           index                    1    # pressure bar/atm
 variable prel           index                    1.   # barostat relaxation time (time units)
 
 # ------ Output ------------------------------------
-variable nthermo        index                  50    # thermodynamic data output frequency
-variable ntraj          index                 100    # trajectory output frequency - all system
+variable nthermo        index                 250    # thermodynamic data output frequency
+variable ntraj          index                 250    # trajectory output frequency - all system
 variable trajType       index                  dcd    # trajectory type (dcd, xtc, xyz)
 
 # ------ Random number seeds -----------------------
