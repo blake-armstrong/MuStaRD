@@ -134,8 +134,8 @@ def main():
         header,
         commands,
         INPUTS,
-        debug=False,
-        mpi_list=[4, 4, 2, 2],
+        # debug=True,
+        mpi_list=[4, 4],
     )
     msevb.add_trajectory(filename="trajectory.dcd", write_frequency=50)
     msevb.add_trajectory(filename="reaction.xyz", write_frequency=50, rxn=True)
@@ -145,15 +145,10 @@ def main():
         properties=["temp", "pe", "ke"],
         write_frequency=50,
     )
-    # msevb.msevb_minimise()
-    # msevb.finite_differences(
-    #     file="fd_diff4.out",
-    #     delta=1e-4,
-    #     #     index_array=[
-    #     #         0,
-    # )
+    msevb.minimise()
+    # msevb.finite_differences(file="new_fd.out", delta=1e-3, index_array=[0, 1, 2])
     # msevb.step(200)
-    msevb.step(1000000)
+    # msevb.step(1000000)
     # msevb.step(100)
     # msevb.step(50000)
 

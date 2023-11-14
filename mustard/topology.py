@@ -386,32 +386,34 @@ class Topology:
             self._get_one(lmp)
             self._get_two(lmp)
 
-        def __call__(self, lmp, pos=None, vel=None, forces=None):
-            return self.call(self, lmp, pos=pos, vel=vel, forces=forces)
+        def __call__(self, lmp, pos=None, vel=None, forces=None, imgs=None):
+            return self.call(self, lmp, pos=pos, vel=vel, forces=forces, imgs=imgs)
 
         def _generate_call(self):
             if self.scale_box:
 
-                def call(self, lmp, pos=None, vel=None, forces=None):
-                    self._get_one(lmp, pos=pos, vel=vel, forces=forces)
+                def call(self, lmp, pos=None, vel=None, forces=None, imgs=None):
+                    self._get_one(lmp, pos=pos, vel=vel, forces=forces, imgs=imgs)
                     self._get_two(lmp)
 
                 self.call = call
                 return
 
-            def call(self, lmp, pos=None, vel=None, forces=None):
-                self._get_one(lmp, pos=pos, vel=vel, forces=forces)
+            def call(self, lmp, pos=None, vel=None, forces=None, imgs=None):
+                self._get_one(lmp, pos=pos, vel=vel, forces=forces, imgs=imgs)
 
             self.call = call
 
-        def _get_one(self, lmp, pos=None, vel=None, forces=None):
+        def _get_one(self, lmp, pos=None, vel=None, forces=None, imgs=None):
             if pos is None:
                 pos = utils.get_positions(lmp)
             self._pos = pos
             if vel is None:
                 vel = utils.get_velocities(lmp)
             self._vel = vel
-            self._images = utils.get_images(lmp)
+            if imgs is None:
+                imgs = utils.get_images(lmp)
+            self._images = imgs
             if forces is None:
                 forces = utils.get_forces(lmp)
             self._forces = forces

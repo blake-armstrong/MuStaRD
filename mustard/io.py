@@ -436,7 +436,7 @@ class Trajectory:
             traj.close()
 
     @staticmethod
-    def slice(pos, filename_save, mass, types):
+    def save_file(pos, filename_save, mass, types):
         topology = mdtraj.Topology()
         chain = topology.add_chain()
         residue = topology.add_residue("RXN", chain)

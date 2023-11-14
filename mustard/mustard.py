@@ -1,11 +1,9 @@
 from lammps import lammps
 from scipy.optimize import minimize
-from collections import defaultdict
+from copy import copy
 import numpy as np
 import uuid
 
-from copy import copy
-import pandas as pd
 from .msevb import MSEVB
 from .topology import Topology
 from .io import SystemInfo, Trajectory, Output
@@ -163,27 +161,10 @@ class Mustard:
 
     def _new_reset_lmp_topology(self, lmp, frame):
         if self.universe.rank.color == 0:
-            raise RuntimeError("dont do this")
-        lmp.commands_list(
-            ["clear"]
-            + self.restart_commands["header"]
-            + self.restart_commands["read_data"]
-        )
-        utils.set_positions(lmp, frame.pos)
-        utils.set_images(lmp, frame.images)
-        lmp.commands_list(
-            self.restart_commands["change_box"]
-            + self.restart_commands["force_field"]
-            + self.restart_commands["virial"]
-            + self.restart_commands["user"]
-        )
-        utils.set_velocities(lmp, frame.vel)
-        utils.set_box_data(lmp, frame.box_data)
-        self.lmp.command(f"reset_timestep {self.msevb.ntimestep}")
-        self.lmp.commands_list(self.restart_commands["fixes"])
-        self.lmp.set_fix_external_callback("ext", self.msevb, self.lmp)
-        self.msevb.run = 2
-        lmp.command("run 0 pre yes post no")
+            print("Bonds: ", lmp.numpy.gather_bonds())
+            print("Angles: ", lmp.numpy.gather_angles())
+            print("Impropers: ", lmp.numpy.gather_impropers())
+            print("Dihedrals: ", lmp.numpy.gather_dihedrals())
 
     def _redistribute_EVB_states(self, num_total_colors, frame):
         if num_total_colors <= self.universe.total_colors:
@@ -300,8 +281,8 @@ class Mustard:
         self.rebuild = True
         self.universe.global_comm.Barrier()
 
-    def _step(self, n_step=1):
-        if self.universe.rank.color == 0:
+    def _step(self, n_step=1, out=True):
+        if self.universe.rank.color == 0 and out:
             if self.universe.me == 0:
                 self.Output.write(
                     int(self.msevb.step_count), self.msevb.min_eval, self.lmp
@@ -335,9 +316,10 @@ class Mustard:
                 x = self.topology.bonds[h][0]
             except KeyError:
                 x = None
-            self.Output.log(
-                f"reaction occured at step {self.msevb.step_count} between IDs(xhy) {x} {h} {y}"
-            )
+            if out:
+                self.Output.log(
+                    f"reaction occured at step {self.msevb.step_count} between IDs(xhy) {x} {h} {y}"
+                )
         self.update_topology(min_system)
         return min_system
 
@@ -373,212 +355,180 @@ class Mustard:
             Trajectory.trajectory(filename, write_frequency, rxn)
         )
 
-    # def finite_differences(
-    #     self, file="finite_differences.out", delta=1e-3, index_array=None
-    # ):
-    #     if self.universe.me == 0:
-    #         self.Output.log(
-    #             f"Running finite differences calculating with delta {delta} to file {file}"
-    #         )
-    #     if self.universe.rank.color == 0:
-    #         self.lmp.command("run 0 pre yes post no")
-    #     frame = self._get_frame()
-    #     rxn_pairs, systems_idxs, pairs_idxs = self._get_pairinfo(
-    #         frame.pos, frame.xyz_pbc
-    #     )
-    #     if not rxn_pairs:
-    #         self.log(
-    #             (
-    #                 "Could not complete finite differences as no "
-    #                 "possible reactions were detected with starting configuration."
-    #             ),
-    #             level="warn",
-    #         )
-    #         return False
-    #     num_systems = len(systems_idxs)
-    #     if self.universe.me == 0:
-    #         self.log(f"Reaction systems: {systems_idxs}", level="debug")
-    #         self.log(f"rxn_pairs: {rxn_pairs}", level="debug")
-    #         self.log(
-    #             f"Starting total colors: {self.universe.total_colors}", level="debug"
-    #         )
-    #         self.log(f"Number of systems: {num_systems}", level="debug")
-    #     self._redistribute_EVB_states(num_systems, frame)
-    #     if self.universe.me == 0:
-    #         self.log(f"New total colors: {self.universe.total_colors}", level="debug")
-    #     self.log("START")
-    #     _, _, ref_mixed_forces, _ = self._get_mixed_properties(
-    #         rxn_pairs, systems_idxs, num_systems, frame, pairs_idxs
-    #     )
-    #     pos_orig = None
-    #     if self.universe.rank.color == 0:
-    #         pos_orig = self.get_positions()
-    #     pos_orig = self.universe.global_comm.bcast(pos_orig, root=0)
-    #     check_forces = np.zeros(shape=ref_mixed_forces.shape)
-    #     if index_array is None:
-    #         index_array = range(len(pos_orig))
-    #     if len(index_array) > len(pos_orig):
-    #         raise ValueError("Index array length is greater than number of particles")
-    #
-    #     for particle in index_array:
-    #         for coord in range(3):
-    #             self.Output.log(
-    #                 f"calculating force {particle*3 + coord + 1} / {len(pos_orig) * 3}"
-    #             )
-    #             _pos = copy(pos_orig)
-    #             _pos[particle][coord] = pos_orig[particle][coord] + delta
-    #             self.set_positions(_pos)
-    #             self.lmp.command("run 0 post no")
-    #             frame = self._get_frame(pos=_pos)
-    #             pos_m_eval, _, _, _ = self._get_mixed_properties(
-    #                 rxn_pairs, systems_idxs, num_systems, frame, pairs_idxs
-    #             )
-    #             _pos = copy(pos_orig)
-    #             _pos[particle][coord] = pos_orig[particle][coord] - delta
-    #             self.set_positions(_pos)
-    #             self.lmp.command("run 0 post no")
-    #             frame = self._get_frame(pos=_pos)
-    #             neg_m_eval, _, _, _ = self._get_mixed_properties(
-    #                 rxn_pairs, systems_idxs, num_systems, frame, pairs_idxs
-    #             )
-    #             check_forces[particle][coord] = -(pos_m_eval - neg_m_eval) / (2 * delta)
-    #
-    #     if self.universe.me == 0:
-    #         diff = ref_mixed_forces - check_forces
-    #         norm_diff = abs(diff) / abs(ref_mixed_forces)
-    #         df = pd.DataFrame(
-    #             {
-    #                 "Analytic": ref_mixed_forces.flatten(),
-    #                 "Finite_differences": check_forces.flatten(),
-    #                 "Diff": diff.flatten(),
-    #                 "Abs_diff": abs(diff).flatten(),
-    #                 "Norm_diff": norm_diff.flatten(),
-    #             }
-    #         )
-    #         df.to_csv(file, sep="\t", index=False)
-    #         self.Output.log(f"Finite differences written to {file}")
-    #     self.universe.global_comm.Barrier()
-    #     return True
+    def finite_differences(
+        self, file="finite_differences.out", delta=1e-3, index_array=None
+    ):
+        import pandas as pd
 
-    # def minimise(self, cmd_list):
-    #     if self.universe.rank.color == 0:
-    #         self.log("Regular energy minimisation called...")
-    #         self.lmp.commands_list(cmd_list)
-    #         self.log("...system minimised.")
-    #     self.universe.global_comm.Barrier()
+        self.log("Beginning finite differences...")
+        if self.universe.me == 0:
+            self.Output.log(
+                f"Running finite differences calculating with delta {delta} to file {file}"
+            )
 
-    # def msevb_minimise(self, traj=True, scale_box=False):
-    #     self.step_count = 0.2
-    #     if scale_box:
-    #         raise ValueError(
-    #             "MSEVB minimisation with fluctuating box not implemented yet. Flag is there to remind me :)"
-    #         )
-    #     if traj:
-    #         self.add_trajectory(filename="minimise.dcd", write_frequency=1)
-    #     frame = self._get_frame()
-    #     u_frame_pos = frame.images * frame.xyz_pbc + frame.pos
-    #
-    #     def objective(coords):
-    #         upos = coords.reshape(len(frame.pos), len(frame.pos[0]))
-    #         diff = upos - frame.pos
-    #         diff -= frame.xyz_pbc * (diff / frame.xyz_pbc).round()
-    #         nupos = u_frame_pos - diff
-    #         new_imgs = np.floor(nupos / frame.xyz_pbc).astype(int)
-    #         pos = nupos - frame.xyz_pbc * new_imgs
-    #         new_frame = Topology.Frame(
-    #             pos=pos,
-    #             box_data=frame.box_data,
-    #             images=new_imgs,
-    #             xyz_pbc=frame.xyz_pbc,
-    #             vel=frame.vel,
-    #         )
-    #         self.set_positions(pos)
-    #         self.set_images(new_imgs)
-    #         self.lmp.command("run 0 pre yes post no")
-    #         if self.universe.rank.color == 0 and traj:
-    #             self.Trajectory.trajs[-1].write(
-    #                 1,
-    #                 self.lmp,
-    #                 frame.box_data,
-    #                 self.universe,
-    #                 self.topology,
-    #                 pos=nupos,
-    #             )
-    #         rxn_pairs, systems_idxs, pairs_idxs = self._get_pairinfo(pos, frame.xyz_pbc)
-    #         if rxn_pairs:
-    #             num_systems = len(systems_idxs)
-    #             self.log(f"Reaction systems: {systems_idxs}", level="debug")
-    #             self.log(f"rxn_pairs: {rxn_pairs}", level="debug")
-    #             self.log(
-    #                 f"Starting total colors: {self.universe.total_colors}",
-    #                 level="debug",
-    #             )
-    #             self.log(f"Number of systems: {num_systems}", level="debug")
-    #             self._redistribute_EVB_states(num_systems, frame)
-    #             self.log(
-    #                 f"New total colors: {self.universe.total_colors}", level="debug"
-    #             )
-    #             min_eval, _, mixed_forces, _ = self._get_mixed_properties(
-    #                 rxn_pairs, systems_idxs, num_systems, new_frame, pairs_idxs
-    #             )
-    #             return min_eval, mixed_forces.flatten()
-    #         else:
-    #             pe = self.lmp.get_thermo("pe")
-    #             forces = self.get_forces()
-    #             return pe, forces.flatten()
-    #
-    #     init_pe, _ = objective(frame.pos)
-    #     self.log("Running minimisation...")
-    #     if self.universe.me == 0:
-    #         reg_pe = self.lmp.get_thermo("pe")
-    #         self.log(f"starting non-mixed potential energy for minimisation: {reg_pe} ")
-    #     self.log(
-    #         f"starting mixed potential energy for minimisation: {init_pe} ",
-    #     )
-    #     self.log(" updating initial topology...")
-    #     cycle = 0
-    #     while True:
-    #         self.log(f"  cycle: {cycle}")
-    #         reaction = self._step(n_step=0, nl_update=1, mini=True)
-    #         if not reaction:
-    #             self.log(" ...no change in topology")
-    #             break
-    #         self.log("    topology updated")
-    #         cycle += 1
-    #         if cycle > 100:
-    #             break
-    #
-    #     objective_values = []
-    #
-    #     def callback(xk):
-    #         objective_values.append(objective(xk))
-    #
-    #     result = minimize(
-    #         objective,
-    #         frame.pos.flatten(),
-    #         method="L-BFGS-B",
-    #         jac=True,
-    #         tol=1e-6,
-    #         callback=callback,
-    #     )
-    #     self.log(result, level="debug")
-    #     # self.logger.info("Objective function values at each step:")
-    #     for i, value in enumerate(objective_values):
-    #         self.log(f"  step {i}: {value[0]:.4f}")
-    #     self.log(f"...minimised MSEVB potential energy: {result.fun}")
-    #
-    #     upos = result.x.reshape(len(frame.pos), len(frame.pos[0]))
-    #     diff = upos - frame.pos
-    #     diff -= frame.xyz_pbc * (diff / frame.xyz_pbc).round()
-    #     nupos = u_frame_pos - diff
-    #     new_imgs = np.floor(nupos / frame.xyz_pbc).astype(int)
-    #     pos = nupos - frame.xyz_pbc * new_imgs
-    #
-    #     self.set_positions(pos)
-    #     self.set_images(new_imgs)
-    #     self.lmp.command("run 0 pre yes post no")
-    #     self.Trajectory.trajs.pop()
-    #     self.step_count = 0
+        any_pairs = self.identify_pairs()
+        if not any_pairs:
+            self.log(
+                (
+                    "No possible reactions were identified "
+                    "finite differences forces should therefore be the "
+                    "same as those without any msevb effects."
+                ),
+                level="warn",
+            )
+        self.msevb.run = int(any_pairs)
+        self.lmp.command("run 0 pre yes post no update yes")
+        ref_mixed_forces = copy(self.msevb.current_mixed_forces)
+        self.msevb.sync = False
+
+        starting_positions = utils.get_positions(self.lmp)
+        starting_positions = self.universe.global_comm.bcast(starting_positions, root=0)
+        check_forces = np.zeros(shape=self.msevb.forces_shape)
+        num_particles = self.msevb.forces_shape[0]
+        if index_array is None:
+            index_array = range(num_particles)
+        if len(index_array) > num_particles:
+            raise ValueError("Index array length is greater than number of particles")
+        for particle in index_array:
+            for coord in range(3):
+                self.Output.log(
+                    f"calculating force {particle*3 + coord + 1} / {num_particles * 3}"
+                )
+                evals = []
+                for d in (delta, -delta):
+                    pos_copy = copy(starting_positions)
+                    pos_copy[particle][coord] = starting_positions[particle][coord] + d
+                    utils.set_positions(self.lmp, pos_copy)
+                    self.lmp.command("run 0 pre yes post no update yes")
+                    evals.append(copy(self.msevb.min_eval))
+                check_forces[particle][coord] = -(evals[0] - evals[1]) / (2 * delta)
+
+        if self.universe.me == 0:
+            diff = ref_mixed_forces - check_forces
+            norm_diff = abs(diff) / abs(ref_mixed_forces)
+            df = pd.DataFrame(
+                {
+                    "Analytic": ref_mixed_forces.flatten(),
+                    "Finite_differences": check_forces.flatten(),
+                    "Diff": diff.flatten(),
+                    "Abs_diff": abs(diff).flatten(),
+                    "Norm_diff": norm_diff.flatten(),
+                }
+            )
+            df.to_csv(file, sep="\t", index=False)
+        self.Output.log(f"Finite differences written to {file}")
+        self.universe.global_comm.Barrier()
+
+    def minimise(self, traj=True, file="minimised.pdb"):
+        if traj:
+            self.add_trajectory(filename="minimise.dcd", write_frequency=1)
+        u_frame_pos = (
+            self.msevb.frame.images * self.msevb.frame.xyz_pbc + self.msevb.frame.pos
+        )
+        frame = copy(self.msevb.frame)
+        self.cycle = 0
+
+        def objective(coords):
+            if self.cycle % 2 == 0:
+                self.log(f" step {self.cycle // 2}: {self.msevb.min_eval}")
+            self.cycle += 1
+            upos = coords.reshape(len(frame.pos), len(frame.pos[0]))
+            diff = upos - frame.pos
+            diff -= frame.xyz_pbc * (diff / frame.xyz_pbc).round()
+            nupos = u_frame_pos - diff
+            new_imgs = np.floor(nupos / frame.xyz_pbc).astype(int)
+            pos = nupos - frame.xyz_pbc * new_imgs
+            utils.set_positions(self.lmp, pos)
+            utils.set_images(self.lmp, new_imgs)
+            self.msevb.frame(self.lmp, pos=pos, imgs=new_imgs)
+            any_pairs = self.identify_pairs()
+            self.msevb.run = int(any_pairs)
+            self.lmp.command("run 0 pre yes post no update yes")
+            if self.universe.rank.color == 0 and traj:
+                self.Trajectory.trajs[-1].write(
+                    1,
+                    self.lmp,
+                    frame.box_data,
+                    self.universe,
+                    self.topology,
+                    pos=nupos,
+                )
+            self.universe.global_comm.Barrier()
+            self.msevb.min_eval = self.universe.global_comm.bcast(
+                self.msevb.min_eval, root=0
+            )
+            return self.msevb.min_eval, self.msevb.current_mixed_forces.flatten()
+
+        # init_pe, _ = objective(frame.pos)
+        self.log("Running minimisation...")
+        if self.universe.me == 0:
+            reg_pe = self.lmp.get_thermo("pe")
+            self.log(f"starting non-mixed potential energy for minimisation: {reg_pe} ")
+        self.log(
+            f"starting mixed potential energy for minimisation: {self.msevb.min_eval} ",
+        )
+        self.log(" updating initial topology...")
+        cycle = 0
+        while True:
+            self.log(f"  cycle: {cycle}")
+            nlup = copy(self.SI.nl_update)
+            self.SI.nl_update = 1
+            reaction = self._step(n_step=0, out=False)
+            if reaction is None:
+                self.log(" ...no change in topology")
+                break
+            self.log("    topology updated")
+            cycle += 1
+            if cycle > 100:
+                break
+        self.SI.nl_update = nlup
+        any_pairs = self.identify_pairs()
+        self.msevb.run = int(any_pairs)
+        self.lmp.command("run 0 pre yes post no update yes")
+
+        objective_values = []
+
+        def callback(xk):
+            e, _ = objective(xk)
+            objective_values.append(e)
+
+        self.log("Minimum eigenvalue at each step:")
+        result = minimize(
+            objective,
+            frame.pos.flatten(),
+            method="L-BFGS-B",
+            jac=True,
+            tol=1e-6,
+            callback=callback,
+        )
+        self.log(f"...final minimum eigenvalue: {result.fun}")
+        self.log(result, level="debug")
+
+        upos = result.x.reshape(len(frame.pos), len(frame.pos[0]))
+        diff = upos - frame.pos
+        diff -= frame.xyz_pbc * (diff / frame.xyz_pbc).round()
+        nupos = u_frame_pos - diff
+        new_imgs = np.floor(nupos / frame.xyz_pbc).astype(int)
+        pos = nupos - frame.xyz_pbc * new_imgs
+
+        utils.set_positions(self.lmp, pos)
+        utils.set_images(self.lmp, new_imgs)
+        self.universe.global_comm.Barrier()
+        self.msevb.frame(self.lmp, pos=pos, imgs=new_imgs)
+        any_pairs = self.identify_pairs()
+        self.msevb.run = int(any_pairs)
+        self.lmp.command("run 0 pre yes post no update yes")
+        if self.universe.me == 0:
+            Trajectory.save_file(
+                pos=self.msevb.frame.pos,
+                filename_save=file,
+                mass=self.topology.masses,
+                types=self.topology.xyz_types,
+            )
+        self.log(f"Minised structure written to {file}")
+        if traj:
+            self.Trajectory.trajs.pop()
+        del self.cycle
 
     def __del__(self):
         if hasattr(self, "SI"):
