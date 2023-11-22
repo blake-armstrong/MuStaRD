@@ -43,6 +43,7 @@ class Topology:
         types = np.array(utils.gather_atoms(lmp, "type", 0, 1))
         qs = np.array(utils.gather_atoms(lmp, "q", 1, 1))
         mols = np.array(utils.gather_atoms(lmp, "molecule", 0, 1))
+        imgs = utils.get_images(lmp)
         masses = lmp.numpy.extract_atom("mass")[types]
 
         # dict stores per-ID info
@@ -54,6 +55,7 @@ class Topology:
                 charge=qs[idx],
                 molecule=mols[idx],
                 mass=masses[idx],
+                image=imgs[idx],
             )
 
         # dict converts residue ID to list of IDs
@@ -64,7 +66,13 @@ class Topology:
             mol_to_ids[atom.molecule].append(ID)
 
         with warnings.catch_warnings(record=True):
-            bonds = lmp.numpy.gather_bonds().astype(int)[:, 1:]
+            self.top_ref = {
+                "bonds": lmp.numpy.gather_bonds().astype(int),
+                "angles": lmp.numpy.gather_angles().astype(int),
+                "impropers": lmp.numpy.gather_impropers().astype(int),
+                "dihedrals": lmp.numpy.gather_dihedrals().astype(int),
+            }
+            bonds = self.top_ref["bonds"][:, 1:]
         bonds_dict = {}
         for bond in bonds:
             a, b = bond
@@ -205,6 +213,86 @@ class Topology:
         uypos = uhpos + disp
         new_imgs = np.floor(uypos / abcabc[:3]).astype(int)
         return new_imgs, yids
+
+    def _set_top(self, total_ids, type_str, fmt_str):
+        add = self.top_ref[type_str][
+            np.any(np.isin(self.top_ref[type_str][:, 1:], total_ids), axis=1)
+        ]
+        fmtd_add = np.array([])
+        if add.any():
+            fmtd_add = np.apply_along_axis(
+                lambda row: fmt_str.format(*row),
+                axis=1,
+                arr=add,
+            )
+        return fmtd_add.reshape(-1, 1)
+
+    def _reset_lmp_topology(self, total_ids):
+        types = np.vectorize(lambda ID: self.atoms[ID].type)(total_ids)
+        charges = np.vectorize(lambda ID: self.atoms[ID].charge)(total_ids)
+
+        set_type_charge_img = []
+        for idx, ID in enumerate(total_ids):
+            set_type_charge_img.append(f"set atom {ID} type {types[idx]}")
+            set_type_charge_img.append(f"set atom {ID} charge {charges[idx]}")
+            images = self.atoms[ID].image
+            set_type_charge_img.append(
+                f"set atom {ID} image {images[0]} {images[1]} {images[2]}"
+            )
+        self.lmp.commands_list(set_type_charge_img)
+        # for ID in total_ids:
+        #     self.atoms[ID].type
+        #     set_type_charge.append(f"set atom {eyed} type {new_types[eyed]}")
+        #     set_type_charge.append(
+        #         f"set atom {eyed} charge {self.SI.type_charges[new_types[eyed]]}"
+        #     )
+        #     ids_for_change.remove(eyed)
+
+        b = self._set_top(
+            total_ids,
+            type_str="bonds",
+            fmt_str="create_bonds single/bond {:10} {:10} {:10} special no ",
+        )
+        a = self._set_top(
+            total_ids,
+            type_str="angles",
+            fmt_str="create_bonds single/angle {:10} {:10} {:10} {:10} special no ",
+        )
+        i = self._set_top(
+            total_ids,
+            type_str="impropers",
+            fmt_str="create_bonds single/bond {:10} {:10} {:10} {:10} {:10} special no ",
+        )
+        d = self._set_top(
+            total_ids,
+            type_str="dihedrals",
+            fmt_str="create_bonds single/bond {:10} {:10} {:10} {:10} {:10} special no ",
+        )
+        full = list(np.concatenate([b, a, i, d]).flatten())
+        full[-1] = full[-1].replace("no", "yes")
+        [self.lmp.command(cmd) for cmd in full]
+
+    def reset_lmp_topology(self, system):
+        # system = self.grab_system(system_idx)
+        if not system.any():
+            return
+        rxn_nums = [self.rxn_nums_dict[tuple(pair)] for pair in system]
+        total_ids = []
+        for rxn_pair, _ in zip(system, rxn_nums):
+            id_h, id_y = rxn_pair
+            # create groups
+            hxy_group_str = "group HXY id "
+            hxs = self.residues[self.atoms[id_h].molecule]
+            ys = self.residues[self.atoms[id_y].molecule]
+            for eyed in hxs + ys:
+                hxy_group_str += f"{eyed} "
+                total_ids.append(eyed)
+            # removes all bonds, angles, dihedrals and impropers involving these ids
+            self.lmp.commands_list(
+                [hxy_group_str, "delete_bonds HXY multi remove", "group HXY delete"]
+            )
+        total_ids = np.array(total_ids)
+        self._reset_lmp_topology(total_ids)
 
     def change_topology_to_system(self, lmp, system, frame):
         create_bonds = []
@@ -507,6 +595,7 @@ class Topology:
         charge: float
         molecule: int
         mass: float
+        image: np.ndarray
 
     @staticmethod
     def _get_ids_from_type(type_int, atom_info):

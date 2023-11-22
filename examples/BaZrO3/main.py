@@ -102,7 +102,7 @@ def main():
             "O3": -2.000000,
             "H1": 0.308698,
         },
-        "neighbour_list_update": 2,
+        "neighbour_list_update": 10,
         "lammps_unit_system": "metal",
         # "computes" : ("cpe"),
         "reactions": [
@@ -134,21 +134,23 @@ def main():
         header,
         commands,
         INPUTS,
-        # debug=True,
-        mpi_list=[4, 4],
+        debug=True,
+        mpi_list=[4, 4, 4],
     )
     msevb.add_trajectory(filename="trajectory.dcd", write_frequency=50)
-    msevb.add_trajectory(filename="reaction.xyz", write_frequency=50, rxn=True)
+    msevb.add_trajectory(filename="reaction.xyz", write_frequency=1, rxn=True)
     msevb.add_output(filename=None, properties=["temp", "pe", "ke"], write_frequency=50)
     msevb.add_output(
         filename="mustard.log",
         properties=["temp", "pe", "ke"],
         write_frequency=50,
     )
-    msevb.minimise()
+    msevb.rerun("test.xyz")
+
+    # msevb.minimise()
     # msevb.finite_differences(file="new_fd.out", delta=1e-3, index_array=[0, 1, 2])
     # msevb.step(200)
-    # msevb.step(1000000)
+    # msevb.step(1000)
     # msevb.step(100)
     # msevb.step(50000)
 

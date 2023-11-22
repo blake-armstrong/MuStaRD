@@ -399,6 +399,18 @@ class Trajectory:
                             for typ, pos in zip(topology.xyz_types, unwrapped_pos)
                         ]
                     )
+                    self.xyz_file.write(
+                        f"Bonds {self._fmt(topology.top_ref['bonds'])}\n"
+                    )
+                    self.xyz_file.write(
+                        f"Angles {self._fmt(topology.top_ref['angles'])}\n"
+                    )
+                    self.xyz_file.write(
+                        f"Impropers {self._fmt(topology.top_ref['impropers'])}\n"
+                    )
+                    self.xyz_file.write(
+                        f"Dihedrals {self._fmt(topology.top_ref['dihedrals'])}\n"
+                    )
                     self.xyz_file.flush()
                 else:
                     self.dcd_file.write(
@@ -406,6 +418,9 @@ class Trajectory:
                         cell_lengths=list(abcabc[:3]),
                         cell_angles=abcabc[3:],
                     )
+
+        def _fmt(self, arr):
+            return np.array2string(arr, separator=",", formatter={"int": "{}".format})
 
         def write(self, step, *args, **kwargs):
             if self.fname:
@@ -445,6 +460,74 @@ class Trajectory:
         _f = mdtraj.open(filename_save, "w")
         _f.write(pos, topology=topology)
         _f.close()
+
+    @staticmethod
+    def read_xyz(trajectory, topology):
+        if trajectory.split(".")[-1] != "xyz":
+            raise ValueErorr("Need reactive xyz file")
+        num_frames = 0
+        frames = []
+        with open(trajectory, "r") as open_traj:
+            while True:
+                na = open_traj.readline()
+                if na == "":
+                    break
+                na = int(na)
+                _pbc = open_traj.readline()  # do something with this
+                split_pbc = _pbc.split()
+                pbc = np.array(split_pbc).reshape(3, 3)
+                xyz = np.empty(shape=(na, 3))
+                types = np.empty(shape=na, dtype=str)
+                for particle in range(na):
+                    line = open_traj.readline()
+                    splitline = line.split()
+                    types[particle] = splitline[0]
+                    xyz[particle] = [float(x) for x in splitline[1:4]]
+                _bonds = open_traj.readline()
+                split_bonds = _bonds.split()
+                bonds = eval(f"np.array({split_bonds[-1]})")
+                _angles = open_traj.readline()
+                split_angles = _angles.split()
+                angles = eval(f"np.array({split_angles[-1]})")
+                _impropers = open_traj.readline()
+                split_impropers = _impropers.split()
+                impropers = eval(f"np.array({split_impropers[-1]})")
+                _dihedrals = open_traj.readline()
+                split_dihedrals = _dihedrals.split()
+                dihedrals = eval(f"np.array({split_dihedrals[-1]})")
+                frames.append(
+                    Frame(
+                        natoms=na,
+                        pbc=pbc,
+                        pos=xyz,
+                        types=types,
+                        bonds=bonds,
+                        angles=angles,
+                        impropers=impropers,
+                        dihedrals=dihedrals,
+                    )
+                )
+                num_frames += 1
+        return frames
+
+        # new_topology = mdtraj.Topology()
+        # chain = new_topology.add_chain()
+        # residue = new_topology.add_residue("RXN", chain)
+        # for m, t in zip(topology.masses, topology.types):
+        #     new_topology.add_atom(str(t), mdtraj.element.Element.getByMass(m), residue)
+        # # itertraj = mdtraj.iterload(trajectory, top=new_topology)
+        # traj = mdtraj.load_xyz(trajectory, top=new_topology)
+
+
+def Frame(NamedTuple):
+    natoms: int
+    pbc: np.ndarray
+    pos: np.ndarray
+    types: np.ndarray
+    bonds: np.ndarray
+    angles: np.ndarray
+    impropers: np.ndarray
+    dihedrals: np.ndarray
 
 
 def logger(

@@ -3,6 +3,7 @@ from scipy.optimize import minimize
 from copy import copy
 import numpy as np
 import uuid
+import warnings
 
 from .msevb import MSEVB
 from .topology import Topology
@@ -89,8 +90,8 @@ class Mustard:
         self.lmp.commands_list(commands)
         self.lmp.command("run 0 post no")
         shape = utils.get_positions(self.lmp).shape
-        if self.universe.rank.color == 0:
-            self.lmp.command(f"write_data /tmp/{self.SI.file} nocoeff")
+        # if self.universe.rank.color == 0:
+        #     self.lmp.command(f"write_data /tmp/{self.SI.file} nocoeff")
         self.universe.global_comm.Barrier()
 
         fixes = [
@@ -135,36 +136,29 @@ class Mustard:
         self.lmp.command("run 0 pre yes post no")
         self.msevb.step_count = 0
 
-    def _reset_lmp_topology(self, lmp, frame):
-        if self.universe.rank.color == 0:
-            raise RuntimeError("dont do this")
-        lmp.commands_list(
-            ["clear"]
-            + self.restart_commands["header"]
-            + self.restart_commands["read_data"]
-        )
-        utils.set_positions(lmp, frame.pos)
-        utils.set_images(lmp, frame.images)
-        lmp.commands_list(
-            self.restart_commands["change_box"]
-            + self.restart_commands["force_field"]
-            + self.restart_commands["virial"]
-            + self.restart_commands["user"]
-        )
-        utils.set_velocities(lmp, frame.vel)
-        utils.set_box_data(lmp, frame.box_data)
-        self.lmp.command(f"reset_timestep {self.msevb.ntimestep}")
-        self.lmp.commands_list(self.restart_commands["fixes"])
-        self.lmp.set_fix_external_callback("ext", self.msevb, self.lmp)
-        self.msevb.run = 2
-        lmp.command("run 0 pre yes post no")
-
-    def _new_reset_lmp_topology(self, lmp, frame):
-        if self.universe.rank.color == 0:
-            print("Bonds: ", lmp.numpy.gather_bonds())
-            print("Angles: ", lmp.numpy.gather_angles())
-            print("Impropers: ", lmp.numpy.gather_impropers())
-            print("Dihedrals: ", lmp.numpy.gather_dihedrals())
+    # def _reset_lmp_topology(self, lmp, frame):
+    #     if self.universe.rank.color == 0:
+    #         raise RuntimeError("dont do this")
+    #     lmp.commands_list(
+    #         ["clear"]
+    #         + self.restart_commands["header"]
+    #         + self.restart_commands["read_data"]
+    #     )
+    #     utils.set_positions(lmp, frame.pos)
+    #     utils.set_images(lmp, frame.images)
+    #     lmp.commands_list(
+    #         self.restart_commands["change_box"]
+    #         + self.restart_commands["force_field"]
+    #         + self.restart_commands["virial"]
+    #         + self.restart_commands["user"]
+    #     )
+    #     utils.set_velocities(lmp, frame.vel)
+    #     utils.set_box_data(lmp, frame.box_data)
+    #     self.lmp.command(f"reset_timestep {self.msevb.ntimestep}")
+    #     self.lmp.commands_list(self.restart_commands["fixes"])
+    #     self.lmp.set_fix_external_callback("ext", self.msevb, self.lmp)
+    #     self.msevb.run = 2
+    #     lmp.command("run 0 pre yes post no")
 
     def _redistribute_EVB_states(self, num_total_colors, frame):
         if num_total_colors <= self.universe.total_colors:
@@ -228,7 +222,7 @@ class Mustard:
             if np.array_equal(self.prev_system, system) and self.safe:
                 change_topology = False
             if change_topology:
-                self._reset_lmp_topology(self.lmp, self.msevb.frame)
+                self.topology.reset_lmp_topology(system)
                 self.safe = True
             utils.set_positions(self.lmp, self.msevb.frame.pos)
             utils.set_velocities(self.lmp, self.msevb.frame.vel)
@@ -252,26 +246,29 @@ class Mustard:
             yids += list(_yids)
         self.msevb.run = 2
         self.lmp.command(f"run 0 pre yes post no")
-        if self.universe.rank.color == 0:
-            self.topology.change_topology_to_system(self.lmp, system, self.msevb.frame)
-            self.lmp.commands_list(
-                [
-                    f"set atom {ID} image {imgs[0]} {imgs[1]} {imgs[2]}"
-                    for ID, imgs in zip(yids, new_imgs)
-                ]
-                + [
-                    "reset_atoms mol all single yes",
-                ]
-            )
-        self.universe.global_comm.Barrier()
-        self.msevb.run = 2
-        self.lmp.command(f"run 0 pre yes post no")
-        if self.universe.rank.color == 0:
-            self.lmp.command(f"write_data /tmp/{self.SI.file} nocoeff")
-        self.universe.global_comm.Barrier()
         if self.universe.rank.color != 0:
-            self._reset_lmp_topology(self.lmp, self.msevb.frame)
+            current_system = self.topology.grab_system(
+                np.intp(self.universe.rank.color)
+            )
+            self.topology.reset_lmp_topology(current_system)
+        # if self.universe.rank.color == 0:
+        self.topology.change_topology_to_system(self.lmp, system, self.msevb.frame)
+        self.lmp.commands_list(
+            [
+                f"set atom {ID} image {imgs[0]} {imgs[1]} {imgs[2]}"
+                for ID, imgs in zip(yids, new_imgs)
+            ]
+            + [
+                "reset_atoms mol all single yes",
+            ]
+        )
         self.universe.global_comm.Barrier()
+        # self.msevb.run = 2
+        # self.lmp.command(f"run 0 pre yes post no")
+        # # if self.universe.rank.color == 0:
+        # #     self.lmp.command(f"write_data /tmp/{self.SI.file} nocoeff")
+        # self.universe.global_comm.Barrier()
+        # self.universe.global_comm.Barrier()
         self.msevb.run = 2
         self.lmp.command(f"run 0 pre yes post no")
         self.universe.global_comm.Barrier()
@@ -530,11 +527,39 @@ class Mustard:
             self.Trajectory.trajs.pop()
         del self.cycle
 
-    def __del__(self):
-        if hasattr(self, "SI"):
-            import os
+    def forces_for_ml(self, trajectory):
+        def do_something():
+            pass
 
-            try:
-                os.remove(f"/tmp/{self.SI.file}")
-            except OSError:
-                pass
+        self.rerun(trajectory, do_something)
+
+    def rerun(self, trajectory, do_something=None):
+        frames = Trajectory.read_xyz(trajectory, self.topology)
+        print(frames)
+        exit()
+        for chunk in itertraj:
+            for pos in chunk.xyz:
+                self.safe = False
+                self.prev_system = np.array(tuple())
+                utils.set_positions(self.lmp, pos)
+                any_pairs = self.identify_pairs()
+                self.msevb.ntimestep = self.universe.global_comm.bcast(
+                    self.msevb.ntimestep, root=0
+                )
+                self.msevb.run = int(any_pairs)
+                self.lmp.command("run 0 pre yes post no update yes")
+                do_something()
+                if self.msevb.min_state_idx == 0:
+                    continue
+                # reaction has occured - update topology
+                min_system = self.topology.grab_system(self.msevb.min_state_idx)
+                self.update_topology(min_system)
+
+    # def __del__(self):
+    #     if hasattr(self, "SI"):
+    #         import os
+    #
+    #         try:
+    #             os.remove(f"/tmp/{self.SI.file}")
+    #         except OSError:
+    #             pass
