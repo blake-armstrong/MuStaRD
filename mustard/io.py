@@ -462,9 +462,9 @@ class Trajectory:
         _f.close()
 
     @staticmethod
-    def read_xyz(trajectory, topology):
+    def read_xyz(trajectory):
         if trajectory.split(".")[-1] != "xyz":
-            raise ValueErorr("Need reactive xyz file")
+            raise ValueError("Need reactive xyz file")
         num_frames = 0
         frames = []
         with open(trajectory, "r") as open_traj:
@@ -473,11 +473,13 @@ class Trajectory:
                 if na == "":
                     break
                 na = int(na)
-                _pbc = open_traj.readline()  # do something with this
+                _pbc = open_traj.readline()
+                _pbc = _pbc.replace("Lattice=", "")
+                _pbc = _pbc.replace('"', "")
                 split_pbc = _pbc.split()
-                pbc = np.array(split_pbc).reshape(3, 3)
+                pbc = np.array(split_pbc, dtype=float).reshape(3, 3)
                 xyz = np.empty(shape=(na, 3))
-                types = np.empty(shape=na, dtype=str)
+                types = list(np.empty(shape=na, dtype=str))
                 for particle in range(na):
                     line = open_traj.readline()
                     splitline = line.split()
@@ -485,22 +487,23 @@ class Trajectory:
                     xyz[particle] = [float(x) for x in splitline[1:4]]
                 _bonds = open_traj.readline()
                 split_bonds = _bonds.split()
-                bonds = eval(f"np.array({split_bonds[-1]})")
+                bonds = eval(f"np.array({split_bonds[-1]}, dtype=int)")
                 _angles = open_traj.readline()
                 split_angles = _angles.split()
-                angles = eval(f"np.array({split_angles[-1]})")
+                angles = eval(f"np.array({split_angles[-1]}, dtype=int)")
                 _impropers = open_traj.readline()
                 split_impropers = _impropers.split()
-                impropers = eval(f"np.array({split_impropers[-1]})")
+                impropers = eval(f"np.array({split_impropers[-1]}, dtype=int)")
                 _dihedrals = open_traj.readline()
                 split_dihedrals = _dihedrals.split()
-                dihedrals = eval(f"np.array({split_dihedrals[-1]})")
+                dihedrals = eval(f"np.array({split_dihedrals[-1]}, dtype=int)")
                 frames.append(
                     Frame(
+                        frame=num_frames,
                         natoms=na,
                         pbc=pbc,
                         pos=xyz,
-                        types=types,
+                        types=np.array(types),
                         bonds=bonds,
                         angles=angles,
                         impropers=impropers,
@@ -510,16 +513,9 @@ class Trajectory:
                 num_frames += 1
         return frames
 
-        # new_topology = mdtraj.Topology()
-        # chain = new_topology.add_chain()
-        # residue = new_topology.add_residue("RXN", chain)
-        # for m, t in zip(topology.masses, topology.types):
-        #     new_topology.add_atom(str(t), mdtraj.element.Element.getByMass(m), residue)
-        # # itertraj = mdtraj.iterload(trajectory, top=new_topology)
-        # traj = mdtraj.load_xyz(trajectory, top=new_topology)
 
-
-def Frame(NamedTuple):
+class Frame(NamedTuple):
+    frame: int
     natoms: int
     pbc: np.ndarray
     pos: np.ndarray

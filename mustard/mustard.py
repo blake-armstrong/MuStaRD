@@ -222,7 +222,7 @@ class Mustard:
             if np.array_equal(self.prev_system, system) and self.safe:
                 change_topology = False
             if change_topology:
-                self.topology.reset_lmp_topology(system)
+                self.topology.reset_lmp_topology()
                 self.safe = True
             utils.set_positions(self.lmp, self.msevb.frame.pos)
             utils.set_velocities(self.lmp, self.msevb.frame.vel)
@@ -250,9 +250,10 @@ class Mustard:
             current_system = self.topology.grab_system(
                 np.intp(self.universe.rank.color)
             )
-            self.topology.reset_lmp_topology(current_system)
+            self.topology.reset_lmp_topology()
         # if self.universe.rank.color == 0:
         self.topology.change_topology_to_system(self.lmp, system, self.msevb.frame)
+        self.topology.current_system = np.array(tuple())
         self.lmp.commands_list(
             [
                 f"set atom {ID} image {imgs[0]} {imgs[1]} {imgs[2]}"
@@ -277,6 +278,7 @@ class Mustard:
         self.prev_system = np.array(tuple())
         self.rebuild = True
         self.universe.global_comm.Barrier()
+        exit()
 
     def _step(self, n_step=1, out=True):
         if self.universe.rank.color == 0 and out:
@@ -534,26 +536,24 @@ class Mustard:
         self.rerun(trajectory, do_something)
 
     def rerun(self, trajectory, do_something=None):
-        frames = Trajectory.read_xyz(trajectory, self.topology)
-        print(frames)
-        exit()
-        for chunk in itertraj:
-            for pos in chunk.xyz:
-                self.safe = False
-                self.prev_system = np.array(tuple())
-                utils.set_positions(self.lmp, pos)
-                any_pairs = self.identify_pairs()
-                self.msevb.ntimestep = self.universe.global_comm.bcast(
-                    self.msevb.ntimestep, root=0
-                )
-                self.msevb.run = int(any_pairs)
-                self.lmp.command("run 0 pre yes post no update yes")
-                do_something()
-                if self.msevb.min_state_idx == 0:
-                    continue
-                # reaction has occured - update topology
-                min_system = self.topology.grab_system(self.msevb.min_state_idx)
-                self.update_topology(min_system)
+        frames = Trajectory.read_xyz(trajectory)
+        for frame in frames:
+            self.safe = False
+            self.prev_system = np.array(tuple())
+            self.topology.set_traj_frame(frame)
+            exit()
+            any_pairs = self.identify_pairs()
+            self.msevb.ntimestep = self.universe.global_comm.bcast(
+                self.msevb.ntimestep, root=0
+            )
+            self.msevb.run = int(any_pairs)
+            self.lmp.command("run 0 pre yes post no update yes")
+            do_something()
+            if self.msevb.min_state_idx == 0:
+                continue
+            # reaction has occured - update topology
+            min_system = self.topology.grab_system(self.msevb.min_state_idx)
+            self.update_topology(min_system)
 
     # def __del__(self):
     #     if hasattr(self, "SI"):

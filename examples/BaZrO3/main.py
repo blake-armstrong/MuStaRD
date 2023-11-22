@@ -145,12 +145,12 @@ def main():
         properties=["temp", "pe", "ke"],
         write_frequency=50,
     )
-    msevb.rerun("test.xyz")
+    # msevb.rerun("test.xyz")
 
     # msevb.minimise()
     # msevb.finite_differences(file="new_fd.out", delta=1e-3, index_array=[0, 1, 2])
     # msevb.step(200)
-    # msevb.step(1000)
+    msevb.step(10000)
     # msevb.step(100)
     # msevb.step(50000)
 

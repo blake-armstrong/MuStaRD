@@ -16,6 +16,7 @@ class Topology:
         self.systems_idxs: np.ndarray
         self.pairs_idxs: list
         self.num_systems: int
+        self.current_system = np.array(tuple())
 
     def build_topology(self):
         (
@@ -214,6 +215,16 @@ class Topology:
         new_imgs = np.floor(uypos / abcabc[:3]).astype(int)
         return new_imgs, yids
 
+    # def set_bonds(self, bonds):
+
+    def set_traj_frame(self, frame):
+        self.lmp.command("delete_bonds all multi remove")
+        utils.set_positions(self.lmp, frame.pos)
+        types = np.vectorize(lambda typ: self.SI.atom_types[typ.replace(" ", "")])(
+            frame.types
+        )
+        charges = np.vectorize(lambda typ: self.SI.type_charges[typ])(types)
+
     def _set_top(self, total_ids, type_str, fmt_str):
         add = self.top_ref[type_str][
             np.any(np.isin(self.top_ref[type_str][:, 1:], total_ids), axis=1)
@@ -240,13 +251,6 @@ class Topology:
                 f"set atom {ID} image {images[0]} {images[1]} {images[2]}"
             )
         self.lmp.commands_list(set_type_charge_img)
-        # for ID in total_ids:
-        #     self.atoms[ID].type
-        #     set_type_charge.append(f"set atom {eyed} type {new_types[eyed]}")
-        #     set_type_charge.append(
-        #         f"set atom {eyed} charge {self.SI.type_charges[new_types[eyed]]}"
-        #     )
-        #     ids_for_change.remove(eyed)
 
         b = self._set_top(
             total_ids,
@@ -272,29 +276,33 @@ class Topology:
         full[-1] = full[-1].replace("no", "yes")
         [self.lmp.command(cmd) for cmd in full]
 
-    def reset_lmp_topology(self, system):
-        # system = self.grab_system(system_idx)
-        if not system.any():
-            return
-        rxn_nums = [self.rxn_nums_dict[tuple(pair)] for pair in system]
-        total_ids = []
-        for rxn_pair, _ in zip(system, rxn_nums):
-            id_h, id_y = rxn_pair
-            # create groups
-            hxy_group_str = "group HXY id "
-            hxs = self.residues[self.atoms[id_h].molecule]
-            ys = self.residues[self.atoms[id_y].molecule]
-            for eyed in hxs + ys:
-                hxy_group_str += f"{eyed} "
-                total_ids.append(eyed)
-            # removes all bonds, angles, dihedrals and impropers involving these ids
-            self.lmp.commands_list(
-                [hxy_group_str, "delete_bonds HXY multi remove", "group HXY delete"]
-            )
-        total_ids = np.array(total_ids)
-        self._reset_lmp_topology(total_ids)
+    def reset_lmp_topology(self):
+        # system = self.current_system
+        # if not system.any():
+        #    return
+        # rxn_nums = [self.rxn_nums_dict[tuple(pair)] for pair in system]
+        # total_ids = []
+        # for rxn_pair, _ in zip(system, rxn_nums):
+        #    id_h, id_y = rxn_pair
+        #    # create groups
+        #    hxy_group_str = "group HXY id "
+        #    hxs = self.residues[self.atoms[id_h].molecule]
+        #    ys = self.residues[self.atoms[id_y].molecule]
+        #    for eyed in hxs + ys:
+        #        hxy_group_str += f"{eyed} "
+        #        total_ids.append(eyed)
+        #    # removes all bonds, angles, dihedrals and impropers involving these ids
+        #    self.lmp.commands_list(
+        #        [hxy_group_str, "delete_bonds HXY multi remove", "group HXY delete"]
+        #    )
+        # total_ids = np.array(total_ids)
+        # self._reset_lmp_topology(total_ids)
+        # self.current_systen = np.array(tuple())
+        self.lmp.command("delete_bonds all multi remove")
+        self._reset_lmp_topology(self.ids)
 
     def change_topology_to_system(self, lmp, system, frame):
+        self.current_system = system
         create_bonds = []
         set_type_charge = []
         rxn_nums = [self.rxn_nums_dict[tuple(pair)] for pair in system]
