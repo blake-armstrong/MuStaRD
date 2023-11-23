@@ -6,7 +6,7 @@ import inspect
 from .constants import UNITS
 from time import time
 from typing import NamedTuple
-from .utils import extract_box
+from . import utils
 from .mixing import get_FD_occupancies
 
 _DEFAULTS = {
@@ -368,7 +368,7 @@ class Trajectory:
                     self.dcd_file = mdtraj.open(fname, "w")
 
         def _write(self, lmp, box_data, universe, topology, pos=None):
-            abcabc, abc = extract_box(box_data)
+            abcabc, abc = utils.extract_box(box_data)
             na = lmp.extract_global("natoms")
             z = np.zeros((na, 3))  # type: ignore
             xu = lmp.numpy.extract_fix("ux", 1, 2)
@@ -395,7 +395,7 @@ class Trajectory:
                     )
                     self.xyz_file.writelines(
                         [
-                            "{0} {1[0]:.3f} {1[1]:.3f} {1[2]:.3f}\n".format(typ, pos)
+                            "{0} {1[0]:} {1[1]:} {1[2]:}\n".format(typ, pos)
                             for typ, pos in zip(topology.xyz_types, unwrapped_pos)
                         ]
                     )
@@ -462,7 +462,7 @@ class Trajectory:
         _f.close()
 
     @staticmethod
-    def read_xyz(trajectory):
+    def read_xyz(trajectory, skip=1):
         if trajectory.split(".")[-1] != "xyz":
             raise ValueError("Need reactive xyz file")
         num_frames = 0
@@ -473,11 +473,20 @@ class Trajectory:
                 if na == "":
                     break
                 na = int(na)
+                if num_frames % skip != 0:
+                    open_traj.readline()
+                    for _ in range(na):
+                        open_traj.readline()
+                    for _ in range(4):
+                        open_traj.readline()
+                    num_frames += 1
+                    continue
                 _pbc = open_traj.readline()
                 _pbc = _pbc.replace("Lattice=", "")
                 _pbc = _pbc.replace('"', "")
                 split_pbc = _pbc.split()
-                pbc = np.array(split_pbc, dtype=float).reshape(3, 3)
+                pbc = np.array(split_pbc, dtype=float)
+                abcabc = utils.get_abcabc(pbc)
                 xyz = np.empty(shape=(na, 3))
                 types = list(np.empty(shape=na, dtype=str))
                 for particle in range(na):
@@ -485,6 +494,7 @@ class Trajectory:
                     splitline = line.split()
                     types[particle] = splitline[0]
                     xyz[particle] = [float(x) for x in splitline[1:4]]
+                xyz -= abcabc[:3] * (xyz / abcabc[:3]).round()
                 _bonds = open_traj.readline()
                 split_bonds = _bonds.split()
                 bonds = eval(f"np.array({split_bonds[-1]}, dtype=int)")

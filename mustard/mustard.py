@@ -58,6 +58,7 @@ class Mustard:
         )
         self.cmds = {
             "header": header,
+            "read": [f"read_data {lmp_coord_file}"],
             "ff": [f"include {force_field_file}"],
             "user": commands,
             "virial": [
@@ -90,8 +91,8 @@ class Mustard:
         self.lmp.commands_list(commands)
         self.lmp.command("run 0 post no")
         shape = utils.get_positions(self.lmp).shape
-        # if self.universe.rank.color == 0:
-        #     self.lmp.command(f"write_data /tmp/{self.SI.file} nocoeff")
+        if self.universe.rank.color == 0:
+            self.lmp.command(f"write_data /tmp/{self.SI.file} nocoeff")
         self.universe.global_comm.Barrier()
 
         fixes = [
@@ -235,6 +236,10 @@ class Mustard:
                 )
                 self.msevb.run = 2
                 self.lmp.command("run 0 pre yes post no")
+        elif self.universe.rank.color != 0:
+            self.topology.reset_lmp_topology()
+            self.safe = True
+
         self.prev_system = system
         return True
 
@@ -247,9 +252,9 @@ class Mustard:
         self.msevb.run = 2
         self.lmp.command(f"run 0 pre yes post no")
         if self.universe.rank.color != 0:
-            current_system = self.topology.grab_system(
-                np.intp(self.universe.rank.color)
-            )
+            # current_system = self.topology.grab_system(
+            #     np.intp(self.universe.rank.color)
+            # )
             self.topology.reset_lmp_topology()
         # if self.universe.rank.color == 0:
         self.topology.change_topology_to_system(self.lmp, system, self.msevb.frame)
@@ -264,12 +269,6 @@ class Mustard:
             ]
         )
         self.universe.global_comm.Barrier()
-        # self.msevb.run = 2
-        # self.lmp.command(f"run 0 pre yes post no")
-        # # if self.universe.rank.color == 0:
-        # #     self.lmp.command(f"write_data /tmp/{self.SI.file} nocoeff")
-        # self.universe.global_comm.Barrier()
-        # self.universe.global_comm.Barrier()
         self.msevb.run = 2
         self.lmp.command(f"run 0 pre yes post no")
         self.universe.global_comm.Barrier()
@@ -278,7 +277,6 @@ class Mustard:
         self.prev_system = np.array(tuple())
         self.rebuild = True
         self.universe.global_comm.Barrier()
-        exit()
 
     def _step(self, n_step=1, out=True):
         if self.universe.rank.color == 0 and out:
@@ -329,7 +327,6 @@ class Mustard:
         if steps == 0:
             self._step(n_step=0)
             return
-
         for _ in range(steps):
             self._step()
             self.msevb.step_count += 1
@@ -529,37 +526,89 @@ class Mustard:
             self.Trajectory.trajs.pop()
         del self.cycle
 
-    def forces_for_ml(self, trajectory):
-        def do_something():
-            pass
+    def _extend_forces(self, frame):
+        if self.universe.rank.color == 0:
+            self.lmp.command(f"write_data /tmp/{self.SI.file} nocoeff")
+        self.elec_lmp.command(f"clear")
+        self.elec_lmp.commands_list(
+            self.cmds["header"]
+            + [
+                f"read_data /tmp/{self.SI.file}",
+                "change_box all triclinic",
+            ]
+            + self.cmds["elec_ff"]
+        )
+        utils.set_positions(self.elec_lmp, frame.pos)
+        self.elec_lmp.command("run 0 pre yes post no update yes")
+        elec_forces = utils.get_forces(self.elec_lmp)
+        self.ml_data["R"].append(frame.pos)
+        self.ml_data["F"].append(self.msevb.current_mixed_forces - elec_forces)
+        self.ml_data["E"].append(self.msevb.min_eval)
+        cell, _ = utils.extract_box(utils.get_box_data(self.lmp))
+        self.ml_data["cell"].append(cell)
 
-        self.rerun(trajectory, do_something)
-
-    def rerun(self, trajectory, do_something=None):
-        frames = Trajectory.read_xyz(trajectory)
+    def _rerun(self, trajectory, skip=1, do_something=None):
+        if do_something is None:
+            do_something = self.do_something
+        self.log(f"Beginning rerun")
+        frames = Trajectory.read_xyz(trajectory, skip=skip)
         for frame in frames:
+            self.log(f"Processing frame {frame.frame}")
             self.safe = False
             self.prev_system = np.array(tuple())
             self.topology.set_traj_frame(frame)
-            exit()
+            utils.set_positions(self.lmp, frame.pos)
+            # self.msevb.frame(self.lmp, pos=frame.pos)
+            self.msevb.run = 2
+            self.lmp.command("run 0 pre yes post no update yes")
+            self.universe.global_comm.Barrier()
+            self.topology.build_topology()
+            self.universe.global_comm.Barrier()
             any_pairs = self.identify_pairs()
             self.msevb.ntimestep = self.universe.global_comm.bcast(
                 self.msevb.ntimestep, root=0
             )
             self.msevb.run = int(any_pairs)
             self.lmp.command("run 0 pre yes post no update yes")
-            do_something()
-            if self.msevb.min_state_idx == 0:
-                continue
-            # reaction has occured - update topology
-            min_system = self.topology.grab_system(self.msevb.min_state_idx)
-            self.update_topology(min_system)
+            do_something(frame)
 
-    # def __del__(self):
-    #     if hasattr(self, "SI"):
-    #         import os
-    #
-    #         try:
-    #             os.remove(f"/tmp/{self.SI.file}")
-    #         except OSError:
-    #             pass
+    def do_something(self, _):
+        pass
+
+    def forces_for_ml(self, trajectory, elec_ff, skip=1):
+        cmdargs = ["-nocite", "-screen", "none", "-log", "none"]
+        self.elec_lmp = lammps(
+            name="",
+            cmdargs=cmdargs,
+            comm=self.universe.global_comm,
+        )
+        self.cmds["elec_ff"] = [f"include {elec_ff}"]
+        self.ml_data = {
+            "R": [],
+            "E": [],
+            "z": [],
+            "F": [],
+            "pbc": [1, 1, 1],
+            "cell": [],
+        }
+        self._rerun(trajectory, do_something=self._extend_forces, skip=skip)
+
+        if self.universe.me == 0:
+            np.savez(
+                "data.npz",
+                R=self.ml_data["R"],
+                E=self.ml_data["E"],
+                z=self.ml_data["z"],
+                F=self.ml_data["F"],
+                pbc=self.ml_data["pbc"],
+                cell=self.ml_data["cell"],
+            )
+
+    def __del__(self):
+        if hasattr(self, "SI"):
+            import os
+
+            try:
+                os.remove(f"/tmp/{self.SI.file}")
+            except OSError:
+                pass

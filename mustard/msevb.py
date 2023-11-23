@@ -69,6 +69,7 @@ class MSEVB:
         current_forces = utils.get_forces(lmp)
         idxs = self.topology.id_to_idx(tag)
         total_x, total_v = self.sync_x_v(lmp, x, idxs)
+        self.log(f"pos {total_x}")
         pe = lmp.extract_compute("get_pe", 0, 0)
         if self.universe.sub_rank == 0:
             self.log(
@@ -138,11 +139,6 @@ class MSEVB:
         # mixed_virial = None
         # if virials is not None:
         #     mixed_virial = np.einsum("ij,i->j", virials, amplitudes)
-
-    # def callback_minimise(self, lmp, ntimestep, nlocal, tag, x, f):
-    #     self.callback_main(lmp, ntimestep, nlocal, tag, x, f)
-    #     pe = lmp.extract_compute("get_pe", 0, 0)
-    #     lmp.fix_external_set_energy_global("ext", self.min_eval - pe)
 
     def sync_x_v(self, lmp, pos, idxs):
         if not self.sync:

@@ -219,11 +219,59 @@ class Topology:
 
     def set_traj_frame(self, frame):
         self.lmp.command("delete_bonds all multi remove")
-        utils.set_positions(self.lmp, frame.pos)
         types = np.vectorize(lambda typ: self.SI.atom_types[typ.replace(" ", "")])(
             frame.types
         )
         charges = np.vectorize(lambda typ: self.SI.type_charges[typ])(types)
+        set_type_charges = []
+        for idx in range(frame.natoms):
+            set_type_charges.append(f"set atom {self.ids[idx]} type {types[idx]}")
+            set_type_charges.append(f"set atom {self.ids[idx]} charge {charges[idx]}")
+        self.lmp.commands_list(set_type_charges)
+        add_bonds = np.array([])
+        if frame.bonds.any():
+            add_bonds = np.apply_along_axis(
+                lambda row: "create_bonds single/bond {:10} {:10} {:10} special no ".format(
+                    *row
+                ),
+                axis=1,
+                arr=frame.bonds,
+            )
+        add_angles = np.array([])
+        if frame.angles.any():
+            add_angles = np.apply_along_axis(
+                lambda row: "create_bonds single/angle {:10} {:10} {:10} {:10} special no ".format(
+                    *row
+                ),
+                axis=1,
+                arr=frame.angles,
+            )
+        add_impropers = np.array([])
+        if frame.impropers.any():
+            add_impropers = np.apply_along_axis(
+                lambda row: "create_bonds single/improper {:10} {:10} {:10} {:10} {:10} special no ".format(
+                    *row
+                ),
+                axis=1,
+                arr=frame.impropers,
+            )
+        add_dihedrals = np.array([])
+        if frame.dihedrals.any():
+            add_dihedrals = np.apply_along_axis(
+                lambda row: "create_bonds single/dihedral {:10} {:10} {:10} {:10} {:10} special no ".format(
+                    *row
+                ),
+                axis=1,
+                arr=frame.dihedrals,
+            )
+        full = list(
+            np.concatenate(
+                [add_bonds, add_angles, add_impropers, add_dihedrals]
+            ).flatten()
+        )
+        full[-1] = full[-1].replace("no", "yes")
+        [self.lmp.command(cmd) for cmd in full]
+        self.lmp.command("reset_atoms mol all single yes")
 
     def _set_top(self, total_ids, type_str, fmt_str):
         add = self.top_ref[type_str][
@@ -265,12 +313,12 @@ class Topology:
         i = self._set_top(
             total_ids,
             type_str="impropers",
-            fmt_str="create_bonds single/bond {:10} {:10} {:10} {:10} {:10} special no ",
+            fmt_str="create_bonds single/improper {:10} {:10} {:10} {:10} {:10} special no ",
         )
         d = self._set_top(
             total_ids,
             type_str="dihedrals",
-            fmt_str="create_bonds single/bond {:10} {:10} {:10} {:10} {:10} special no ",
+            fmt_str="create_bonds single/dihedral {:10} {:10} {:10} {:10} {:10} special no ",
         )
         full = list(np.concatenate([b, a, i, d]).flatten())
         full[-1] = full[-1].replace("no", "yes")

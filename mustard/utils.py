@@ -139,14 +139,20 @@ def convert_to_c_type(array, c_type):
 def extract_box(box_data):
     boxlo, boxhi, xy, yz, xz, _, _ = box_data
     lx, ly, lz = np.array(boxhi) - np.array(boxlo)
+    abc = [lx, 0, 0, xy, ly, 0, xz, yz, lz]
+    abcabc = get_abcabc(abc)
+    return abcabc, abc
+
+
+def get_abcabc(abc):
+    lx, _, _, xy, ly, _, xz, yz, lz = abc
     a = lx
     b = (ly**2 + xy**2) ** 0.5
     c = (lz**2 + xz**2 + yz**2) ** 0.5
     alpha = math.acos((xy * xz + ly * yz) / (b * c)) * 180 / math.pi
     beta = math.acos(xz / c) * 180 / math.pi
     gamma = math.acos(xy / b) * 180 / math.pi
-
-    return np.array([a, b, c, alpha, beta, gamma]), [lx, 0, 0, xy, ly, 0, xz, yz, lz]
+    return np.array([a, b, c, alpha, beta, gamma])
 
 
 def get_box_data(lmp):
