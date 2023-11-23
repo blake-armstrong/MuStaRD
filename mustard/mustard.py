@@ -236,9 +236,6 @@ class Mustard:
                 )
                 self.msevb.run = 2
                 self.lmp.command("run 0 pre yes post no")
-        elif self.universe.rank.color != 0:
-            self.topology.reset_lmp_topology()
-            self.safe = True
 
         self.prev_system = system
         return True
