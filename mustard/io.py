@@ -36,9 +36,10 @@ _DEFAULTS = {
     "lammps_unit_system": None,
     "computes": None,
     "fermi_mixing": False,
-    "neighbour_list_update": 2,
+    "neighbour_list_update": 4,
     "scf_tol": 1e-4,
     "scf_max_iter": 100,
+    "shells": 1,
 }
 
 
@@ -72,6 +73,7 @@ class SystemInfo:
         self.FM = self._set_fermi_mixing(params.pop("fermi_mixing"))
         self.get_occupancies = self._set_get_occupancies()
         self.nl_update = self._set_nl_update(params.pop("neighbour_list_update"))
+        self.shells = self._set_shells(params.pop("shells"))
         self.scf_tol = float(params.pop("scf_tol"))
         self.scf_max_iter = int(params.pop("scf_max_iter"))
         self.set_RT(self.temperature * self.units["boltz"])
@@ -256,6 +258,9 @@ class SystemInfo:
                 f"Unexpected type for computes {computes}. Expect a str or list of strs"
             )
         return [str(compute) for compute in computes]
+
+    def _set_shells(self, shells):
+        return int(shells)
 
     def _set_fermi_mixing(self, fm):
         return bool(fm)
@@ -451,6 +456,13 @@ class Trajectory:
             traj.close()
 
     @staticmethod
+    def get_z(mass):
+        z = []
+        for m in mass:
+            z.append(mdtraj.element.Element.getByMass(m).atomic_number)
+        return z
+
+    @staticmethod
     def save_file(pos, filename_save, mass, types):
         topology = mdtraj.Topology()
         chain = topology.add_chain()
@@ -494,6 +506,7 @@ class Trajectory:
                     splitline = line.split()
                     types[particle] = splitline[0]
                     xyz[particle] = [float(x) for x in splitline[1:4]]
+                imgs = np.floor(xyz / abcabc[:3]).astype(int)
                 xyz -= abcabc[:3] * (xyz / abcabc[:3]).round()
                 _bonds = open_traj.readline()
                 split_bonds = _bonds.split()
@@ -511,8 +524,9 @@ class Trajectory:
                     Frame(
                         frame=num_frames,
                         natoms=na,
-                        pbc=pbc,
+                        pbc=abcabc,
                         pos=xyz,
+                        imgs=imgs,
                         types=np.array(types),
                         bonds=bonds,
                         angles=angles,
@@ -529,6 +543,7 @@ class Frame(NamedTuple):
     natoms: int
     pbc: np.ndarray
     pos: np.ndarray
+    imgs: np.ndarray
     types: np.ndarray
     bonds: np.ndarray
     angles: np.ndarray

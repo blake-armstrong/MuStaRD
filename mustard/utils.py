@@ -95,13 +95,13 @@ def get_pairs(positions, xyz_pbc, cutoffs, X, H_idxs, Y_idxs, Topology):
     if not dists_bool.any():
         return None
     pair_dists = dists[dists_bool.nonzero()[0], dists_bool.nonzero()[1]]
+    sort = np.argsort(pair_dists)
     # grab indexes of pairs that meet dist cutoff
     H_ready_idx = H_idxs[(dists_bool).nonzero()[0]]
     Y_ready_idx = Y_idxs[(dists_bool).nonzero()[1]]
     rxn_pairs = np.array([Topology.ids[H_ready_idx], Topology.ids[Y_ready_idx]]).T
     if ang_cut is None or X is None:
-        rxn_pairs = rxn_pairs[np.argsort(rxn_pairs[:, 0])]
-        return rxn_pairs, pair_dists, [None] * len(rxn_pairs)
+        return rxn_pairs[sort], pair_dists[sort], [None] * len(rxn_pairs)
     X_ready_idx = [
         Topology.atoms[id].idx
         for idx in H_ready_idx
@@ -121,7 +121,7 @@ def get_pairs(positions, xyz_pbc, cutoffs, X, H_idxs, Y_idxs, Topology):
     hxy_angles = angles[angle_bool]
     rxn_pairs = rxn_pairs[angle_bool]
     rxn_pairs = rxn_pairs[np.argsort(rxn_pairs[:, 0])]
-    return rxn_pairs, pair_dists, hxy_angles
+    return rxn_pairs[sort], pair_dists[sort], hxy_angles[sort]
 
 
 def gather_atoms(lmp, *args):

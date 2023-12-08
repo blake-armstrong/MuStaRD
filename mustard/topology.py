@@ -14,6 +14,8 @@ class Topology:
         self.build_topology()
         self.rxn_pairs: list
         self.systems_idxs: np.ndarray
+        self.pair_dists: np.ndarray
+        self.hxy_angles: np.ndarray
         self.pairs_idxs: list
         self.num_systems: int
         self.current_system = np.array(tuple())
@@ -156,10 +158,12 @@ class Topology:
                 pair_dists.append(rxn_info[1])
                 hxy_angles.append(rxn_info[2])
         if rxn_pairs:
-            rxn_pairs = np.concatenate(rxn_pairs, axis=0)
-            rxn_nums = np.concatenate(rxn_nums, axis=0)
             pair_dists = np.concatenate(pair_dists, axis=0)
-            hxy_angles = np.concatenate(hxy_angles, axis=0)
+            sort = np.argsort(pair_dists)
+            rxn_pairs = np.concatenate(rxn_pairs, axis=0)[sort]
+            rxn_nums = np.concatenate(rxn_nums, axis=0)[sort]
+            hxy_angles = np.concatenate(hxy_angles, axis=0)[sort]
+            pair_dists = pair_dists[sort]
             systems_idxs, pairs_idxs = self.rxn_pairs_to_systems(
                 rxn_pairs,
                 rxn_nums,
@@ -168,7 +172,10 @@ class Topology:
             )
         self.rxn_pairs = list(rxn_pairs)
         self.systems_idxs = np.array(systems_idxs)
+        self.pair_dists = np.array(pair_dists)
+        self.hxy_angles = np.array(hxy_angles)
         self.pairs_idxs = pairs_idxs
+        print(self.pairs_idxs)
         self.num_systems = len(systems_idxs)
 
     def grab_system(self, system_idx: np.intp):
@@ -185,21 +192,6 @@ class Topology:
 
     def set_lmp(self, lmp_obj):
         self.lmp = lmp_obj
-
-    # def update_lmp_topology(self):
-    #     self.lmp_obj.
-    #     self.lmp_obj.command("read_data /tmp/mustard.data")
-    #     # cmds_list = []
-    #     # cmds_list.append("delete_bonds all multi remove")
-    #     # for ID, atom in self.atoms.items():
-    #     #     cmds_list.append(f"set atom {ID} type {atom.type}")
-    #     #     cmds_list.append(f"set atom {ID} charge {atom.charge}")
-    #     # types = {id: atom.type for id, atom in self.atoms.items()}
-    #     # create_bonds = self.create_bonds(types, self.bonds)
-    #     # cmds_list += create_bonds
-    #     # cmds_list[-1] = cmds_list[-1].replace("no", "yes")
-    #     # cmds_list += ["reset_atoms mol all single yes"] + ["run 0 post no"]
-    #     # self.lmp.commands_list(cmds_list)
 
     def _get_new_imgs(self, h, y, frame):
         yids = self.residues[self.atoms[y].molecule]
@@ -227,6 +219,10 @@ class Topology:
         for idx in range(frame.natoms):
             set_type_charges.append(f"set atom {self.ids[idx]} type {types[idx]}")
             set_type_charges.append(f"set atom {self.ids[idx]} charge {charges[idx]}")
+            img = frame.imgs[idx]
+            set_type_charges.append(
+                f"set atom {self.ids[idx]} image {img[0]} {img[1]} {img[2]}"
+            )
         self.lmp.commands_list(set_type_charges)
         add_bonds = np.array([])
         if frame.bonds.any():
@@ -323,6 +319,7 @@ class Topology:
         full = list(np.concatenate([b, a, i, d]).flatten())
         full[-1] = full[-1].replace("no", "yes")
         [self.lmp.command(cmd) for cmd in full]
+        self.lmp.command("reset_atoms mol all single yes")
 
     def reset_lmp_topology(self):
         # system = self.current_system
@@ -416,6 +413,7 @@ class Topology:
             create_bonds += self.create_bonds(new_types, nbd)
         create_bonds[-1] = create_bonds[-1].replace("no", "yes")
         lmp.commands_list(set_type_charge + create_bonds + ["group HXY delete"])
+        self.lmp.command("reset_atoms mol all single yes")
 
     def create_bonds(self, types, bonds):
         cmd_list = []

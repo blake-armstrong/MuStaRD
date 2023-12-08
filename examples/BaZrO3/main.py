@@ -137,7 +137,7 @@ def main():
         debug=True,
         mpi_list=[4, 4, 4],
     )
-    msevb.add_trajectory(filename="trajectory.dcd", write_frequency=50)
+    msevb.add_trajectory(filename="trajectory.dcd", write_frequency=1)
     msevb.add_trajectory(filename="reaction.xyz", write_frequency=1, rxn=True)
     msevb.add_output(filename=None, properties=["temp", "pe", "ke"], write_frequency=50)
     msevb.add_output(
@@ -145,13 +145,14 @@ def main():
         properties=["temp", "pe", "ke"],
         write_frequency=50,
     )
-    # msevb.forces_for_ml("1500_ml.xyz", elec_ff="elec.lmp", skip=20)
+    # msevb.forces_for_ml("test.xyz", elec_ff="elec.lmp", skip=1)
+    # msevb.forces_for_ml("1500_ml.xyz", elec_ff="elec.lmp", skip=1)
 
     # msevb.minimise()
     # msevb.finite_differences(file="new_fd.out", delta=1e-3, index_array=[0, 1, 2])
     # msevb.step(200)
     # msevb.step(10)
-    msevb.step(100)
+    msevb.step(1)
     # msevb.step(50000)
 
 

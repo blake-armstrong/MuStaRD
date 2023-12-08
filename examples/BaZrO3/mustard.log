@@ -1,5 +1,3 @@
       Step          Pe(mixed)          E_total                Temp                  Pe                  Ke   Speed(ns/day)
          0   -31397.4946644921   -31188.0932295921     1500.0000000000   -31396.4231833354      209.4014349000      0.00000000
 reaction occured at step 0 between IDs(xhy) 13 1 2
-reaction occured at step 17 between IDs(xhy) 2 1 13
-        50   -31399.9642281659   -31191.6813467181     1491.9874943588   -31399.9642281659      208.2828814477      3.29889945

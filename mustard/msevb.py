@@ -69,7 +69,6 @@ class MSEVB:
         current_forces = utils.get_forces(lmp)
         idxs = self.topology.id_to_idx(tag)
         total_x, total_v = self.sync_x_v(lmp, x, idxs)
-        self.log(f"pos {total_x}")
         pe = lmp.extract_compute("get_pe", 0, 0)
         if self.universe.sub_rank == 0:
             self.log(
@@ -118,27 +117,49 @@ class MSEVB:
         amplitudes = min_evec_coeffs**2
         self.log(f"Amplitudes: {amplitudes}", level="debug")
         min_state_idx = np.argmax(amplitudes)
-        min_evec_coeff = 0
+        # min_evec_coeff = 0
+        # if (
+        #     self.universe.rank.color < self.topology.num_systems
+        #     and self.universe.sub_rank == 0
+        # ):
+        #     min_evec_coeff = min_evec_coeffs[self.universe.rank.color]
+        # ondiag_forces = current_forces * min_evec_coeff**2
+        # offdiag_forces = cpl_forces * 2 * min_evec_coeffs[0] * min_evec_coeff
+        # mixed_forces = ondiag_forces + offdiag_forces
+        # force_commbuff = np.empty_like(mixed_forces)
+        # self.universe.global_comm.Allreduce(mixed_forces, force_commbuff, op=MPI.SUM)
+        m = np.zeros(
+            shape=(
+                self.topology.num_systems,
+                self.topology.num_systems,
+                *current_forces.shape,
+            )
+        )
         if (
             self.universe.rank.color < self.topology.num_systems
             and self.universe.sub_rank == 0
         ):
-            min_evec_coeff = min_evec_coeffs[self.universe.rank.color]
-        ondiag_forces = current_forces * min_evec_coeff**2
-        offdiag_forces = cpl_forces * 2 * min_evec_coeffs[0] * min_evec_coeff
-        mixed_forces = ondiag_forces + offdiag_forces
-        force_commbuff = np.empty_like(mixed_forces)
-        self.universe.global_comm.Allreduce(mixed_forces, force_commbuff, op=MPI.SUM)
+            m[self.universe.rank.color, self.universe.rank.color][:, :] = current_forces
+            if self.universe.rank.color != 0:
+                m[0, self.universe.rank.color][:, :] = cpl_forces
+                m[self.universe.rank.color, 0][:, :] = cpl_forces
+        mbuff = np.empty_like(m)
+        self.universe.global_comm.Allreduce(m, mbuff, op=MPI.SUM)
+        mixed_forces = self.hellmann_feynman(mbuff, min_evec_coeffs)
         self.min_state_idx = min_state_idx
         self.min_eval = float(min_eval)
         if len(idxs) > 0:
-            new_forces[:, :] = force_commbuff[idxs] - current_forces[idxs]
-        self.current_mixed_forces = force_commbuff
-        self.log(f"Mixed forces: {force_commbuff}", level="debug")
+            new_forces[:, :] = mixed_forces[idxs] - current_forces[idxs]
+        self.current_mixed_forces = mixed_forces
+        # self.log(f"Mixed forces: {force_commbuff}", level="debug")
+        self.log(f"Mixed forces: {mixed_forces}", level="debug")
         # TODO: deal with virial/pressure later
         # mixed_virial = None
         # if virials is not None:
         #     mixed_virial = np.einsum("ij,i->j", virials, amplitudes)
+
+    def hellmann_feynman(self, matrix, evec):
+        return np.einsum("ijkl,i,j->kl", matrix, evec, evec)
 
     def sync_x_v(self, lmp, pos, idxs):
         if not self.sync:
@@ -237,26 +258,20 @@ class MSEVB:
         return self.mix_states_scf
 
     def mix_states_single(self, pes, computes, frame):
-        # rxn_pairs, _, pairs_idxs, _ = pair_info
+        matrix = np.zeros(shape=(self.topology.num_systems, self.topology.num_systems))
         states = self.topology.pairs_idxs[0]
-        num_states = len(states)
-        matrix = np.zeros(shape=(num_states, num_states))
-        # cpl_forces = np.zeros(shape=(num_states - 1, *frame.forces.shape))
         cpl_forces = np.zeros(shape=frame.forces.shape)
         if self.universe.rank.color == 0:
             if self.universe.me == 0:
                 matrix[0, 0] = pes[0]
-                for state in range(1, num_states):
+                for state in range(1, self.topology.num_systems):
                     cpl_val = self.universe.global_comm.recv(
                         source=MPI.ANY_SOURCE, tag=state
                     )
                     matrix[state, state] = pes[state]
                     matrix[state, 0] = cpl_val
                     matrix[0, state] = cpl_val
-                    # cpl_forces[state - 1, :, :] = self.universe.global_comm.recv(
-                    #     source=MPI.ANY_SOURCE, tag=state + 100
-                    # )
-        elif self.universe.rank.color < num_states:
+        elif self.universe.rank.color < self.topology.num_systems:
             init_compute, new_compute = None, None
             if computes is not None:
                 init_compute = computes[0]
@@ -273,19 +288,10 @@ class MSEVB:
                 self.universe.global_comm.send(
                     cpl_val, dest=0, tag=self.universe.rank.color
                 )
-                # self.universe.global_comm.send(
-                #     _cpl_forces, dest=0, tag=self.universe.rank.color + 100
-                # )
         min_eval = 0.0
-        min_evec_coeffs = np.zeros(shape=num_states)
+        min_evec_coeffs = np.zeros(shape=self.topology.num_systems)
         if self.universe.me == 0:
             min_eval, min_evec_coeffs = self.get_min_EVB_state(matrix)
-        # t0 = time()
-        # min_eval = self.universe.global_comm.bcast(min_eval, root=0)
-        # min_evec_coeffs[:] = self.universe.global_comm.bcast(min_evec_coeffs, root=0)
-        # cpl_forces[:, :, :] = self.universe.global_comm.bcast(cpl_forces, root=0)
-        # t1 = time()
-
         return min_eval, min_evec_coeffs, cpl_forces
 
     def mix_states_scf(self, pes, computes, frame):
