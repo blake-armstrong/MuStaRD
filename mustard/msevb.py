@@ -252,14 +252,17 @@ class MSEVB:
         return cpl_val, cpl_forces
 
     def mix_states(self):
-        num_sites = len(self.topology.pairs_idxs)
+        num_sites = self.topology.num_sites
         if num_sites == 1:
             return self.mix_states_single
         return self.mix_states_scf
 
     def mix_states_single(self, pes, computes, frame):
         matrix = np.zeros(shape=(self.topology.num_systems, self.topology.num_systems))
-        states = self.topology.pairs_idxs[0]
+        # print(self.topology.systems_idxs[0].T)
+        # print(self.topology.systems_idxs)
+        # exit()
+        states = self.topology.systems
         cpl_forces = np.zeros(shape=frame.forces.shape)
         if self.universe.rank.color == 0:
             if self.universe.me == 0:
@@ -273,11 +276,12 @@ class MSEVB:
                     matrix[0, state] = cpl_val
         elif self.universe.rank.color < self.topology.num_systems:
             init_compute, new_compute = None, None
+            system = self.topology.current_system
             if computes is not None:
                 init_compute = computes[0]
                 new_compute = computes[self.universe.rank.color]
             cpl_val, cpl_forces = self.get_coupling(
-                self.topology.rxn_pairs[states[self.universe.rank.color]],
+                system.pairs[0],
                 frame,
                 pes[0],
                 pes[self.universe.rank.color],
@@ -295,6 +299,7 @@ class MSEVB:
         return min_eval, min_evec_coeffs, cpl_forces
 
     def mix_states_scf(self, pes, computes, frame):
+        raise RuntimeError("multi site not ready yet")
         # TODO:
         min_eval = 0.0
         min_evec_coeffs = np.array([0.0, 0.0])

@@ -129,7 +129,7 @@ class Mustard:
         self.lmp.command("run 0 post no")
         self.Trajectory = Trajectory()
         self.Output = Output()
-        self.prev_system = np.array(tuple())
+        self.prev_system = self.topology.current_system
         self.safe = False
         self.rebuild = True
         self.identify_pairs()
@@ -190,42 +190,46 @@ class Mustard:
 
     def identify_pairs(self):
         self.msevb.frame._update_vel(utils.get_velocities(self.lmp))
-        self.topology.get_pairs(self.msevb.frame.pos, self.msevb.frame.xyz_pbc)
-        self.log(f"Reaction systems: {self.topology.systems_idxs}", level="debug")
-        self.log(f"Reaction distances: {self.topology.pair_dists}", level="debug")
-        self.log(f"Reaction angles: {self.topology.hxy_angles}", level="debug")
-        if not self.topology.rxn_pairs:
-            self.prev_system = np.array(tuple())
+        any_reactions = self.topology.get_systems(
+            self.msevb.frame.pos, self.msevb.frame.xyz_pbc
+        )
+
+        if not any_reactions:
+            self.prev_system = self.topology.systems[0]
             return False
+
+        for system in self.topology.systems:
+            self.log(f"System {system.index}: {system}", level="debug")
 
         self._redistribute_EVB_states(self.topology.num_systems, self.msevb.frame)
 
-        system = self.topology.grab_system(np.intp(self.universe.rank.color))
-        if len(system) != 0:
-            change_topology = True
-            if np.array_equal(self.prev_system, system) and self.safe:
-                change_topology = False
-            if change_topology:
-                self.topology.reset_lmp_topology()
-                self.safe = True
-            utils.set_positions(self.lmp, self.msevb.frame.pos)
-            utils.set_velocities(self.lmp, self.msevb.frame.vel)
-            utils.set_images(self.lmp, self.msevb.frame.images)
-            if self.SI.scale_box:
-                utils.set_box_data(self.lmp, self.msevb.frame.box_data)
-            if change_topology:
-                self.topology.change_topology_to_system(
-                    self.lmp, system, self.msevb.frame
-                )
-                self.msevb.run = 2
-                self.lmp.command("run 0 pre yes post no")
+        system = self.topology.grab_system(self.universe.rank.color)
+        change_topology = True
+        if system.index == 0:
+            self.prev_system = system
+            return True
+
+        if np.array_equal(self.prev_system.pairs, system.pairs) and self.safe:
+            change_topology = False
+        if change_topology:
+            self.topology.reset_lmp_topology()
+            self.safe = True
+        utils.set_positions(self.lmp, self.msevb.frame.pos)
+        utils.set_velocities(self.lmp, self.msevb.frame.vel)
+        utils.set_images(self.lmp, self.msevb.frame.images)
+        if self.SI.scale_box:
+            utils.set_box_data(self.lmp, self.msevb.frame.box_data)
+        if change_topology:
+            self.topology.change_topology_to_system(self.lmp, system, self.msevb.frame)
+            self.msevb.run = 2
+            self.lmp.command("run 0 pre yes post no")
 
         self.prev_system = system
         return True
 
     def update_topology(self, system):
         new_imgs, yids = [], []
-        for h, y in system:
+        for h, y in system.pairs:
             _new_imgs, _yids = self.topology.get_new_imgs(h, y, self.msevb.frame)
             new_imgs += list(_new_imgs)
             yids += list(_yids)
@@ -238,7 +242,7 @@ class Mustard:
             self.topology.reset_lmp_topology()
         # if self.universe.rank.color == 0:
         self.topology.change_topology_to_system(self.lmp, system, self.msevb.frame)
-        self.topology.current_system = np.array(tuple())
+        self.topology.current_system = self.topology.empty_system()
         self.lmp.commands_list(
             [
                 f"set atom {ID} image {imgs[0]} {imgs[1]} {imgs[2]}"
@@ -254,7 +258,7 @@ class Mustard:
         self.universe.global_comm.Barrier()
         self.topology.build_topology()
         self.safe = False
-        self.prev_system = np.array(tuple())
+        self.prev_system = self.topology.empty_system()
         self.rebuild = True
         self.universe.global_comm.Barrier()
 
@@ -285,8 +289,8 @@ class Mustard:
         if self.msevb.min_state_idx == 0:
             return None
         # reaction has occured - update topology
-        min_system = self.topology.grab_system(self.msevb.min_state_idx)
-        for pair in min_system:
+        min_system = self.topology.grab_system(int(self.msevb.min_state_idx))
+        for pair in min_system.pairs:
             h, y = pair
             try:
                 # NOTE assumes transferring atom is only bonded to one other atom

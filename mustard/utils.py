@@ -75,7 +75,7 @@ def dMDF(dx, dy, dz, rm, rc):
     return np.array([ddx, ddy, ddz])
 
 
-def get_pairs(positions, xyz_pbc, cutoffs, X, H_idxs, Y_idxs, Topology):
+def get_pairs(positions, xyz_pbc, cutoffs, X_idxs, H_idxs, Y_idxs, Topology):
     dist_cut, ang_cut = (
         cutoffs["distance"],
         cutoffs["angle"],
@@ -86,12 +86,6 @@ def get_pairs(positions, xyz_pbc, cutoffs, X, H_idxs, Y_idxs, Topology):
     Y_pos = positions[Y_idxs]
     dists = get_distances(H_pos, Y_pos, xyz_pbc)
     dists_bool = dists < dist_cut
-    X_ready_idx = [
-        Topology.atoms[id].idx
-        for idx in H_idxs
-        for id in Topology.residues[Topology.atoms[Topology.ids[idx]].molecule]
-        if Topology.atoms[id].type == X
-    ][0]
     if not dists_bool.any():
         return None
     pair_dists = dists[dists_bool.nonzero()[0], dists_bool.nonzero()[1]]
@@ -100,13 +94,13 @@ def get_pairs(positions, xyz_pbc, cutoffs, X, H_idxs, Y_idxs, Topology):
     H_ready_idx = H_idxs[(dists_bool).nonzero()[0]]
     Y_ready_idx = Y_idxs[(dists_bool).nonzero()[1]]
     rxn_pairs = np.array([Topology.ids[H_ready_idx], Topology.ids[Y_ready_idx]]).T
-    if ang_cut is None or X is None:
+    if ang_cut is None or not X_idxs.any():
         return rxn_pairs[sort], pair_dists[sort], [None] * len(rxn_pairs)
     X_ready_idx = [
         Topology.atoms[id].idx
         for idx in H_ready_idx
         for id in Topology.residues[Topology.atoms[Topology.ids[idx]].molecule]
-        if Topology.atoms[id].type == X
+        if Topology.atoms[id].idx in X_idxs
     ]
     # check angles work as well.
     # positions of atoms in angle
