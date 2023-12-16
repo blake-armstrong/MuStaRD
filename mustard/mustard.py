@@ -133,6 +133,8 @@ class Mustard:
         self.safe = False
         self.rebuild = True
         self.identify_pairs()
+        self.log(f"Systems: {self.topology.systems}")
+        exit()
         self.msevb.run = 3
         self.lmp.command("run 0 pre yes post no")
         self.msevb.step_count = 0
@@ -146,7 +148,12 @@ class Mustard:
             return
         if self.topology.num_systems > self.universe.num_fixed_colors:
             self.log(
-                f"{self.topology.num_systems} states were identified but only {self.universe.num_fixed_colors} systems available",
+                (
+                    f"{self.topology.num_systems} states were identified but "
+                    f"only {self.universe.num_fixed_colors} systems are available. "
+                    f"This means only the first {self.universe.num_fixed_colors} "
+                    "will be evaluated. "
+                ),
                 level="warn",
             )
             self.topology.num_systems = self.universe.num_fixed_colors

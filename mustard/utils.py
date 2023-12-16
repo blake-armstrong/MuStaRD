@@ -1,6 +1,7 @@
 import numpy as np
 from ctypes import c_int, c_double
 import math
+from collections import defaultdict
 
 
 def get_distances(pos_arr_1, pos_arr_2, xyz_pbc):
@@ -75,47 +76,51 @@ def dMDF(dx, dy, dz, rm, rc):
     return np.array([ddx, ddy, ddz])
 
 
-def get_pairs(positions, xyz_pbc, cutoffs, X_idxs, H_idxs, Y_idxs, Topology):
-    dist_cut, ang_cut = (
-        cutoffs["distance"],
-        cutoffs["angle"],
-    )
-    if H_idxs.size == 0 or Y_idxs.size == 0:
-        return None
-    H_pos = positions[H_idxs]
-    Y_pos = positions[Y_idxs]
-    dists = get_distances(H_pos, Y_pos, xyz_pbc)
-    dists_bool = dists < dist_cut
-    if not dists_bool.any():
-        return None
-    pair_dists = dists[dists_bool.nonzero()[0], dists_bool.nonzero()[1]]
-    sort = np.argsort(pair_dists)
-    # grab indexes of pairs that meet dist cutoff
-    H_ready_idx = H_idxs[(dists_bool).nonzero()[0]]
-    Y_ready_idx = Y_idxs[(dists_bool).nonzero()[1]]
-    rxn_pairs = np.array([Topology.ids[H_ready_idx], Topology.ids[Y_ready_idx]]).T
-    if ang_cut is None or not X_idxs.any():
-        return rxn_pairs[sort], pair_dists[sort], [None] * len(rxn_pairs)
-    X_ready_idx = [
-        Topology.atoms[id].idx
-        for idx in H_ready_idx
-        for id in Topology.residues[Topology.atoms[Topology.ids[idx]].molecule]
-        if Topology.atoms[id].idx in X_idxs
-    ]
-    # check angles work as well.
-    # positions of atoms in angle
-    H_pos = positions[H_ready_idx]
-    X_pos = positions[X_ready_idx]
-    Y_pos = positions[Y_ready_idx]
-    # get angles..
-    angles = get_angles(H_pos, X_pos, Y_pos, xyz_pbc)
-    angle_bool = angles < ang_cut
-    if not angle_bool.any():
-        return None
-    hxy_angles = angles[angle_bool]
-    rxn_pairs = rxn_pairs[angle_bool]
-    rxn_pairs = rxn_pairs[np.argsort(rxn_pairs[:, 0])]
-    return rxn_pairs[sort], pair_dists[sort], hxy_angles[sort]
+def nested_defaultdict():
+    return defaultdict(nested_defaultdict)
+
+
+# def get_pairs(positions, xyz_pbc, cutoffs, X_idxs, H_idxs, Y_idxs, Topology):
+#     dist_cut, ang_cut = (
+#         cutoffs["distance"],
+#         cutoffs["angle"],
+#     )
+#     if H_idxs.size == 0 or Y_idxs.size == 0:
+#         return None
+#     H_pos = positions[H_idxs]
+#     Y_pos = positions[Y_idxs]
+#     dists = get_distances(H_pos, Y_pos, xyz_pbc)
+#     dists_bool = dists < dist_cut
+#     if not dists_bool.any():
+#         return None
+#     pair_dists = dists[dists_bool.nonzero()[0], dists_bool.nonzero()[1]]
+#     sort = np.argsort(pair_dists)
+#     # grab indexes of pairs that meet dist cutoff
+#     H_ready_idx = H_idxs[(dists_bool).nonzero()[0]]
+#     Y_ready_idx = Y_idxs[(dists_bool).nonzero()[1]]
+#     rxn_pairs = np.array([Topology.ids[H_ready_idx], Topology.ids[Y_ready_idx]]).T
+#     if ang_cut is None or not X_idxs.any():
+#         return rxn_pairs[sort], pair_dists[sort], [None] * len(rxn_pairs)
+#     X_ready_idx = [
+#         Topology.atoms[id].idx
+#         for idx in H_ready_idx
+#         for id in Topology.residues[Topology.atoms[Topology.ids[idx]].molecule]
+#         if Topology.atoms[id].idx in X_idxs
+#     ]
+#     # check angles work as well.
+#     # positions of atoms in angle
+#     H_pos = positions[H_ready_idx]
+#     X_pos = positions[X_ready_idx]
+#     Y_pos = positions[Y_ready_idx]
+#     # get angles..
+#     angles = get_angles(H_pos, X_pos, Y_pos, xyz_pbc)
+#     angle_bool = angles < ang_cut
+#     if not angle_bool.any():
+#         return None
+#     hxy_angles = angles[angle_bool]
+#     rxn_pairs = rxn_pairs[angle_bool]
+#     rxn_pairs = rxn_pairs[np.argsort(rxn_pairs[:, 0])]
+#     return rxn_pairs[sort], pair_dists[sort], hxy_angles[sort]
 
 
 def gather_atoms(lmp, *args):

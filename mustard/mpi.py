@@ -124,6 +124,7 @@ class Universe:
             log = self.logger.debug
         if level == "warn":
             log = self.logger.warn
+            # msg = f"\033[91m{msg}\033[0m"
         if self.me == rank:
             log(msg)
             return

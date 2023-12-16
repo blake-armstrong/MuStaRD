@@ -225,7 +225,7 @@ class MSEVB:
         ):
             new_cmp = dict(zip(self.SI.computes, new_cmp))
             init_cmp = dict(zip(self.SI.computes, init_cmp))
-        rxn_num = self.topology.rxn_nums_dict[pair]
+        rxn_num = self.topology.rxn_pair_info[pair]["num"]
         snapshot = self.topology._get_snapshot(frame, self.step_count)
         rxn_ids = {"x_id": x, "h_id": h, "y_id": y}
         cpl_val = self.SI.coupling_value_functions[rxn_num](

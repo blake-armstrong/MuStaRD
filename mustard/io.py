@@ -564,8 +564,34 @@ def logger(
     logger = logging.getLogger(name)
     logger.setLevel(level)
     handler.setLevel(level)
+
+    class CustomFormatter(logging.Formatter):
+        white = "\x1b[1;39m"
+        grey = "\x1b[38;20m"
+        yellow = "\x1b[33;21m"
+        red = "\x1b[31;20m"
+        bold_red = "\x1b[31;1m"
+        reset = "\x1b[0m"
+
+        fmts = {
+            logging.DEBUG: grey + fmt + reset,
+            logging.INFO: white + fmt + reset,
+            logging.WARNING: yellow + fmt + reset,
+            logging.ERROR: red + fmt + reset,
+            logging.CRITICAL: bold_red + fmt + reset,
+        }
+
+        def format(self, record):
+            log_fmt = self.fmts.get(record.levelno)
+            formatter = logging.Formatter(log_fmt, datefmt=datefmt)
+            return formatter.format(record)
+
+    # formatter = logging.Formatter(fmt, datefmt=datefmt)
     formatter = logging.Formatter(fmt, datefmt=datefmt)
+    if filename is None:
+        formatter = CustomFormatter()
     handler.setFormatter(formatter)
+
     logger.addHandler(handler)
 
     return logger
