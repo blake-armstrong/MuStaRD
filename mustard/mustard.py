@@ -67,10 +67,7 @@ class Mustard:
         }
         cmdargs = ["-nocite", "-screen", "none", "-log", "none"]
         if self.universe.debug:
-            if self.universe.rank.color == 0:
-                cmdargs[-1] = "state_main.log"
-            else:
-                cmdargs[-1] = f"state_{self.universe.rank.color}.log"
+            cmdargs[-1] = f"state_{self.universe.rank.color}.log"
         self.lmp = lammps(
             name="",
             cmdargs=cmdargs,
@@ -133,13 +130,14 @@ class Mustard:
         self.safe = False
         self.rebuild = True
         self.identify_pairs()
-        self.log(f"Systems: {self.topology.systems}")
-        exit()
+        self.log("Systems")
+        [self.log(f"{system}") for system in self.topology.systems]
         self.msevb.run = 3
         self.lmp.command("run 0 pre yes post no")
         self.msevb.step_count = 0
 
     def _redistribute_EVB_states(self, num_total_colors, frame):
+        # NOTE: This is from an old version of the code. Delete soon.
         # self.log(f"rxn_pairs: {self.topology.rxn_pairs}", level="debug")
         # self.log(f"Starting total colors: {self.universe.total_colors}", level="debug")
         # self.log(f"Number of systems: {self.topology.num_systems}", level="debug")
@@ -236,29 +234,22 @@ class Mustard:
 
     def update_topology(self, system):
         new_imgs, yids = [], []
-        for h, y in system.pairs:
-            _new_imgs, _yids = self.topology.get_new_imgs(h, y, self.msevb.frame)
+        for site in system.sites:
+            h, y = site.pair
+            _new_imgs, _yids = self.topology.get_new_imgs(h, y, self.msevb.frame, site)
             new_imgs += list(_new_imgs)
             yids += list(_yids)
         self.msevb.run = 2
         self.lmp.command(f"run 0 pre yes post no")
         if self.universe.rank.color != 0:
-            # current_system = self.topology.grab_system(
-            #     np.intp(self.universe.rank.color)
-            # )
             self.topology.reset_lmp_topology()
-        # if self.universe.rank.color == 0:
         self.topology.change_topology_to_system(self.lmp, system, self.msevb.frame)
         self.topology.current_system = self.topology.empty_system()
-        self.lmp.commands_list(
-            [
-                f"set atom {ID} image {imgs[0]} {imgs[1]} {imgs[2]}"
-                for ID, imgs in zip(yids, new_imgs)
-            ]
-            + [
-                "reset_atoms mol all single yes",
-            ]
-        )
+        update = [
+            f"set atom {ID} image {imgs[0]} {imgs[1]} {imgs[2]}"
+            for ID, imgs in zip(yids, new_imgs)
+        ] + ["reset_atoms mol all single yes"]
+        self.lmp.commands_list(update)
         self.universe.global_comm.Barrier()
         self.msevb.run = 2
         self.lmp.command(f"run 0 pre yes post no")

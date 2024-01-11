@@ -141,6 +141,7 @@ class MSEVB:
         ):
             m[self.universe.rank.color, self.universe.rank.color][:, :] = current_forces
             if self.universe.rank.color != 0:
+                # HERE
                 m[0, self.universe.rank.color][:, :] = cpl_forces
                 m[self.universe.rank.color, 0][:, :] = cpl_forces
         mbuff = np.empty_like(m)
@@ -259,10 +260,6 @@ class MSEVB:
 
     def mix_states_single(self, pes, computes, frame):
         matrix = np.zeros(shape=(self.topology.num_systems, self.topology.num_systems))
-        # print(self.topology.systems_idxs[0].T)
-        # print(self.topology.systems_idxs)
-        # exit()
-        states = self.topology.systems
         cpl_forces = np.zeros(shape=frame.forces.shape)
         if self.universe.rank.color == 0:
             if self.universe.me == 0:
@@ -272,8 +269,9 @@ class MSEVB:
                         source=MPI.ANY_SOURCE, tag=state
                     )
                     matrix[state, state] = pes[state]
-                    matrix[state, 0] = cpl_val
-                    matrix[0, state] = cpl_val
+                    loc = self.topology.systems[state].sites[0].parents
+                    matrix[state, loc] = cpl_val
+                    matrix[loc, state] = cpl_val
         elif self.universe.rank.color < self.topology.num_systems:
             init_compute, new_compute = None, None
             system = self.topology.current_system
