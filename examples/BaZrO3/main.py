@@ -7,7 +7,7 @@ LMB = 0.7998
 ZETA = 16
 
 DIST_CUTOFF = 1.8
-DIST_TAPER = 1.8
+DIST_TAPER = 1.7
 
 
 def get_dist(pos1, pos2, pbc):
@@ -31,7 +31,7 @@ def coupling_value_function(
     rHY = get_dist(h_pos, y_pos, snapshot.frame.xyz_pbc)
     rHX = get_dist(h_pos, x_pos, snapshot.frame.xyz_pbc)
     Q = abs(rHY - rHX)
-    return Raiteri2011_coupling(Q)  # * MDF(rHY, DIST_TAPER, DIST_CUTOFF)
+    return Raiteri2011_coupling(Q) * MDF(rHY, DIST_TAPER, DIST_CUTOFF)
 
 
 def coupling_forces_function(rxn_ids, snapshot, computes, forces):
@@ -54,9 +54,9 @@ def coupling_forces_function(rxn_ids, snapshot, computes, forces):
     taper = MDF(rHY, DIST_TAPER, DIST_CUTOFF)
     taper = 1
     taper_derivative = 0
-    # if rHY < DIST_CUTOFF and rHY > DIST_TAPER:
-    #     _dHY = dHY.flatten()
-    #     taper_derivative = dMDF(_dHY[0], _dHY[1], _dHY[2], DIST_TAPER, DIST_CUTOFF)
+    if rHY < DIST_CUTOFF and rHY > DIST_TAPER:
+        _dHY = dHY.flatten()
+        taper_derivative = dMDF(_dHY[0], _dHY[1], _dHY[2], DIST_TAPER, DIST_CUTOFF)
     prefactor = -2 * ZETA * cpl * drHYHX
     derivHY = prefactor * (dHY.flatten() / rHY) * taper + taper_derivative * cpl
     derivHX = prefactor * -(dHX.flatten() / rHX) * taper
@@ -70,7 +70,7 @@ def coupling_forces_function(rxn_ids, snapshot, computes, forces):
 
 
 def main():
-    lmp_coord_file = "bazryo3-1.0.lmp"
+    lmp_coord_file = "coord.lmp"
     force_field_file = "ff.lmp"
     header = ["units metal", "atom_style full", "boundary p p p"]
 
@@ -135,15 +135,17 @@ def main():
         commands,
         INPUTS,
         debug=True,
-        mpi_list=[4, 4, 4],
+        mpi_list=[6, 6],
     )
-    msevb.add_trajectory(filename="trajectory.dcd", write_frequency=1)
-    msevb.add_trajectory(filename="reaction.xyz", write_frequency=1, rxn=True)
-    msevb.add_output(filename=None, properties=["temp", "pe", "ke"], write_frequency=50)
+    msevb.add_trajectory(filename="trajectory.dcd", write_frequency=100)
+    msevb.add_trajectory(filename="reaction.xyz", write_frequency=100, rxn=True)
+    msevb.add_output(
+        filename=None, properties=["temp", "pe", "ke"], write_frequency=100
+    )
     msevb.add_output(
         filename="mustard.log",
         properties=["temp", "pe", "ke"],
-        write_frequency=50,
+        write_frequency=100,
     )
     # msevb.forces_for_ml("test.xyz", elec_ff="elec.lmp", skip=1)
     # msevb.forces_for_ml("1500_ml.xyz", elec_ff="elec.lmp", skip=1)
@@ -152,7 +154,7 @@ def main():
     # msevb.finite_differences(file="new_fd.out", delta=1e-3, index_array=[0, 1, 2])
     # msevb.step(200)
     # msevb.step(10)
-    msevb.step(1)
+    msevb.step(1000)
     # msevb.step(50000)
 
 
