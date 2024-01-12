@@ -130,8 +130,8 @@ class Mustard:
         self.safe = False
         self.rebuild = True
         self.identify_pairs()
-        self.log("Systems")
-        [self.log(f"{system}") for system in self.topology.systems]
+        self.log("Systems", level="debug")
+        [self.log(f"{system}", level="debug") for system in self.topology.systems]
         self.msevb.run = 3
         self.lmp.command("run 0 pre yes post no")
         self.msevb.step_count = 0
@@ -274,6 +274,9 @@ class Mustard:
                 self.topology,
             )
         any_pairs = self.identify_pairs()
+        self.log(
+            f"Number of identified systems: {self.topology.num_systems}", level="debug"
+        )
         self.msevb.ntimestep = self.universe.global_comm.bcast(
             self.msevb.ntimestep, root=0
         )

@@ -80,7 +80,12 @@ class SystemInfo:
         self.file = str(None)
 
         if params:
-            raise ValueError(f"Unknown keys in reaction parameters: {params.keys()}")
+            raise ValueError(
+                (
+                    f"Unknown keys in reaction parameters: {params.keys()}\n"
+                    f"Available keys are: {_DEFAULTS.keys()}"
+                )
+            )
 
     def _set_types(self, _types):
         if type(_types) != dict:
