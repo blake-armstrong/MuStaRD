@@ -4,7 +4,7 @@ import math
 from collections import defaultdict
 
 
-def get_distances(pos_arr_1, pos_arr_2, xyz_pbc):
+def get_distances(pos_arr_1, pos_arr_2, xyz_pbc, dx=False):
     # pass two numpy position arrays with pbc
     # returns array with distances accounting for pbc
     # calc x2-x1, y2-y1, z2-z1
@@ -15,7 +15,8 @@ def get_distances(pos_arr_1, pos_arr_2, xyz_pbc):
     pos_matrix.T[2] -= xyz_pbc[2] * ((pos_matrix.T[2]) / xyz_pbc[2]).round()
     # calc distances
     distances = np.linalg.norm(pos_matrix, axis=-1)
-
+    if dx:
+        return distances, pos_matrix
     return distances
 
 

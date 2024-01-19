@@ -71,8 +71,6 @@ class Universe:
         if self.rank.modify:
             self.subsub_comm = self.sub_comm.Split(self.rank.color, self.me)
             self.lmp_comm = self.subsub_comm
-        # self.total_colors = total_colors
-        # print("total colors", self.total_colors)
         self.num_fixed_colors = num_fixed_colors
         self.num_fixed_ranks = num_fixed_ranks
         self.num_free_ranks = self.num_procs - self.num_fixed_ranks
@@ -124,7 +122,7 @@ class Universe:
             log = self.logger.debug
         if level == "warn":
             log = self.logger.warn
-            # msg = f"\033[91m{msg}\033[0m"
+            msg = f"\033[91m{msg}\033[0m"
         if self.me == rank:
             log(msg)
             return

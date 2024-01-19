@@ -4,8 +4,6 @@ from .topology import Topology
 from .io import SystemInfo
 from .mpi import Universe
 from . import utils
-from copy import copy
-from time import time
 
 
 class MSEVB:
@@ -37,8 +35,6 @@ class MSEVB:
             callback = self.callback_none
         if self.run == 2:
             callback = self.callback_update
-        # if self.run == 99:
-        #     callback = self.callback_minimise
         return callback(lmp, ntimestep, nlocal, tag, x, f)
 
     def callback_update(self, lmp, ntimestep, nlocal, tag, x, f):
@@ -117,17 +113,6 @@ class MSEVB:
         amplitudes = min_evec_coeffs**2
         self.log(f"Amplitudes: {amplitudes}", level="debug")
         min_state_idx = np.argmax(amplitudes)
-        # min_evec_coeff = 0
-        # if (
-        #     self.universe.rank.color < self.topology.num_systems
-        #     and self.universe.sub_rank == 0
-        # ):
-        #     min_evec_coeff = min_evec_coeffs[self.universe.rank.color]
-        # ondiag_forces = current_forces * min_evec_coeff**2
-        # offdiag_forces = cpl_forces * 2 * min_evec_coeffs[0] * min_evec_coeff
-        # mixed_forces = ondiag_forces + offdiag_forces
-        # force_commbuff = np.empty_like(mixed_forces)
-        # self.universe.global_comm.Allreduce(mixed_forces, force_commbuff, op=MPI.SUM)
         m = np.zeros(
             shape=(
                 self.topology.num_systems,
@@ -152,7 +137,6 @@ class MSEVB:
         if len(idxs) > 0:
             new_forces[:, :] = mixed_forces[idxs] - current_forces[idxs]
         self.current_mixed_forces = mixed_forces
-        # self.log(f"Mixed forces: {force_commbuff}", level="debug")
         self.log(f"Mixed forces: {mixed_forces}", level="debug")
         # TODO: deal with virial/pressure later
         # mixed_virial = None
@@ -227,19 +211,14 @@ class MSEVB:
             new_cmp = dict(zip(self.SI.computes, new_cmp))
             init_cmp = dict(zip(self.SI.computes, init_cmp))
         rxn_num = self.topology.rxn_pair_info[pair]["num"]
-        snapshot = self.topology._get_snapshot(frame, self.step_count)
+        self.snapshot = self.topology._get_snapshot(frame, self.step_count)
         rxn_ids = {"x_id": x, "h_id": h, "y_id": y}
         cpl_val = self.SI.coupling_value_functions[rxn_num](
-            rxn_ids,
-            snapshot,
-            new_pe,
-            init_pe,
-            new_cmp,
-            init_cmp,
+            rxn_ids, self.snapshot, new_pe, init_pe, new_cmp, init_cmp
         )
         cpl_forces = self.SI.coupling_forces_functions[rxn_num](
             rxn_ids,
-            snapshot,
+            self.snapshot,
             new_cmp,
             frame.forces,
         )
@@ -247,9 +226,6 @@ class MSEVB:
             raise ValueError(
                 "Returned coupling forces shape {cpl_forces.shape} should be the same as forces shape {forces.shape}"
             )
-        # taper = self.SI.taper_functions[self.topology.rxn_nums_dict[pair]](
-        #    *self.topology.rxn_taper_info[pair]
-        # )
         return cpl_val, cpl_forces
 
     def mix_states(self):

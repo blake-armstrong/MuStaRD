@@ -27,11 +27,13 @@ class Topology:
             self.atoms,
             self.residues,
             self.bonds,
+            self.qs,
         ) = self.generate_generic_topology(self.lmp)
         self.ST = self.generate_specific_topology(self.atoms)
         self.xyz_types = np.vectorize(lambda x: self.SI.reverse_atom_types[x])(
             self.types
         )
+
         self._id_to_idx = np.vectorize(lambda x: self.atoms[x].idx)
         self.id_to_mass = np.vectorize(lambda x: self.atoms[x].mass)
         self.masses = self.id_to_mass(self.ids)
@@ -86,7 +88,7 @@ class Topology:
             bonds_dict[a].append(b)
             bonds_dict[b].append(a)
 
-        return ids, types, atom_info, mol_to_ids, bonds_dict
+        return ids, types, atom_info, mol_to_ids, bonds_dict, qs
 
     def _generate_specific_topology(self, X, H, Y, atoms):
         H_ids, H_idxs = self._get_ids_from_type(H, atoms)
@@ -108,13 +110,14 @@ class Topology:
         ]
 
     def _get_snapshot(self, frame, step):
-        return Topology.Snapshot(
+        return Snapshot(
             frame=frame,
             ids=self.ids,
             types=self.types,
             atoms=self.atoms,
             residues=self.residues,
             bonds=self.bonds,
+            qs=self.qs,
             step=step,
         )
 
@@ -888,15 +891,6 @@ class Topology:
         def err():
             raise RuntimeWarning("Frame attributes should not be externally modified.")
 
-    class Snapshot(NamedTuple):
-        frame: "Topology.Frame"
-        ids: np.ndarray
-        types: np.ndarray
-        atoms: dict
-        residues: dict
-        bonds: dict
-        step: int
-
     class SpecificTopology(NamedTuple):
         H_ids: np.ndarray
         H_idxs: np.ndarray
@@ -949,6 +943,28 @@ class Topology:
                         impropers.add((a, *s))
 
         return list(angles), list(propers), list(impropers)
+
+
+class Snapshot:
+    def __init__(
+        self,
+        frame: Topology.Frame,
+        ids: np.ndarray,
+        types: np.ndarray,
+        atoms: dict,
+        residues: dict,
+        bonds: dict,
+        qs: np.ndarray,
+        step: int,
+    ):
+        self.frame = frame
+        self.ids = ids
+        self.types = types
+        self.atoms = atoms
+        self.residues = residues
+        self.bonds = bonds
+        self.qs = qs
+        self.step = step
 
 
 class Site:

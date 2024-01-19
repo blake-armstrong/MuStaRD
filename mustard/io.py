@@ -271,11 +271,11 @@ class SystemInfo:
         return bool(fm)
 
     def _set_get_occupancies(self):
-        if self.FM:
+        if self.FM and self.temperature > 1e-6:
             # fermi mixing
 
             def get_occupancies_FM(eig_vals, SI):
-                return get_FD_occupancies(eig_vals, SI.temperature, SI.fd_tols, SI.RT)
+                return get_FD_occupancies(eig_vals, SI.RT)
 
             return get_occupancies_FM
 
@@ -464,7 +464,7 @@ class Trajectory:
     def get_z(mass):
         z = []
         for m in mass:
-            z.append(mdtraj.element.Element.getByMass(m).atomic_number)
+            z.append(mdtraj.element.Element.getByMass(m).atomic_number)  # type: ignore
         return z
 
     @staticmethod
