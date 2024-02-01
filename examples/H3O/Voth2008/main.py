@@ -172,7 +172,6 @@ def main():
         ],
     }
 
-    # msevb = mustard.Mustard(lmp_coord_file, force_field_file, coupling_function, header, commands, INPUTS, msevb_mpi_ranks=[11,11,11,11])
     # mpi_list = list(np.ones(24))
     mpi_list = [1, 1, 1, 1]
     msevb = Mustard(
@@ -181,8 +180,8 @@ def main():
         header,
         commands,
         INPUTS,
-        debug=True,
         mpi_list=mpi_list,
+        debug=True,
     )
 
     msevb.add_trajectory(filename="trajectory.dcd", write_frequency=100)
@@ -195,7 +194,7 @@ def main():
     #     delta=1e-3,
     # )
 
-    # msevb.step(1)
+    msevb.step(1)
 
 
 if __name__ == "__main__":
