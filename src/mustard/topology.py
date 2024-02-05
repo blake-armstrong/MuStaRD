@@ -556,7 +556,8 @@ class Topology:
             fmt_str="create_bonds single/dihedral {:10} {:10} {:10} {:10} {:10} special no ",
         )
         full = list(np.concatenate([b, a, i, d]).flatten())
-        full[-1] = full[-1].replace("no", "yes")
+        if full:
+            full[-1] = full[-1].replace("no", "yes")
         [self.lmp.command(cmd) for cmd in full]
         self.lmp.command("reset_atoms mol all single yes")
 
@@ -669,6 +670,8 @@ class Topology:
                         f"set atom {eyed} charge {self.SI.type_charges[new_types[eyed]]}"
                     )
                 new_imgs, yids = self._get_new_imgs(id_h, id_y, frame)
+                if not self.SI.pbc:
+                    new_imgs *= 0
                 create_bonds += [
                     f"set atom {ID} image {imgs[0]} {imgs[1]} {imgs[2]}"
                     for ID, imgs in zip(yids, new_imgs)
