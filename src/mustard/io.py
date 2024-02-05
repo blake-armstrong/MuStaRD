@@ -40,6 +40,7 @@ _DEFAULTS = {
     "scf_tol": 1e-4,
     "scf_max_iter": 100,
     "shells": 1,
+    "pbc": True,
 }
 
 
@@ -77,7 +78,7 @@ class SystemInfo:
         self.scf_tol = float(params.pop("scf_tol"))
         self.scf_max_iter = int(params.pop("scf_max_iter"))
         self.set_RT(self.temperature * self.units["boltz"])
-        self.file = str(None)
+        self.pbc = bool(params.pop("pbc"))
 
         if params:
             raise ValueError(

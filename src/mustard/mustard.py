@@ -374,11 +374,10 @@ class Mustard:
             index_array = range(num_particles)
         if len(index_array) > num_particles:
             raise ValueError("Index array length is greater than number of particles")
+        ndofs = len(index_array) * 3
         for particle in index_array:
             for coord in range(3):
-                self.Output.log(
-                    f"calculating force {particle*3 + coord + 1} / {num_particles * 3}"
-                )
+                self.Output.log(f"calculating force {particle*3 + coord + 1} / {ndofs}")
                 evals = []
                 for d in (delta, -delta):
                     pos_copy = copy(u_starting_pos)
@@ -621,10 +620,3 @@ class Mustard:
     def __del__(self):
         if hasattr(self, "lmp_comm"):
             self.universe.lmp_comm.Free()
-        if hasattr(self, "SI"):
-            import os
-
-            try:
-                os.remove(f"/tmp/{self.SI.file}")
-            except OSError:
-                pass
