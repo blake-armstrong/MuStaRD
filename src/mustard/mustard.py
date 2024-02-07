@@ -237,6 +237,8 @@ class Mustard:
         for site in system.sites:
             h, y = site.pair
             _new_imgs, _yids = self.topology.get_new_imgs(h, y, self.msevb.frame, site)
+            if not self.SI.pbc:
+                _new_imgs *= 0
             new_imgs += list(_new_imgs)
             yids += list(_yids)
         self.msevb.run = 2
@@ -419,24 +421,30 @@ class Mustard:
     def minimise(self, traj=True, file="minimised.pdb"):
         if traj:
             self.add_trajectory(filename="minimise.dcd", write_frequency=1)
-        u_frame_pos = (
-            self.msevb.frame.images * self.msevb.frame.xyz_pbc + self.msevb.frame.pos
-        )
         frame = copy(self.msevb.frame)
+        u_frame_pos = frame.pos
+        if self.SI.pbc:
+            u_frame_pos = (
+                frame.images * frame.xyz_pbc + frame.pos
+            )
         self.cycle = 0
 
         def objective(coords):
             if self.cycle % 2 == 0:
                 self.log(f" step {self.cycle // 2}: {self.msevb.min_eval}")
             self.cycle += 1
-            upos = coords.reshape(len(frame.pos), len(frame.pos[0]))
-            diff = upos - frame.pos
-            diff -= frame.xyz_pbc * (diff / frame.xyz_pbc).round()
-            nupos = u_frame_pos - diff
-            new_imgs = np.floor(nupos / frame.xyz_pbc).astype(int)
-            pos = nupos - frame.xyz_pbc * new_imgs
+            pos = coords.reshape(len(frame.pos), len(frame.pos[0]))
+            nupos = pos
+            print(f"COORDS", coords)
+            new_imgs = (pos * 0).astype(int)
+            if self.SI.pbc:
+                diff = pos - frame.pos
+                diff -= frame.xyz_pbc * (diff / frame.xyz_pbc).round()
+                nupos = u_frame_pos - diff
+                new_imgs = np.floor(nupos / frame.xyz_pbc).astype(int)
+                pos = nupos - frame.xyz_pbc * new_imgs
+                utils.set_images(self.lmp, new_imgs)
             utils.set_positions(self.lmp, pos)
-            utils.set_images(self.lmp, new_imgs)
             self.msevb.frame(self.lmp, pos=pos, imgs=new_imgs)
             any_pairs = self.identify_pairs()
             self.msevb.run = int(any_pairs)
@@ -454,7 +462,7 @@ class Mustard:
             self.msevb.min_eval = self.universe.global_comm.bcast(
                 self.msevb.min_eval, root=0
             )
-            return self.msevb.min_eval, self.msevb.current_mixed_forces.flatten()
+            return self.msevb.min_eval, self.msevb.current_mixed_forces.flatten() * -1
 
         # init_pe, _ = objective(frame.pos)
         self.log("Running minimisation...")
@@ -489,6 +497,8 @@ class Mustard:
             e, _ = objective(xk)
             objective_values.append(e)
 
+        bounds = [(p - 2, p + 2) for p in frame.pos.flatten()]
+
         self.log("Minimum eigenvalue at each step:")
         result = minimize(
             objective,
@@ -497,19 +507,22 @@ class Mustard:
             jac=True,
             tol=1e-6,
             callback=callback,
+            bounds=bounds,
         )
         self.log(f"...final minimum eigenvalue: {result.fun}")
         self.log(result, level="debug")
 
-        upos = result.x.reshape(len(frame.pos), len(frame.pos[0]))
-        diff = upos - frame.pos
-        diff -= frame.xyz_pbc * (diff / frame.xyz_pbc).round()
-        nupos = u_frame_pos - diff
-        new_imgs = np.floor(nupos / frame.xyz_pbc).astype(int)
-        pos = nupos - frame.xyz_pbc * new_imgs
+        pos = result.x.reshape(len(frame.pos), len(frame.pos[0]))
+        new_imgs = (pos * 0).astype(int)
+        if self.SI.pbc:
+            diff = pos - frame.pos
+            diff -= frame.xyz_pbc * (diff / frame.xyz_pbc).round()
+            nupos = u_frame_pos - diff
+            new_imgs = np.floor(nupos / frame.xyz_pbc).astype(int)
+            pos = nupos - frame.xyz_pbc * new_imgs
+            utils.set_images(self.lmp, new_imgs)
 
         utils.set_positions(self.lmp, pos)
-        utils.set_images(self.lmp, new_imgs)
         self.universe.global_comm.Barrier()
         self.msevb.frame(self.lmp, pos=pos, imgs=new_imgs)
         any_pairs = self.identify_pairs()
