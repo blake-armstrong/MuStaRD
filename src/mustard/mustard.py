@@ -418,7 +418,7 @@ class Mustard:
         self.Output.log(f"Finite differences written to {file}")
         self.universe.global_comm.Barrier()
 
-    def minimise(self, traj=True, file="minimised.pdb"):
+    def minimise(self, traj=True, file="minimised.pdb", fix=None):
         if traj:
             self.add_trajectory(filename="minimise.dcd", write_frequency=1)
         frame = copy(self.msevb.frame)
@@ -428,6 +428,11 @@ class Mustard:
                 frame.images * frame.xyz_pbc + frame.pos
             )
         self.cycle = 0
+
+        if fix is not None:
+            if type(fix) not in (list, tuple, np.ndarray):
+                raise ValueError("fix should be a list")
+            fix = list(fix)
 
         def objective(coords):
             if self.cycle % 2 == 0:
@@ -444,6 +449,14 @@ class Mustard:
                 new_imgs = np.floor(nupos / frame.xyz_pbc).astype(int)
                 pos = nupos - frame.xyz_pbc * new_imgs
                 utils.set_images(self.lmp, new_imgs)
+            upos = coords.reshape(len(frame.pos), len(frame.pos[0]))
+            if fix is not None:
+                upos[fix] = u_frame_pos[fix]
+            diff = upos - frame.pos
+            diff -= frame.xyz_pbc * (diff / frame.xyz_pbc).round()
+            nupos = u_frame_pos - diff
+            new_imgs = np.floor(nupos / frame.xyz_pbc).astype(int)
+            pos = nupos - frame.xyz_pbc * new_imgs
             utils.set_positions(self.lmp, pos)
             self.msevb.frame(self.lmp, pos=pos, imgs=new_imgs)
             any_pairs = self.identify_pairs()
