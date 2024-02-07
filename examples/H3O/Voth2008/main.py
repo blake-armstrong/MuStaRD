@@ -21,6 +21,15 @@ def Voth2007_coupling(V_ex, A_val, V_const=VCONST):
     return (V_const + V_ex) * A_val
 
 
+TYPE_TO_EXCHANGE_Q = {
+    1 : -0.0895456,
+    2 : 0.0252683,
+    3 : -0.0895456,
+    4 : 0.0252683,
+}
+TYPE_TO_EXCHANGE_Q = np.vectorize(TYPE_TO_EXCHANGE_Q.__getitem__)
+H_EXCHANGE_Q = 0.0780180
+
 def coupling_value_function(
     rxn_ids, snapshot, new_pe, initial_pe, new_compute, initial_compute
 ):
@@ -42,11 +51,13 @@ def coupling_value_function(
         ]
     )
     snapshot.group1_idxs = np.array([snapshot.atoms[eyed].idx for eyed in group1_ids])
+    exch_qs = TYPE_TO_EXCHANGE_Q(snapshot.types[snapshot.group1_idxs])
+    exch_qs[np.where(snapshot.group1_idxs == snapshot.atoms[rxn_ids["h_id"]].idx)[0]] = H_EXCHANGE_Q
     snapshot.group2_idxs = np.delete(
         np.arange(len(snapshot.frame.pos)), snapshot.group1_idxs
     )
     group1_pos = snapshot.frame.pos[snapshot.group1_idxs]
-    group1_qs = snapshot.qs[snapshot.group1_idxs]
+    group1_qs = exch_qs
     group2_pos = snapshot.frame.pos[snapshot.group2_idxs]
     group2_qs = snapshot.qs[snapshot.group2_idxs]
     dists, dxs = utils.get_distances(group1_pos, group2_pos, xyz_pbc, dx=True)
@@ -56,7 +67,6 @@ def coupling_value_function(
     V_ex = np.sum(q_prod_r) * CF
     snapshot.ds = dxr * -(q_prod_r / dists)[:, :, None]
     snapshot.V_ex = V_ex
-
     snapshot.term1 = np.exp(-GAMMA * snapshot.q**2)
     snapshot.term2 = P * np.exp(-K * (snapshot.Roo - DOO) ** 2)
     snapshot.term3 = BETA * (snapshot.Roo - ROO0)
@@ -66,7 +76,7 @@ def coupling_value_function(
         * (1 + snapshot.term2)
         * (0.5 * (1 - np.tanh(snapshot.term3)) + snapshot.term4)
     )
-    snapshot.c = Voth2007_coupling(V_ex, snapshot.A_val)
+    snapshot.c = Voth2007_coupling(snapshot.V_ex, snapshot.A_val)
     return snapshot.c
 
 
@@ -89,26 +99,22 @@ def coupling_forces_function(rxn_ids, snapshot, computes, forces):
     dA_dx = dA_dr * snapshot.dRoopos / snapshot.Roo
     group1_deriv = np.sum(snapshot.ds, axis=1) * CF
     group2_deriv = -1 * np.sum(snapshot.ds, axis=0) * CF
+
     # V_ex derivs
     V_ex_derivs = np.zeros(shape=snapshot.frame.pos.shape)
     V_ex_derivs[snapshot.group1_idxs] += group1_deriv
     V_ex_derivs[snapshot.group2_idxs] += group2_deriv
 
-    # q derivs
-    q_derivs = np.zeros(shape=snapshot.frame.pos.shape)
-    q_derivs[snapshot.atoms[rxn_ids["h_id"]].idx] += dA_dq_H
-    q_derivs[snapshot.atoms[rxn_ids["y_id"]].idx] += dA_dq_O
-    q_derivs[snapshot.atoms[rxn_ids["x_id"]].idx] += dA_dq_O
-    # Roo derivs
-    Roo_derivs = np.zeros(shape=snapshot.frame.pos.shape)
-    Roo_derivs[snapshot.atoms[rxn_ids["y_id"]].idx] -= dA_dx
-    Roo_derivs[snapshot.atoms[rxn_ids["x_id"]].idx] += dA_dx
+    # A derivs
+    A_derivs = np.zeros(shape=snapshot.frame.pos.shape)
+    A_derivs[snapshot.atoms[rxn_ids["h_id"]].idx] += dA_dq_H
+    A_derivs[snapshot.atoms[rxn_ids["y_id"]].idx] += dA_dq_O
+    A_derivs[snapshot.atoms[rxn_ids["x_id"]].idx] += dA_dq_O
+    A_derivs[snapshot.atoms[rxn_ids["y_id"]].idx] -= dA_dx
+    A_derivs[snapshot.atoms[rxn_ids["x_id"]].idx] += dA_dx
 
-    full_derivs = (
-        VCONST * (q_derivs + Roo_derivs)
-        + V_ex_derivs * snapshot.A_val
-        + snapshot.V_ex * (q_derivs + Roo_derivs)
-    )
+    full_derivs = (VCONST + snapshot.V_ex) * A_derivs + V_ex_derivs * snapshot.A_val
+
     return full_derivs * -1
 
 
@@ -145,9 +151,10 @@ def main():
         },
         "lammps_unit_system": "metal",
         "computes": None,
-        "shells": 1,
+        "shells": 3,
         "neighbour_list_update": 4,
-        "fermi_mixing": True,
+        # "fermi_mixing": True,
+        "pbc": True,
         "reactions": [
             {
                 "reaction": ("O3", "H3", "O2"),
@@ -172,29 +179,31 @@ def main():
         ],
     }
 
-    # mpi_list = list(np.ones(24))
-    mpi_list = [1, 1, 1, 1]
+    mpi_list = list(np.ones(32))
+    # mpi_list = [1, 1, 1, 1]
     msevb = Mustard(
         lmp_coord_file,
         force_field_file,
         header,
         commands,
         INPUTS,
-        mpi_list=mpi_list,
         debug=True,
+        mpi_list=mpi_list,
     )
 
     msevb.add_trajectory(filename="trajectory.dcd", write_frequency=100)
     msevb.add_trajectory(filename="reaction.xyz", write_frequency=100, rxn=True)
     msevb.add_output(filename=None, write_frequency=100)
     msevb.add_output(filename="mustard.log", write_frequency=10)
-    # msevb.msevb_minimise()
+    # msevb.minimise()
+    # msevb.minimise(fix=[0, 3, 4])
     # msevb.finite_differences(
-    #     file="voth_finite_differences_multishell.dat",
+    #     file="voth_finite_differences_multishell1_no_vreps.dat",
     #     delta=1e-3,
+    #     index_array=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
     # )
 
-    msevb.step(1)
+    msevb.step(1000)
 
 
 if __name__ == "__main__":
