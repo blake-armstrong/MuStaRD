@@ -43,7 +43,6 @@ class MSEVB:
     def callback_none(self, lmp, ntimestep, nlocal, tag, x, f):
         new_forces = lmp.numpy.fix_external_get_force("ext")
         current_forces = utils.get_forces(lmp)
-        mixed_forces = None
         mixed_forces = self.universe.global_comm.bcast(current_forces, root=0)
         idxs = self.topology.id_to_idx(tag)
         total_x, total_v = self.sync_x_v(lmp, x, idxs)
@@ -107,6 +106,7 @@ class MSEVB:
             pes,
             computes,
             self.frame,
+            current_forces,
         )
         self.log(f"Minimum Eigenvalue: {min_eval}", level="debug")
         min_evec_coeffs = self.universe.global_comm.bcast(min_evec_coeffs, root=0)
@@ -194,7 +194,7 @@ class MSEVB:
         self.log(occupancies, level="debug")
         return np.min(eig_vals), min_evec_coeffs
 
-    def get_coupling(self, pair, frame, init_pe, new_pe, init_cmp=None, new_cmp=None):
+    def get_coupling(self, pair, frame, init_pe, new_pe, forces, init_cmp=None, new_cmp=None):
         pair = tuple(pair)
         h, y = pair
         try:
@@ -220,6 +220,7 @@ class MSEVB:
             rxn_ids,
             self.snapshot,
             new_cmp,
+            forces,
             frame.forces,
         )
         if cpl_forces.shape != frame.forces.shape:
@@ -230,11 +231,13 @@ class MSEVB:
 
     def mix_states(self):
         num_sites = self.topology.num_sites
+        if num_sites == 0:
+            raise RuntimeError("should not have happened")
         if num_sites == 1:
             return self.mix_states_single
         return self.mix_states_scf
 
-    def mix_states_single(self, pes, computes, frame):
+    def mix_states_single(self, pes, computes, frame, forces):
         matrix = np.zeros(shape=(self.topology.num_systems, self.topology.num_systems))
         cpl_forces = np.zeros(shape=frame.forces.shape)
         if self.universe.rank.color == 0:
@@ -259,6 +262,7 @@ class MSEVB:
                 frame,
                 pes[0],
                 pes[self.universe.rank.color],
+                forces,
                 init_compute,
                 new_compute,
             )
@@ -272,7 +276,7 @@ class MSEVB:
             min_eval, min_evec_coeffs = self.get_min_EVB_state(matrix)
         return min_eval, min_evec_coeffs, cpl_forces
 
-    def mix_states_scf(self, pes, computes, frame):
+    def mix_states_scf(self, pes, computes, frame, forces):
         raise RuntimeError("multi site not ready yet")
         # TODO:
         min_eval = 0.0

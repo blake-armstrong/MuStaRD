@@ -32,7 +32,7 @@ _DEFAULTS = {
     "temperature": None,
     "fd_tol_1": 1e-6,
     "fd_tol_2": 1e-6,
-    "constant_volume": False,
+    "constant_volume": True,
     "lammps_unit_system": None,
     "computes": None,
     "fermi_mixing": False,
@@ -53,6 +53,7 @@ class SystemInfo:
         fdt3 = self._set_fd_tols(params.pop("fd_tol_2"))
         self.fd_tols = (fdt2, fdt3)
         self._set_const_vol(params.pop("constant_volume"))
+
         self.atom_types, self.reverse_atom_types = self._set_types(
             params.pop("atom_types")
         )
@@ -115,6 +116,8 @@ class SystemInfo:
     def _set_type_charges(self, _charges):
         if type(_charges) != dict:
             raise ValueError(f"Unrecognised type for input {_charges}. Expected dict")
+        if len(_charges) != len(self.atom_types) - 1:
+            raise ValueError("Atom type dictionary should be the same length as type charges dictionary")
         charges = {}
         for k, v in _charges.items():
             charges[self.atom_types[k]] = float(v)
@@ -197,10 +200,10 @@ class SystemInfo:
                     f"argument passed to coupling_forces_function not callable"
                 )
             args = len(inspect.signature(_coupling_forces_function).parameters)
-            nargs = 4
+            nargs = 5
             if args != nargs:
                 raise ValueError(
-                    f"coupling_function should have {nargs} arguments (rxn_ids, snapshot, computes, forces), found {args}"
+                    f"coupling_function should have {nargs} arguments (rxn_ids, snapshot, computes, new_forces, initial_forces), found {args}"
                 )
             self.coupling_forces_functions.append(_coupling_forces_function)
 
@@ -244,6 +247,8 @@ class SystemInfo:
 
     def _set_const_vol(self, _cv):
         self.scale_box = not bool(_cv)
+        if self.scale_box:
+            raise ValueError("Only constant volume right now.")
 
     def _set_unit_system(self, unit):
         if UNITS is None:

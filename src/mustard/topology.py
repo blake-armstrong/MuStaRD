@@ -19,6 +19,9 @@ class Topology:
         self.num_sites: int
         self.current_system = self.empty_system()
         self.rxn_pair_info = dict()
+        self.distsort: np.ndarray
+        self.prev_rxn_pairs: np.ndarray = np.array([])
+        self.update = True
 
     def build_topology(self):
         (
@@ -121,7 +124,7 @@ class Topology:
             step=step,
         )
 
-    def get_pairs(
+    def full_get_pairs(
         self,
         positions,
         xyz_pbc,
@@ -145,17 +148,20 @@ class Topology:
         H_pos = positions[H_idxs]
         Y_pos = positions[Y_idxs]
         dists = utils.get_distances(H_pos, Y_pos, xyz_pbc)
-        dists_bool = dists < dist_cut
+        if self.update:
+            dists_bool = dists < dist_cut
+        else:
+            dists_bool = np.ones(shape = dists.shape) == 1 # type: ignore
         if not dists_bool.any():
             return None
-        pair_dists = dists[dists_bool.nonzero()[0], dists_bool.nonzero()[1]]
-        sort = np.argsort(pair_dists)
+        pair_dists = dists[dists_bool.nonzero()[0], dists_bool.nonzero()[1]] #type: ignore
         # grab indexes of pairs that meet dist cutoff
         H_ready_idx = H_idxs[(dists_bool).nonzero()[0]]
         Y_ready_idx = Y_idxs[(dists_bool).nonzero()[1]]
         rxn_pairs = np.array([self.ids[H_ready_idx], self.ids[Y_ready_idx]]).T
+        self.prev_rxn_pairs = rxn_pairs
         if ang_cut is None or not X_idxs.any():
-            return rxn_pairs[sort], pair_dists[sort], [None] * len(rxn_pairs)
+            return rxn_pairs, pair_dists, [None] * len(rxn_pairs)
         X_ready_idx = [
             self.atoms[id].idx
             for idx in H_ready_idx
@@ -175,7 +181,53 @@ class Topology:
         hxy_angles = angles[angle_bool]
         rxn_pairs = rxn_pairs[angle_bool]
         rxn_pairs = rxn_pairs[np.argsort(rxn_pairs[:, 0])]
-        return rxn_pairs[sort], pair_dists[sort], hxy_angles[sort]
+        self.prev_rxn_pairs = rxn_pairs
+        return rxn_pairs, pair_dists, hxy_angles
+
+    def get_pairs(
+        self,
+        positions,
+        xyz_pbc,
+        cutoffs,
+        X_idxs,
+        H_idxs,
+        Y_idxs,
+        residues=None,
+        atoms=None,
+    ):
+        if residues is None:
+            residues = self.residues
+        if atoms is None:
+            atoms = self.atoms
+        if not self.update:
+            H_idx = self.id_to_idx(self.prev_rxn_pairs[:, 0])
+            Y_idx = self.id_to_idx(self.prev_rxn_pairs[:, 1])
+            H_pos = positions[H_idx]
+            Y_pos = positions[Y_idx]
+            dists = H_pos - Y_pos
+            dists -= xyz_pbc * (dists / xyz_pbc).round()
+            return self.prev_rxn_pairs, dists, [None] * len(self.prev_rxn_pairs)
+            # if not X_idxs.any():
+            #     return self.prev_rxn_pairs, dists, [None] * len(self.prev_rxn_pairs)
+            # X_idx = [
+            #     self.atoms[id].idx
+            #     for idx in H_idx
+            #     for id in residues[atoms[self.ids[idx]].molecule]
+            #     if self.atoms[id].idx in X_idxs
+            # ]
+            #
+            # X_pos = positions[X_idx]
+            # ba = H_pos - X_pos
+            # bc = Y_pos - X_pos
+            # 
+            # cosine_angle = np.sum(ba * bc, axis=1) / (
+            #     np.linalg.norm(ba, axis=-1) * np.linalg.norm(bc, axis=-1)
+            # )
+            # angle = np.arccos(cosine_angle)
+            # 
+            # return self.prev_rxn_pairs, dists, np.degrees(angle)
+
+        return self.full_get_pairs(positions, xyz_pbc, cutoffs, X_idxs, H_idxs, Y_idxs, residues, atoms)
 
     def _get_pairs_idxs(self, pos, xyz_pbc, rxn_infos=None):
         rxn_pairs = []
@@ -204,12 +256,24 @@ class Topology:
             rxn_pairs = np.array(rxn_pairs).reshape(-1, 2).astype(int)
             return pairs_idxs, rxn_pairs
         pair_dists = np.concatenate(pair_dists, axis=0)
-        sort = np.argsort(pair_dists)
-        rxn_pairs = np.concatenate(rxn_pairs, axis=0)[sort]
+        rxn_pairs = np.concatenate(rxn_pairs, axis=0)
+        sort = np.argsort(np.sum(rxn_pairs**2, axis=1))
+        rxn_pairs = rxn_pairs[sort]
         rxn_nums = np.concatenate(rxn_nums, axis=0)[sort]
         hxy_angles = np.concatenate(hxy_angles, axis=0)[sort]
         pair_dists = pair_dists[sort]
-        rxn_molecules = np.array([self.atoms[pair[0]].molecule for pair in rxn_pairs])
+        self.dist_sort = np.argsort(pair_dists)
+
+        # NOTE: The following is very bad and makes dangerous assumptions.
+        rxn_molecules1 = np.array([self.atoms[pair[0]].molecule for pair in rxn_pairs])
+        rxn_molecules2 = np.array([self.atoms[pair[1]].molecule for pair in rxn_pairs])
+        rm1l = len(set(rxn_molecules1))
+        rm2l = len(set(rxn_molecules2))
+        rxn_molecules = rxn_molecules1
+        if rm2l < rm1l:
+            rxn_molecules = rxn_molecules2
+        #######################
+
         for n, pair in enumerate(rxn_pairs):
             self.rxn_pair_info[tuple(pair)]["num"] = rxn_nums[n]
             self.rxn_pair_info[tuple(pair)]["dist"] = pair_dists[n]
@@ -368,7 +432,6 @@ class Topology:
 
                     site = pairs_idxs_copy[nsite][end_of_site:]
             pairs_idxs = pairs_idxs_copy
-
         systems_idxs = np.array(list(product(*pairs_idxs)))
 
         systems = []
@@ -408,7 +471,7 @@ class Topology:
                 sites=tuple(sites),
             )
             systems.append(system)
-
+        
         self.num_systems = len(systems_idxs)
         self.num_sites = len(pairs_idxs)
         self.systems = systems
@@ -649,7 +712,8 @@ class Topology:
                 # its possible to just edit the array returned from extract_atoms
                 # or call scatter_atoms, probably faster than looping through set
                 new_types = {}
-                for eyed in (id_h, id_y, id_x):
+                rxn_ids = (id_h, id_y, id_x)
+                for eyed in rxn_ids:
                     if eyed is None:
                         continue
                     new_types[eyed] = self.SI.reactions[rxn_num].type_changes0[
@@ -662,6 +726,8 @@ class Topology:
                     ids_for_change.remove(eyed)
 
                 for eyed in ids_for_change:
+                    if eyed is None:
+                        continue
                     new_types[eyed] = self.SI.reactions[rxn_num].type_changes1[
                         site.atoms[eyed].type
                     ]
@@ -715,7 +781,10 @@ class Topology:
 
         # angles
         if self.SI.angle_types and angles:
+            dont = set()
             for id_0, id_1, id_2 in angles:
+                if f"{id_0}-{id_1}-{id_2}" in dont or f"{id_2}-{id_1}-{id_0}" in dont:
+                    continue
                 new_type_0 = types[id_0]
                 new_type_1 = types[id_1]
                 new_type_2 = types[id_2]
@@ -723,6 +792,7 @@ class Topology:
                     angle_type = self.SI.angle_types[
                         f"{new_type_0}-{new_type_1}-{new_type_2}"
                     ]
+                    dont.add(f"{id_0}-{id_1}-{id_2}")
                 except KeyError:
                     continue
                 cmd_list.append(
@@ -731,7 +801,10 @@ class Topology:
 
         # propers
         if self.SI.proper_types and propers:
+            dont = set()
             for id_0, id_1, id_2, id_3 in propers:
+                if f"{id_0}-{id_1}-{id_2}-{id_3}" in dont or f"{id_3}-{id_2}-{id_1}-{id_0}" in dont:
+                    continue
                 new_type_0 = types[id_0]
                 new_type_1 = types[id_1]
                 new_type_2 = types[id_2]
@@ -746,13 +819,17 @@ class Topology:
                         f"{new_type_3}-{new_type_2}-{new_type_1}-{new_type_0}"
                     ]
                     ids.reverse()
+                dont.add(f"{ids[0]}-{ids[1]}-{ids[2]}-{ids[3]}")
                 cmd_list.append(
                     f"create_bonds single/dihedral {proper_type} {ids[0]} {ids[1]} {ids[2]} {ids[3]} special no"
                 )
 
         # impropers
         if self.SI.improper_types and impropers:
+            dont = set()
             for id_0, id_1, id_2, id_3 in impropers:
+                if f"{id_0}-{id_1}-{id_2}-{id_3}" in dont:
+                    continue
                 new_type_0 = types[id_0]
                 new_type_1 = types[id_1]
                 new_type_2 = types[id_2]
@@ -763,6 +840,7 @@ class Topology:
                     ]
                 except KeyError:
                     continue
+                dont.add(f"{id_0}-{id_1}-{id_2}-{id_3}")
                 cmd_list.append(
                     f"create_bonds single/improper {improper_type} {id_0} {id_1} {id_2} {id_3} special no"
                 )

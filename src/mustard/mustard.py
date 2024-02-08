@@ -15,56 +15,31 @@ from mustard import utils
 class Mustard:
     def __init__(
         self,
-        lmp_coord_file,
-        force_field_file,
-        header,
-        commands,
+        user_commands,
         reaction_parameters,
         # read_restart=None,  # TODO
+        # write_restart=None, # TODO 
         mpi_list=None,
-        # write_restart=None
         debug=False,
     ):
         self.universe = Universe(mpi_list, debug)
         self.log = self.universe.log
-        # List of parameters to broadcast
         params_to_broadcast = (
-            lmp_coord_file,
-            force_field_file,
-            header,
-            commands,
+            user_commands,
             reaction_parameters,
             mpi_list,
             debug,
         )
-        # Broadcast all parameters from rank 0
         broadcasted_params = self.universe.global_comm.bcast(
             params_to_broadcast, root=0
         )
-        # Unpack the broadcasted parameters
         (
-            lmp_coord_file,
-            force_field_file,
-            header,
-            commands,
+            user_commands,
             reaction_parameters,
             mpi_list,
             debug,
         ) = broadcasted_params
-        # SYSTEM INFO
         self.SI = SystemInfo(reaction_parameters)
-        self.SI.file = "mustard." + self.universe.global_comm.bcast(
-            str(uuid.uuid4().hex), root=0
-        )
-        self.cmds = {
-            "header": header,
-            "read": [f"read_data {lmp_coord_file}"],
-            "ff": [f"include {force_field_file}"],
-            "user": commands,
-            "virial": [
-                "compute pre_vir all pressure NULL virial",
-            ],
-        }
         cmdargs = ["-nocite", "-screen", "none", "-log", "none"]
         if self.universe.debug:
             cmdargs[-1] = f"state_{self.universe.rank.color}.log"
@@ -73,46 +48,21 @@ class Mustard:
             cmdargs=cmdargs,
             comm=self.universe.lmp_comm,
         )
-        self.lmp.commands_list(
-            header
-            + [
-                f"read_data {lmp_coord_file}",
-                "change_box all triclinic",
-                f"include {force_field_file}",
-            ]
-        )
-        virial = "compute pre_vir all pressure NULL virial"
-        if self.SI.scale_box:
-            self.lmp.command(virial)
-
-        self.lmp.commands_list(commands)
+        self.lmp.commands_list(user_commands)
         self.lmp.command("run 0 post no")
         shape = utils.get_positions(self.lmp).shape
-        if self.universe.rank.color == 0:
-            self.lmp.command(f"write_data /tmp/{self.SI.file} nocoeff")
         self.universe.global_comm.Barrier()
-
+        fix_virial = "fix_modify ext virial no"
+        if self.SI.scale_box:
+            fix_virial = fix_virial.replace("no", "yes")
         fixes = [
             "fix ux all store/state 1 xu yu zu",
             "fix ext all external pf/callback 1 1",
             "fix_modify ext energy no",
-            "fix_modify ext virial no",
+            fix_virial,
             "compute get_pe all pe",
         ]
-        if self.SI.scale_box:
-            fixes[-2] = fixes[-2].replace("no", "yes")
         self.lmp.commands_list(fixes)
-        self.restart_commands = {
-            "header": header,
-            "read_data": [f"read_data /tmp/{self.SI.file}"],
-            "change_box": ["change_box all triclinic"],
-            "force_field": [f"include {force_field_file}"],
-            "user": commands,
-            "fixes": fixes,
-            "virial": [""],
-        }
-        if self.SI.scale_box:
-            self.restart_commands["virial"][0] = virial
         self.topology = Topology(self.lmp, self.SI)
         frame = Topology.Frame(self.lmp, *shape, scale_box=self.SI.scale_box)
         self.msevb = MSEVB(
@@ -129,19 +79,15 @@ class Mustard:
         self.prev_system = self.topology.current_system
         self.safe = False
         self.rebuild = True
-        self.identify_pairs()
+        print(f"{self.topology.update}")
+        any_pairs = int(self.identify_pairs())
         self.log("Systems", level="debug")
         [self.log(f"{system}", level="debug") for system in self.topology.systems]
-        self.msevb.run = 3
+        self.msevb.run = any_pairs
         self.lmp.command("run 0 pre yes post no")
         self.msevb.step_count = 0
 
-    def _redistribute_EVB_states(self, num_total_colors, frame):
-        # NOTE: This is from an old version of the code. Delete soon.
-        # self.log(f"rxn_pairs: {self.topology.rxn_pairs}", level="debug")
-        # self.log(f"Starting total colors: {self.universe.total_colors}", level="debug")
-        # self.log(f"Number of systems: {self.topology.num_systems}", level="debug")
-        # self.log(f"New total colors: {self.universe.total_colors}", level="debug")
+    def _redistribute_EVB_states(self, num_total_colors):
         if num_total_colors <= self.universe.total_colors:
             return
         if self.topology.num_systems > self.universe.num_fixed_colors:
@@ -155,44 +101,10 @@ class Mustard:
                 level="warn",
             )
             self.topology.num_systems = self.universe.num_fixed_colors
-            return
-        # self.log("REDISTRIBUTE CALLED")
-        # self.log(f"num_total_colors {num_total_colors}")
-        # if self.universe.rank.color == 0:
-        #     self.lmp.command(f"write_data /tmp/{self.SI.file} nocoeff")
-        # self.universe.global_comm.Barrier()
-        # if self.universe.rank.modify:
-        #     self.lmp.close()
-        # self.universe.available_ranks_to_colors(num_total_colors)
-        # self.universe.global_comm.Barrier()
-        # if not self.universe.rank.modify:
-        #     return
-        # cmdargs = ["-nocite", "-screen", "none", "-log", "none"]
-        # if self.universe.debug:
-        #     cmdargs[-1] = f"{self.universe.rank.color}.log"
-        # self.lmp = lammps(
-        #     name="",
-        #     cmdargs=cmdargs,
-        #     comm=self.universe.lmp_comm,
-        # )
-        # self.topology.set_lmp(self.lmp)
-        # self.lmp.commands_list(
-        #     self.restart_commands["header"] + self.restart_commands["read_data"]
-        # )
-        # utils.set_positions(self.lmp, frame.pos)
-        # utils.set_images(self.lmp, frame.images)
-        # self.lmp.commands_list(
-        #     self.restart_commands["change_box"]
-        #     + self.restart_commands["force_field"]
-        #     + self.restart_commands["virial"]
-        #     + self.restart_commands["user"]
-        # )
-        # utils.set_box_data(self.lmp, frame.box_data)
-        # utils.set_velocities(self.lmp, frame.vel)
-        # self.lmp.commands_list(self.restart_commands["fixes"])
-        # self.msevb.run = 2
-        # self.lmp.command("run 0 pre yes post no")
-
+            if self.topology.num_systems > 1:
+                ordered = [self.topology.systems[1:][idx] for idx in self.topology.dist_sort]
+                self.topology.systems = [self.topology.systems[0]] + ordered
+     
     def identify_pairs(self):
         self.msevb.frame._update_vel(utils.get_velocities(self.lmp))
         any_reactions = self.topology.get_systems(
@@ -206,7 +118,7 @@ class Mustard:
         for system in self.topology.systems:
             self.log(f"System {system.index}: {system}", level="debug")
 
-        self._redistribute_EVB_states(self.topology.num_systems, self.msevb.frame)
+        self._redistribute_EVB_states(self.topology.num_systems)
 
         system = self.topology.grab_system(self.universe.rank.color)
         change_topology = True
@@ -263,6 +175,7 @@ class Mustard:
         self.universe.global_comm.Barrier()
 
     def _step(self, n_step=1, out=True):
+        self.msevb.min_state_idx = np.intp(0)
         if self.universe.rank.color == 0 and out:
             if self.universe.me == 0:
                 self.Output.write(
@@ -275,6 +188,13 @@ class Mustard:
                 self.universe,
                 self.topology,
             )
+        self.topology.update = False
+        pre = "no"
+        if self.msevb.step_count % self.SI.nl_update == 0 or self.rebuild:
+            # pre = yes recomputes neighlist
+            pre = "yes"
+            self.rebuild = False
+            self.topology.update = True
         any_pairs = self.identify_pairs()
         self.log(
             f"Number of identified systems: {self.topology.num_systems}", level="debug"
@@ -283,12 +203,7 @@ class Mustard:
             self.msevb.ntimestep, root=0
         )
         self.msevb.run = int(any_pairs)
-        pre = "no"
-        if self.msevb.step_count % self.SI.nl_update == 0 or self.rebuild:
-            # pre = yes recomputes neighlist
-            pre = "yes"
-            self.rebuild = False
-        self.lmp.command(f"run {n_step} pre {pre} post no update no")
+        self.lmp.command(f"run {n_step} pre {pre} post no update {pre}")
         if self.msevb.min_state_idx == 0:
             return None
         # reaction has occured - update topology
@@ -440,7 +355,6 @@ class Mustard:
             self.cycle += 1
             pos = coords.reshape(len(frame.pos), len(frame.pos[0]))
             nupos = pos
-            print(f"COORDS", coords)
             new_imgs = (pos * 0).astype(int)
             if self.SI.pbc:
                 diff = pos - frame.pos
