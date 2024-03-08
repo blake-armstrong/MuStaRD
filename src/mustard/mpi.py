@@ -1,6 +1,5 @@
 from mpi4py import MPI
 import numpy as np
-from typing import NamedTuple
 import logging
 from .io import logger
 

@@ -65,12 +65,12 @@ angle_coeff   2      1.6800000      111.72690
 
 variable rcut  equal 9.
 
-pair_style hybrid/overlay coul/cut         ${rcut} &
+pair_style hybrid/overlay coul/long         ${rcut} &
                              lj/cut         ${rcut} &
                          voth/vrep1 1 3 4 2.85 3.05 & 
                          voth/vrep2         2.3 2.5
 
- pair_coeff         *       *       coul/cut
+ pair_coeff         *       *       coul/long
 
 ####################################################################################
 # Water - water (SPC/Fw)
@@ -91,7 +91,7 @@ special_bonds lj 0.  0.  0.  coul 0.  0.  0.
 # Parameters for reciprocal space electrostatics
 ####################################################################################
 
-# kspace_style pppm 1.0e-5
-# kspace_modify fftbench no
+kspace_style pppm 1.0e-5
+kspace_modify fftbench no
 
 ###################################

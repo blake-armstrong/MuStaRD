@@ -2,8 +2,6 @@ from lammps import lammps
 from scipy.optimize import minimize
 from copy import copy
 import numpy as np
-import uuid
-import warnings
 
 from mustard.msevb import MSEVB
 from mustard.topology import Topology
@@ -24,21 +22,18 @@ class Mustard:
     ):
         self.universe = Universe(mpi_list, debug)
         self.log = self.universe.log
-        params_to_broadcast = (
-            user_commands,
-            reaction_parameters,
-            mpi_list,
-            debug,
-        )
-        broadcasted_params = self.universe.global_comm.bcast(
-            params_to_broadcast, root=0
-        )
         (
             user_commands,
             reaction_parameters,
             mpi_list,
             debug,
-        ) = broadcasted_params
+        ) = self.universe.global_comm.bcast(
+        (
+            user_commands,
+            reaction_parameters,
+            mpi_list,
+            debug,
+        ), root=0)
         self.SI = SystemInfo(reaction_parameters)
         cmdargs = ["-nocite", "-screen", "none", "-log", "none"]
         if self.universe.debug:
@@ -50,7 +45,6 @@ class Mustard:
         )
         self.lmp.commands_list(user_commands)
         self.lmp.command("run 0 post no")
-        shape = utils.get_positions(self.lmp).shape
         self.universe.global_comm.Barrier()
         fix_virial = "fix_modify ext virial no"
         if self.SI.scale_box:
@@ -64,12 +58,10 @@ class Mustard:
         ]
         self.lmp.commands_list(fixes)
         self.topology = Topology(self.lmp, self.SI)
-        frame = Topology.Frame(self.lmp, *shape, scale_box=self.SI.scale_box)
         self.msevb = MSEVB(
             universe=self.universe,
             topology=self.topology,
             SI=self.SI,
-            frame=frame,
         )
         self.lmp.set_fix_external_callback("ext", self.msevb, self.lmp)
         self.msevb.run = 2
@@ -79,7 +71,6 @@ class Mustard:
         self.prev_system = self.topology.current_system
         self.safe = False
         self.rebuild = True
-        print(f"{self.topology.update}")
         any_pairs = int(self.identify_pairs())
         self.log("Systems", level="debug")
         [self.log(f"{system}", level="debug") for system in self.topology.systems]
@@ -102,21 +93,19 @@ class Mustard:
             )
             self.topology.num_systems = self.universe.num_fixed_colors
             if self.topology.num_systems > 1:
-                ordered = [self.topology.systems[1:][idx] for idx in self.topology.dist_sort]
-                self.topology.systems = [self.topology.systems[0]] + ordered
+                self.topology.systems = [self.topology.systems[idx] for idx in self.topology.dist_sort if idx < self.topology.num_systems]
      
     def identify_pairs(self):
-        self.msevb.frame._update_vel(utils.get_velocities(self.lmp))
+        self.msevb.frame.setattr("vel", utils.get_velocities(self.lmp))
         any_reactions = self.topology.get_systems(
-            self.msevb.frame.pos, self.msevb.frame.xyz_pbc
+            self.msevb.frame.pos, self.msevb.frame.box_vectors
         )
-
         if not any_reactions:
             self.prev_system = self.topology.systems[0]
             return False
 
         for system in self.topology.systems:
-            self.log(f"System {system.index}: {system}", level="debug")
+            self.log(f"{system}", level="debug")
 
         self._redistribute_EVB_states(self.topology.num_systems)
 
@@ -140,7 +129,6 @@ class Mustard:
             self.topology.change_topology_to_system(self.lmp, system, self.msevb.frame)
             self.msevb.run = 2
             self.lmp.command("run 0 pre yes post no")
-
         self.prev_system = system
         return True
 
@@ -281,9 +269,7 @@ class Mustard:
 
         starting_positions = utils.get_positions(self.lmp)
         starting_positions = self.universe.global_comm.bcast(starting_positions, root=0)
-        u_starting_pos = (
-            self.msevb.frame.images * self.msevb.frame.xyz_pbc + self.msevb.frame.pos
-        )
+        u_starting_pos = utils.unwrap_coordinates(self.msevb.frame.pos, self.msevb.frame.box_matrix, self.msevb.frame.inv_box_matrix, self.msevb.frame.images)
         frame = copy(self.msevb.frame)
         check_forces = np.zeros(shape=self.msevb.forces_shape)
         num_particles = self.msevb.forces_shape[0]
@@ -298,9 +284,9 @@ class Mustard:
                 evals = []
                 for d in (delta, -delta):
                     pos_copy = copy(u_starting_pos)
-                    pos_copy[particle][coord] = starting_positions[particle][coord] + d
-                    new_imgs = np.floor(pos_copy / frame.xyz_pbc).astype(int)
-                    pos = pos_copy - frame.xyz_pbc * new_imgs
+                    pos_copy[particle][coord] += d
+                    new_imgs = utils.get_periodic_images(pos_copy, frame.inv_box_matrix)
+                    pos = utils.wrap_coordinates(pos_copy, frame.box_matrix, frame.inv_box_matrix, new_imgs)
                     utils.set_positions(self.lmp, pos)
                     utils.set_images(self.lmp, new_imgs)
                     self.msevb.frame(self.lmp, pos=pos, imgs=new_imgs)
@@ -333,83 +319,59 @@ class Mustard:
         self.Output.log(f"Finite differences written to {file}")
         self.universe.global_comm.Barrier()
 
-    def minimise(self, traj=True, file="minimised.pdb", fix=None):
+    def minimise(self, traj=True, file="minimised.pdb", fix=None, bound: float = 1.0):
         if traj:
             self.add_trajectory(filename="minimise.dcd", write_frequency=1)
         frame = copy(self.msevb.frame)
-        u_frame_pos = frame.pos
+        unwrapped_starting_pos = frame.pos
         if self.SI.pbc:
-            u_frame_pos = (
-                frame.images * frame.xyz_pbc + frame.pos
-            )
-        self.cycle = 0
+            unwrapped_starting_pos = utils.unwrap_coordinates(frame.pos, frame.box_matrix, frame.inv_box_matrix, frame.images)
+        coords_shape = unwrapped_starting_pos.shape
 
         if fix is not None:
             if type(fix) not in (list, tuple, np.ndarray):
                 raise ValueError("fix should be a list")
-            fix = list(fix)
+            fix = np.array(list(fix))
 
         def objective(coords):
-            if self.cycle % 2 == 0:
-                self.log(f" step {self.cycle // 2}: {self.msevb.min_eval}")
-            self.cycle += 1
-            pos = coords.reshape(len(frame.pos), len(frame.pos[0]))
-            nupos = pos
-            new_imgs = (pos * 0).astype(int)
-            if self.SI.pbc:
-                diff = pos - frame.pos
-                diff -= frame.xyz_pbc * (diff / frame.xyz_pbc).round()
-                nupos = u_frame_pos - diff
-                new_imgs = np.floor(nupos / frame.xyz_pbc).astype(int)
-                pos = nupos - frame.xyz_pbc * new_imgs
-                utils.set_images(self.lmp, new_imgs)
-            upos = coords.reshape(len(frame.pos), len(frame.pos[0]))
+            current_coords = coords.reshape(coords_shape)
             if fix is not None:
-                upos[fix] = u_frame_pos[fix]
-            diff = upos - frame.pos
-            diff -= frame.xyz_pbc * (diff / frame.xyz_pbc).round()
-            nupos = u_frame_pos - diff
-            new_imgs = np.floor(nupos / frame.xyz_pbc).astype(int)
-            pos = nupos - frame.xyz_pbc * new_imgs
-            utils.set_positions(self.lmp, pos)
-            self.msevb.frame(self.lmp, pos=pos, imgs=new_imgs)
+                current_coords[fix] = frame.pos[fix]
+            current_images = np.zeros(shape=coords_shape, dtype=int)
+            current_wrapped_coords = current_coords
+            if self.SI.pbc:
+                current_images = utils.get_periodic_images(current_coords, frame.inv_box_matrix)
+                current_wrapped_coords = utils.wrap_coordinates(current_coords, frame.box_matrix, frame.inv_box_matrix, current_images)
+                utils.set_images(self.lmp, current_images)
+            utils.set_positions(self.lmp, current_wrapped_coords)
+            self.msevb.frame(self.lmp, pos=current_wrapped_coords, imgs=current_images)
             any_pairs = self.identify_pairs()
             self.msevb.run = int(any_pairs)
             self.lmp.command("run 0 pre yes post no update yes")
-            if self.universe.rank.color == 0 and traj:
-                self.Trajectory.trajs[-1].write(
-                    1,
-                    self.lmp,
-                    frame.box_data,
-                    self.universe,
-                    self.topology,
-                    pos=nupos,
-                )
             self.universe.global_comm.Barrier()
             self.msevb.min_eval = self.universe.global_comm.bcast(
                 self.msevb.min_eval, root=0
             )
             return self.msevb.min_eval, self.msevb.current_mixed_forces.flatten() * -1
 
-        # init_pe, _ = objective(frame.pos)
-        self.log("Running minimisation...")
+        self.Output.log("Running minimisation...")
         if self.universe.me == 0:
             reg_pe = self.lmp.get_thermo("pe")
-            self.log(f"starting non-mixed potential energy for minimisation: {reg_pe} ")
-        self.log(
+            self.Output.log(f"starting non-mixed potential energy for minimisation: {reg_pe} ")
+        self.Output.log(
             f"starting mixed potential energy for minimisation: {self.msevb.min_eval} ",
         )
-        self.log(" updating initial topology...")
+        self.Output.log(" updating initial topology...")
         cycle = 0
         while True:
-            self.log(f"  cycle: {cycle}")
+            self.Output.log(f"  cycle: {cycle}")
             nlup = copy(self.SI.nl_update)
             self.SI.nl_update = 1
             reaction = self._step(n_step=0, out=False)
             if reaction is None:
-                self.log(" ...no change in topology")
+                self.Output.log(" ...no change in topology")
                 break
-            self.log("    topology updated")
+            self.Output.log("    topology updated")
             cycle += 1
             if cycle > 100:
                 break
@@ -418,40 +380,47 @@ class Mustard:
         self.msevb.run = int(any_pairs)
         self.lmp.command("run 0 pre yes post no update yes")
 
-        objective_values = []
-
+        self.cycle = 0
         def callback(xk):
             e, _ = objective(xk)
-            objective_values.append(e)
+            self.Output.log(f" step {self.cycle:>8}: {e:20.6f}")
+            if self.universe.rank.color == 0 and traj:
+                self.Trajectory.trajs[-1].write(
+                    1,
+                    self.lmp,
+                    frame.box_data,
+                    self.universe,
+                    self.topology,
+                    pos=xk.reshape(coords_shape),
+                )
+            self.cycle += 1
 
-        bounds = [(p - 2, p + 2) for p in frame.pos.flatten()]
+        bounds = [(p - bound, p + bound) for p in unwrapped_starting_pos.flatten()]
 
-        self.log("Minimum eigenvalue at each step:")
+        self.Output.log("Minimum eigenvalue at each step:")
         result = minimize(
             objective,
-            frame.pos.flatten(),
+            unwrapped_starting_pos.flatten(),
             method="L-BFGS-B",
             jac=True,
             tol=1e-6,
             callback=callback,
             bounds=bounds,
+            # options={"disp":True},
         )
-        self.log(f"...final minimum eigenvalue: {result.fun}")
-        self.log(result, level="debug")
+        self.Output.log(f"...final minimum eigenvalue: {result.fun}")
+        self.Output.log(result)
 
-        pos = result.x.reshape(len(frame.pos), len(frame.pos[0]))
-        new_imgs = (pos * 0).astype(int)
+        minimised_coords = result.x.reshape(coords_shape)
+        minimised_wrapped_coords = minimised_coords
+        minimised_images = np.zeros(shape=coords_shape, dtype=int)
         if self.SI.pbc:
-            diff = pos - frame.pos
-            diff -= frame.xyz_pbc * (diff / frame.xyz_pbc).round()
-            nupos = u_frame_pos - diff
-            new_imgs = np.floor(nupos / frame.xyz_pbc).astype(int)
-            pos = nupos - frame.xyz_pbc * new_imgs
-            utils.set_images(self.lmp, new_imgs)
-
-        utils.set_positions(self.lmp, pos)
+            minimised_images = utils.get_periodic_images(minimised_coords, frame.inv_box_matrix)
+            minimised_wrapped_coords = utils.wrap_coordinates(minimised_coords, frame.box_matrix, frame.inv_box_matrix, minimised_images)
+            utils.set_images(self.lmp, minimised_images)
+        utils.set_positions(self.lmp, minimised_wrapped_coords)
         self.universe.global_comm.Barrier()
-        self.msevb.frame(self.lmp, pos=pos, imgs=new_imgs)
+        self.msevb.frame(self.lmp, pos=minimised_wrapped_coords, imgs=minimised_images)
         any_pairs = self.identify_pairs()
         self.msevb.run = int(any_pairs)
         self.lmp.command("run 0 pre yes post no update yes")
@@ -462,101 +431,11 @@ class Mustard:
                 mass=self.topology.masses,
                 types=self.topology.xyz_types,
             )
-        self.log(f"Minised structure written to {file}")
+        self.Output.log(f"Minised structure written to {file}")
         if traj:
             self.Trajectory.trajs.pop()
         del self.cycle
 
-    # def _extend_forces(self, frame):
-    #     if self.universe.rank.color == 0:
-    #         self.lmp.command(f"write_data /tmp/{self.SI.file} nocoeff")
-    #     self.elec_lmp.command(f"clear")
-    #     self.elec_lmp.commands_list(
-    #         self.cmds["header"]
-    #         + [
-    #             f"read_data /tmp/{self.SI.file}",
-    #             "change_box all triclinic",
-    #         ]
-    #         + self.cmds["elec_ff"]
-    #     )
-    #     utils.set_positions(self.elec_lmp, frame.pos)
-    #     self.elec_lmp.command("run 0 pre yes post no update yes")
-    #     elec_forces = utils.get_forces(self.elec_lmp)
-    #     self.ml_data["R"].append(frame.pos)
-    #     self.ml_data["F"].append(self.msevb.current_mixed_forces - elec_forces)
-    #     self.ml_data["E"].append(self.msevb.min_eval)
-    #     cell, _ = utils.extract_box(utils.get_box_data(self.lmp))
-    #     self.ml_data["cell"].append(cell)
-    #
-    # def _rerun(self, trajectory, skip=1, do_something=None):
-    #     if do_something is None:
-    #         do_something = self.do_something
-    #     self.log(f"Beginning rerun")
-    #     frames = Trajectory.read_xyz(trajectory, skip=skip)
-    #     for frame in frames:
-    #         self.log(f"Processing frame {frame.frame}")
-    #         self.topology.set_traj_frame(frame)
-    #         utils.set_positions(self.lmp, frame.pos)
-    #         utils.set_images(self.lmp, frame.imgs)
-    #         # self.msevb.frame(self.lmp, pos=frame.pos)
-    #         self.msevb.run = 2
-    #         self.lmp.command("run 0 pre yes post no update yes")
-    #         self.universe.global_comm.Barrier()
-    #         self.topology.build_topology()
-    #         self.universe.global_comm.Barrier()
-    #         #    any_pairs = self.identify_pairs()
-    #         self.topology.get_pairs(self.msevb.frame.pos, self.msevb.frame.xyz_pbc)
-    #         self._redistribute_EVB_states(self.topology.num_systems, self.msevb.frame)
-    #         any_pairs = 1
-    #         if not self.topology.rxn_pairs:
-    #             any_pairs = 0
-    #         if any_pairs == 1:
-    #             system = self.topology.grab_system(np.intp(self.universe.rank.color))
-    #             if len(system) != 0:
-    #                 self.topology.change_topology_to_system(
-    #                     self.lmp, system, self.msevb.frame
-    #                 )
-    #                 self.msevb.run = 2
-    #                 self.lmp.command("run 0 pre yes post no")
-    #         self.msevb.ntimestep = self.universe.global_comm.bcast(
-    #             self.msevb.ntimestep, root=0
-    #         )
-    #         self.msevb.run = any_pairs
-    #         self.lmp.command("run 0 pre yes post no update yes")
-    #         do_something(frame)
-    #
-    # def do_something(self, _):
-    #     pass
-    #
-    # def forces_for_ml(self, trajectory, elec_ff, skip=1):
-    #     cmdargs = ["-nocite", "-screen", "none", "-log", "none"]
-    #     self.elec_lmp = lammps(
-    #         name="",
-    #         cmdargs=cmdargs,
-    #         comm=self.universe.global_comm,
-    #     )
-    #     self.cmds["elec_ff"] = [f"include {elec_ff}"]
-    #     self.ml_data = {
-    #         "R": [],
-    #         "E": [],
-    #         "z": Trajectory.get_z(self.topology.masses),
-    #         "F": [],
-    #         "pbc": [1, 1, 1],
-    #         "cell": [],
-    #     }
-    #     self._rerun(trajectory, do_something=self._extend_forces, skip=skip)
-    #
-    #     if self.universe.me == 0:
-    #         np.savez(
-    #             "data.npz",
-    #             R=self.ml_data["R"],
-    #             E=self.ml_data["E"],
-    #             z=self.ml_data["z"],
-    #             F=self.ml_data["F"],
-    #             pbc=self.ml_data["pbc"],
-    #             cell=self.ml_data["cell"],
-    #         )
-
     def __del__(self):
-        if hasattr(self, "lmp_comm"):
+        if hasattr(self.universe, "lmp_comm"):
             self.universe.lmp_comm.Free()

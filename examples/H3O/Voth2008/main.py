@@ -31,28 +31,29 @@ TYPE_TO_EXCHANGE_Q = np.vectorize(TYPE_TO_EXCHANGE_Q.__getitem__)
 H_EXCHANGE_Q = 0.0780180
 
 def coupling_value_function(
-    rxn_ids, snapshot, new_pe, initial_pe, new_compute, initial_compute
+    rxn_ids, snapshot
 ):
-    h_pos = snapshot.frame.pos[snapshot.atoms[rxn_ids["h_id"]].idx]
-    x_pos = snapshot.frame.pos[snapshot.atoms[rxn_ids["x_id"]].idx]
-    y_idx = snapshot.atoms[rxn_ids["y_id"]].idx
-    y_pos = snapshot.frame.pos[y_idx]
-    xyz_pbc = snapshot.frame.xyz_pbc
-    snapshot.dRoopos = x_pos - y_pos
-    snapshot.dRoopos -= xyz_pbc * (snapshot.dRoopos / xyz_pbc).round()
-    snapshot.Roo = np.linalg.norm(snapshot.dRoopos, axis=-1)
-    snapshot.dqpos = 0.5 * (x_pos + y_pos) - h_pos
-    snapshot.dqpos -= xyz_pbc * (snapshot.dqpos / xyz_pbc).round()
-    snapshot.q = np.linalg.norm(snapshot.dqpos, axis=-1)
+
+    snapshot.h_idx = snapshot.atoms[rxn_ids["H"]].idx
+    snapshot.x_idx = snapshot.atoms[rxn_ids["X"]].idx
+    snapshot.y_idx = snapshot.atoms[rxn_ids["Y"]].idx
+    h_pos = snapshot.frame.pos[snapshot.h_idx]
+    x_pos = snapshot.frame.pos[snapshot.x_idx]
+    y_pos = snapshot.frame.pos[snapshot.y_idx]
+    snapshot.dRoopos = utils.get_distance_xyz(x_pos, y_pos, snapshot.frame.box_vectors)
+    snapshot.Roo = utils.get_distances(snapshot.dRoopos)
+    centrexy_pos = 0.5 * (x_pos + y_pos)
+    snapshot.dqpos = utils.get_distance_xyz(centrexy_pos, h_pos, snapshot.frame.box_vectors)
+    snapshot.q = utils.get_distances(snapshot.dqpos)
     group1_ids = np.concatenate(
         [
-            snapshot.residues[snapshot.atoms[rxn_ids["h_id"]].molecule],
-            snapshot.residues[snapshot.atoms[rxn_ids["y_id"]].molecule],
+            snapshot.residues[snapshot.atoms[rxn_ids["H"]].molecule],
+            snapshot.residues[snapshot.atoms[rxn_ids["Y"]].molecule],
         ]
     )
     snapshot.group1_idxs = np.array([snapshot.atoms[eyed].idx for eyed in group1_ids])
     exch_qs = TYPE_TO_EXCHANGE_Q(snapshot.types[snapshot.group1_idxs])
-    exch_qs[np.where(snapshot.group1_idxs == snapshot.atoms[rxn_ids["h_id"]].idx)[0]] = H_EXCHANGE_Q
+    exch_qs[np.where(snapshot.group1_idxs == snapshot.h_idx)[0]] = H_EXCHANGE_Q
     snapshot.group2_idxs = np.delete(
         np.arange(len(snapshot.frame.pos)), snapshot.group1_idxs
     )
@@ -60,8 +61,9 @@ def coupling_value_function(
     group1_qs = exch_qs
     group2_pos = snapshot.frame.pos[snapshot.group2_idxs]
     group2_qs = snapshot.qs[snapshot.group2_idxs]
-    dists, dxs = utils.get_distances(group1_pos, group2_pos, xyz_pbc, dx=True)
-    dxr = dxs / dists[:, :, None]
+    dxs = utils.get_distances_comb_xyz(group1_pos, group2_pos, snapshot.frame.box_vectors)
+    dists = utils.get_distances(dxs)
+    dxr = dxs / dists[:, :, None] # type: ignore
     q_prod = group1_qs[:, None] * group2_qs[None, :]
     q_prod_r = q_prod / dists
     V_ex = np.sum(q_prod_r) * CF
@@ -84,7 +86,7 @@ def sech2(x):
     return 1 - (np.tanh(x)) ** 2
 
 
-def coupling_forces_function(rxn_ids, snapshot, computes, forces):
+def coupling_forces_function(rxn_ids, snapshot, new_forces, initial_forces):
     dA_dq = -2 * GAMMA * snapshot.A_val
     dA_dq_H = -1 * dA_dq * snapshot.dqpos
     dA_dq_O = 0.5 * dA_dq * snapshot.dqpos
@@ -107,11 +109,11 @@ def coupling_forces_function(rxn_ids, snapshot, computes, forces):
 
     # A derivs
     A_derivs = np.zeros(shape=snapshot.frame.pos.shape)
-    A_derivs[snapshot.atoms[rxn_ids["h_id"]].idx] += dA_dq_H
-    A_derivs[snapshot.atoms[rxn_ids["y_id"]].idx] += dA_dq_O
-    A_derivs[snapshot.atoms[rxn_ids["x_id"]].idx] += dA_dq_O
-    A_derivs[snapshot.atoms[rxn_ids["y_id"]].idx] -= dA_dx
-    A_derivs[snapshot.atoms[rxn_ids["x_id"]].idx] += dA_dx
+    A_derivs[snapshot.h_idx] += dA_dq_H
+    A_derivs[snapshot.y_idx] += dA_dq_O
+    A_derivs[snapshot.x_idx] += dA_dq_O
+    A_derivs[snapshot.y_idx] -= dA_dx
+    A_derivs[snapshot.x_idx] += dA_dx
 
     full_derivs = (VCONST + snapshot.V_ex) * A_derivs + V_ex_derivs * snapshot.A_val
 
@@ -121,22 +123,29 @@ def coupling_forces_function(rxn_ids, snapshot, computes, forces):
 def main():
     lmp_coord_file = "coord.lmp"
     force_field_file = "ff.lmp"
-    header = ["units metal", "atom_style full", "boundary p p p"]
 
-    TEMPERATURE = 300
-    TIMESTEP = 1e-3
-    r1 = 38472
-    r2 = 2837
+    temperature = 300
+    timestep = 1e-3
+    r1 = np.random.randint(1, 99999)
+    r2 = np.random.randint(1, 99999)
+
     commands = [
+        "units metal",
+        "atom_style full",
+        "boundary p p p",
+        f"read_data {lmp_coord_file}",
+        # f"read_data {lmp_coord_file} extra/dihedral/per/atom 2 extra/special/per/atom 10",
+        f"change_box all triclinic",
+        f"include {force_field_file}",
         "fix md all nve",
-        f"fix tst all temp/csvr {TEMPERATURE} {TEMPERATURE} 0.1 {r1}",
-        f"timestep {TIMESTEP}",
-        f"velocity all create {TEMPERATURE} {r2} mom yes dist gaussian",
+        f"fix tst all temp/csvr {temperature} {temperature} 0.1 {r1}",
+        f"timestep {timestep}",
+        f"velocity all create {temperature} {r2} mom yes dist gaussian",
         "fix com all momentum 100 linear 1 1 1",
     ]
 
     INPUTS = {
-        "temperature": TEMPERATURE,
+        "temperature": temperature,
         "constant_volume": True,
         "atom_types": {"O2": 1, "H2": 2, "O3": 3, "H3": 4},
         "bond_types": {"O2-H2": 1, "O3-H3": 2},
@@ -153,7 +162,6 @@ def main():
         "computes": None,
         "shells": 3,
         "neighbour_list_update": 4,
-        # "fermi_mixing": True,
         "pbc": True,
         "reactions": [
             {
@@ -182,12 +190,9 @@ def main():
     mpi_list = list(np.ones(32))
     # mpi_list = [1, 1, 1, 1]
     msevb = Mustard(
-        lmp_coord_file,
-        force_field_file,
-        header,
         commands,
         INPUTS,
-        debug=True,
+        # debug=True,
         mpi_list=mpi_list,
     )
 
@@ -195,15 +200,15 @@ def main():
     msevb.add_trajectory(filename="reaction.xyz", write_frequency=100, rxn=True)
     msevb.add_output(filename=None, write_frequency=100)
     msevb.add_output(filename="mustard.log", write_frequency=10)
-    # msevb.minimise()
+    msevb.minimise(bound=0.2)
     # msevb.minimise(fix=[0, 3, 4])
     # msevb.finite_differences(
-    #     file="voth_finite_differences_multishell1_no_vreps.dat",
+    #     file="fd.dat",
     #     delta=1e-3,
     #     index_array=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
     # )
 
-    msevb.step(1000)
+    # msevb.step(1000)
 
 
 if __name__ == "__main__":

@@ -1,42 +1,95 @@
 import numpy as np
-from ctypes import c_int, c_double
 import math
+from ctypes import c_int, c_double
 from collections import defaultdict
+from typing import Tuple, Union
 
 
-def get_distances(pos_arr_1, pos_arr_2, xyz_pbc, dx=False):
-    # pass two numpy position arrays with pbc
-    # returns array with distances accounting for pbc
-    # calc x2-x1, y2-y1, z2-z1
-    pos_matrix = pos_arr_1[:, None, :] - pos_arr_2[None, :, :]
-    # take into account pbc
-    pos_matrix.T[0] -= xyz_pbc[0] * ((pos_matrix.T[0]) / xyz_pbc[0]).round()
-    pos_matrix.T[1] -= xyz_pbc[1] * ((pos_matrix.T[1]) / xyz_pbc[1]).round()
-    pos_matrix.T[2] -= xyz_pbc[2] * ((pos_matrix.T[2]) / xyz_pbc[2]).round()
-    # calc distances
-    distances = np.linalg.norm(pos_matrix, axis=-1)
-    if dx:
-        return distances, pos_matrix
-    return distances
+def get_distance_xyz(pos_arr_1: np.ndarray, pos_arr_2: np.ndarray, box_vectors: np.ndarray) -> np.ndarray:
+    """
+    Parameters
+    ----------
+    pos_arr_1: 1-Dimensional numpy array of shape (3,)
+        Particle 1 position
+    pos_arr_2: 1-Dimensional numpy array of shape (3,)
+        Particle 2 position
+    box_vectors: 1-Dimensional numpy array of shape (9,)
+        Flattened 3x3 vector matrix of the periodic box.
+        Function accesses the bottom diagonal of the matrix.
+    
+    Returns
+    -------
+    1-Dimensional numpy array of shape (3,)
+        The minimum distance of the x, y and z components between pos_arr_1 and pos_arr_2 after accounting
+        for the periodic box.
+    """
+    dx = pos_arr_1 - pos_arr_2
+    scale2 = (dx[2] / box_vectors[8]).round()
+    dx -= scale2 * box_vectors[6:9]
+    scale1 = (dx[1] / box_vectors[4]).round()
+    dx[:2] -= scale1 * box_vectors[3:5]
+    scale0 = (dx[0] / box_vectors[0]).round()
+    dx[0] -= scale0 * box_vectors[0]
+    return dx
 
 
-def get_angles(pos_arr_1, pos_arr_2, pos_arr_3, xyz_pbc):
+def get_distances_xyz(pos_arr_1: np.ndarray, pos_arr_2: np.ndarray, box_vectors: np.ndarray) -> np.ndarray:
+    dx = pos_arr_1 - pos_arr_2
+    scale2 = (dx[:, 2] / box_vectors[8]).round()
+    dx -= scale2[:, None] * box_vectors[6:9]
+    scale1 = (dx[:, 1] / box_vectors[4]).round()
+    dx[:, :2] -= scale1[:, None] * box_vectors[3:5]
+    scale0 = (dx[:, 0] / box_vectors[0]).round()
+    dx[:, 0] -= scale0 * box_vectors[0]
+    return dx
+
+
+def get_distances_comb_xyz(pos_arr_1: np.ndarray, pos_arr_2: np.ndarray, box_vectors: np.ndarray) -> np.ndarray:
+    dx = (pos_arr_1[:, None, :] - pos_arr_2[None, :, :]).T
+    scale2 = (dx[2] / box_vectors[8]).round()
+    dx -= scale2[None, :, :] * box_vectors[6:9][:, None, None]
+    scale1 = (dx[1] / box_vectors[4]).round()
+    dx[:2] -= scale1[None, :, :] * box_vectors[3:5][:, None, None]
+    scale0 = (dx[0] / box_vectors[0]).round()
+    dx[0] -= scale0 * box_vectors[0]
+    return dx.T
+
+
+def get_distances(distances_xyz: np.ndarray) -> Union[np.ndarray, float]:
+    return np.linalg.norm(distances_xyz, axis=-1)
+
+
+def get_angles_comb(pos_arr_1: np.ndarray, pos_arr_2: np.ndarray, pos_arr_3, box_vectors: np.ndarray) -> np.ndarray:
     # take in three position np arrays of equal shape
     # return array containing angles between each point
-    ba = pos_arr_1 - pos_arr_2
-    ba.T[0] -= xyz_pbc[0] * (ba.T[0] / xyz_pbc[0]).round()
-    ba.T[1] -= xyz_pbc[1] * (ba.T[1] / xyz_pbc[1]).round()
-    ba.T[2] -= xyz_pbc[2] * (ba.T[2] / xyz_pbc[2]).round()
-    bc = pos_arr_3 - pos_arr_2
-    bc.T[0] -= xyz_pbc[0] * (bc.T[0] / xyz_pbc[0]).round()
-    bc.T[1] -= xyz_pbc[1] * (bc.T[1] / xyz_pbc[1]).round()
-    bc.T[2] -= xyz_pbc[2] * (bc.T[2] / xyz_pbc[2]).round()
-    cos_ang = np.sum(ba * bc, axis=1) / (
-        np.linalg.norm(ba, axis=-1) * np.linalg.norm(bc, axis=-1)
+    ba_dx = get_distances_comb_xyz(pos_arr_1, pos_arr_2, box_vectors)
+    ba_dists = get_distances(ba_dx)
+    bc_dx = get_distances_comb_xyz(pos_arr_3, pos_arr_2, box_vectors)
+    bc_dists = get_distances(bc_dx)
+    cos_ang = np.sum(ba_dx * bc_dx, axis=1) / (
+        ba_dists * bc_dists
     )
     angles = np.arccos(cos_ang) * 180 / np.pi
 
     return angles
+
+
+def get_fractional_coords(pos_arr: np.ndarray, inv_box_matrix: np.ndarray) -> np.ndarray:
+    return np.dot(inv_box_matrix, pos_arr.T).T
+
+def get_periodic_images(pos_arr: np.ndarray, inv_box_matrix: np.ndarray) -> np.ndarray:
+    frac_pos_arr = get_fractional_coords(pos_arr, inv_box_matrix)
+    return np.floor(frac_pos_arr).astype(int)
+
+def wrap_coordinates(pos_arr: np.ndarray, box_matrix: np.ndarray, inv_box_matrix: np.ndarray, periodic_images: np.ndarray) -> np.ndarray:
+    frac_pos_arr = get_fractional_coords(pos_arr, inv_box_matrix)
+    wrapped_frac_pos_arr = frac_pos_arr - periodic_images
+    return np.dot(box_matrix, wrapped_frac_pos_arr.T).T
+
+def unwrap_coordinates(pos_arr: np.ndarray, box_matrix: np.ndarray, inv_box_matrix: np.ndarray, periodic_images: np.ndarray) -> np.ndarray:
+    frac_pos_arr = get_fractional_coords(pos_arr, inv_box_matrix)
+    unwrapped_frac_pos_arr = frac_pos_arr + periodic_images
+    return np.dot(box_matrix, unwrapped_frac_pos_arr.T).T
 
 
 def MDF(r, rm, rc):
@@ -93,10 +146,10 @@ def convert_to_c_type(array, c_type):
     return (len(_array) * c_type)(*_array)
 
 
-def extract_box(box_data):
+def extract_box(box_data: tuple) -> Tuple[np.ndarray, np.ndarray]:
     boxlo, boxhi, xy, yz, xz, _, _ = box_data
     lx, ly, lz = np.array(boxhi) - np.array(boxlo)
-    abc = [lx, 0, 0, xy, ly, 0, xz, yz, lz]
+    abc = np.array([lx, 0, 0, xy, ly, 0, xz, yz, lz])
     abcabc = get_abcabc(abc)
     return abcabc, abc
 

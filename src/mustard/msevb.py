@@ -1,4 +1,6 @@
 import numpy as np
+from collections import defaultdict
+from copy import copy
 from mpi4py import MPI
 from .topology import Topology
 from .io import SystemInfo
@@ -12,13 +14,12 @@ class MSEVB:
         universe: Universe,
         topology: Topology,
         SI: SystemInfo,
-        frame: Topology.Frame,
     ):
         self.universe = universe
         self.log = self.universe.log
         self.topology = topology
         self.SI = SI
-        self.frame = frame
+        self.frame = self.topology.frame
         self.run: int = 0
         self.min_eval: float = 0.0
         self.min_state_idx: np.intp = np.intp(0)
@@ -211,15 +212,16 @@ class MSEVB:
             new_cmp = dict(zip(self.SI.computes, new_cmp))
             init_cmp = dict(zip(self.SI.computes, init_cmp))
         rxn_num = self.topology.rxn_pair_info[pair]["num"]
-        self.snapshot = self.topology._get_snapshot(frame, self.step_count)
-        rxn_ids = {"x_id": x, "h_id": h, "y_id": y}
+        energies = {"new" : new_pe, "initial" : init_pe}
+        computes = {"new" : new_cmp, "initial" : init_cmp}
+        self.topology.update_snapshot(frame, self.step_count, energies, computes)
+        rxn_ids = {"X": x, "H": h, "Y": y}
         cpl_val = self.SI.coupling_value_functions[rxn_num](
-            rxn_ids, self.snapshot, new_pe, init_pe, new_cmp, init_cmp
+            rxn_ids, self.topology.snapshot
         )
         cpl_forces = self.SI.coupling_forces_functions[rxn_num](
             rxn_ids,
-            self.snapshot,
-            new_cmp,
+            self.topology.snapshot,
             forces,
             frame.forces,
         )
@@ -248,7 +250,7 @@ class MSEVB:
                         source=MPI.ANY_SOURCE, tag=state
                     )
                     matrix[state, state] = pes[state]
-                    loc = self.topology.systems[state].sites[0].parents
+                    loc = self.topology.systems[state].sites[0].parent
                     matrix[state, loc] = cpl_val
                     matrix[loc, state] = cpl_val
         elif self.universe.rank.color < self.topology.num_systems:
@@ -284,93 +286,89 @@ class MSEVB:
         cpl_forces = np.array([[0.0, 0.0, 0.0]])
         return min_eval, min_evec_coeffs, cpl_forces
 
-    # def _mix_states_scf(
-    #     self,
-    #     pes,
-    #     computes,
-    #     frame,
-    #     pair_info,
-    # ):
-    #     rxn_pairs, systems_idxs, pairs_idxs, _ = pair_info
-    #     num_sites = len(pairs_idxs)
-    #     us = defaultdict(dict)
-    #     init_idx = pes.argmin()
-    #     matrices = {}
-    #     mixed_computes = {}
-    #     cs = 1
-    #     evals = np.zeros(num_sites)
-    #     new_forces = np.zeros(shape=frame.forces.shape)
-    #     if computes is not None:
-    #         cs = computes.shape[1]
-    #     for n, site in enumerate(pairs_idxs):
-    #         us[n].update({state: 0.0 for state in site})
-    #         us[n][systems_idxs[init_idx][n]] = 1.0
-    #         num_states = len(site)
-    #         matrices[n] = np.zeros(shape=(num_states, num_states))
-    #         mixed_computes[n] = np.zeros(shape=(num_states, cs))
-    #     get_us = np.vectorize(lambda site, state: us[site][state])
-    #     ref_energy = pes[init_idx]
-    #     cycle = 0
-    #     while True:
-    #         if self.universe.me == 0:
-    #             self.logger.debug("initial energy: %s", pes[init_idx])
-    #             self.logger.debug("initial us: %s", us)
-    #         ref_evals = copy(evals)
-    #         for n, site in enumerate(pairs_idxs):
-    #             matrix = matrices[n]
-    #             mixed_compute = mixed_computes[n]
-    #             for m, state in enumerate(site):
-    #                 state_idxs = np.where(systems_idxs[:, n] == state)[0]
-    #                 state_systems = systems_idxs[state_idxs]
-    #                 state_pes = pes[state_idxs]
-    #                 _sites = (
-    #                     np.ones(shape=state_systems.shape) * np.arange(num_sites)
-    #                 ).astype(int)
-    #                 mix = get_us(
-    #                     np.delete(_sites, n, axis=1),
-    #                     np.delete(state_systems, n, axis=1),
-    #                 ).prod(axis=1)
-    #                 # FIXME: COME BACK TO THIS AND TEST
-    #                 matrix[m, m] = np.sum(state_pes * mix)
-    #                 _mix_compute = None
-    #                 if computes is not None:
-    #                     _mix_compute = np.sum(computes[pes] * mix[:, None], axis=0)
-    #                 mixed_compute[m] = _mix_compute
-    #                 if m == 0:
-    #                     continue
-    #                 # TODO: parallelise cpl calculation
-    #                 cpl = self._get_coupling(
-    #                     rxn_pairs[state],
-    #                     frame,
-    #                     matrix[0, 0],
-    #                     matrix[m, m],
-    #                     mixed_compute[0],
-    #                     mixed_compute[m],
-    #                 )
-    #                 matrix[0, m] = cpl
-    #                 matrix[m, 0] = cpl
-    #             min_eval, min_evec_coeffs = None, None
-    #             if self.universe.me == 0:
-    #                 min_eval, min_evec_coeffs = self._get_min_EVB_state(matrix)
-    #             min_eval, min_evec_coeffs = self.universe.global_comm.bcast(
-    #                 (min_eval, min_evec_coeffs), root=0
-    #             )
-    #             amplitudes = min_evec_coeffs**2
-    #             self.universe.global_comm.Barrier()
-    #             us[n].update({state: amplitudes[n] for n, state in enumerate(site)})
-    #             evals[n] = min_eval
-    #         if self.universe.me == 0:
-    #             self.logger.debug("cycle %s energy: %s", cycle, evals)
-    #             self.logger.debug("cycle %s us: %s", cycle, us)
-    #         if (abs(evals - ref_evals) < self.SI.scf_tol).all():
-    #             break
-    #         cycle += 1
-    #         if cycle > self.SI.scf_max_iter:
-    #             raise RuntimeError(
-    #                 f"Could not converge multi-site problem using SCF within {self.SI.scf_max_iter} cycles."
-    #             )
-    #     cpl_forces = None
-    #     return min_eval, min_evec_coeffs, cpl_forces
+    #def mix_states_scf(
+    #    self,
+    #    pes,
+    #    computes,
+    #    frame,
+    #    forces,
+    #):
+    #    # rxn_pairs, systems_idxs, pairs_idxs, _ = pair_info
+    #    # num_sites = len(pairs_idxs)
+    #    us = defaultdict(dict)
+    #    init_idx = pes.argmin()
+    #    matrices = {}
+    #    mixed_computes = {}
+    #    cs = 1
+    #    evals = np.zeros(self.topology.num_sites)
+    #    new_forces = np.zeros(shape=frame.forces.shape)
+    #    if computes is not None:
+    #        cs = computes.shape[1]
+    #    for n, site in enumerate(self.topology.pairs_idxs):
+    #        us[n].update({state: 0.0 for state in site})
+    #        us[n][self.topology.systems_idxs[init_idx][n]] = 1.0
+    #        num_states = len(site)
+    #        matrices[n] = np.zeros(shape=(num_states, num_states))
+    #        mixed_computes[n] = np.zeros(shape=(num_states, cs))
+    #    get_us = np.vectorize(lambda site, state: us[site][state])
+    #    ref_energy = pes[init_idx]
+    #    for _ in range(self.SI.scf_max_iter):
+    #        if self.universe.me == 0:
+    #            self.log(f"initial energy: {pes[init_idx]}", level="debug")
+    #            self.log(f"initial us: {us}", level="debug")
+    #        ref_evals = copy(evals)
+    #        for n, site in enumerate(self.topology.pairs_idxs):
+    #            matrix = matrices[n]
+    #            mixed_compute = mixed_computes[n]
+    #            for m, state in enumerate(site):
+    #                state_idxs = np.where(self.topology.systems_idxs[:, n] == state)[0]
+    #                state_systems = self.topology.systems_idxs[state_idxs]
+    #                state_pes = pes[state_idxs]
+    #                _sites = (
+    #                    np.ones(shape=state_systems.shape) * np.arange(self.topology.num_sites)
+    #                ).astype(int)
+    #                mix = get_us(
+    #                    np.delete(_sites, n, axis=1),
+    #                    np.delete(state_systems, n, axis=1),
+    #                ).prod(axis=1)
+    #                # FIXME: COME BACK TO THIS AND TEST
+    #                matrix[m, m] = np.sum(state_pes * mix)
+    #                _mix_compute = None
+    #                if computes is not None:
+    #                    _mix_compute = np.sum(computes[pes] * mix[:, None], axis=0)
+    #                mixed_compute[m] = _mix_compute
+    #                if m == 0:
+    #                    continue
+    #                # TODO: parallelise cpl calculation
+    #                cpl = self.get_coupling(
+    #                    rxn_pairs[state],
+    #                    frame,
+    #                    matrix[0, 0],
+    #                    matrix[m, m],
+    #                    mixed_compute[0],
+    #                    mixed_compute[m],
+    #                )
+    #                matrix[0, m] = cpl
+    #                matrix[m, 0] = cpl
+    #            min_eval, min_evec_coeffs = None, None
+    #            if self.universe.me == 0:
+    #                min_eval, min_evec_coeffs = self.get_min_EVB_state(matrix)
+    #            min_eval, min_evec_coeffs = self.universe.global_comm.bcast(
+    #                (min_eval, min_evec_coeffs), root=0
+    #            )
+    #            amplitudes = min_evec_coeffs**2
+    #            self.universe.global_comm.Barrier()
+    #            us[n].update({state: amplitudes[n] for n, state in enumerate(site)})
+    #            evals[n] = min_eval
+    #        if self.universe.me == 0:
+    #            self.logger.debug("cycle %s energy: %s", cycle, evals)
+    #            self.logger.debug("cycle %s us: %s", cycle, us)
+    #        if (abs(evals - ref_evals) < self.SI.scf_tol).all():
+    #            cpl_forces = None
+    #            return min_eval, min_evec_coeffs, cpl_forces
+    #    raise RuntimeError(
+    #        f"Could not converge multi-site problem using SCF within {self.SI.scf_max_iter} cycles."
+    #    )
 
     def _get_mix_properties(self, systems_idxs, get_us, properties):
         amps = self._get_amps(systems_idxs, get_us)

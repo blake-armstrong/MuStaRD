@@ -5,7 +5,7 @@ import numpy as np
 import inspect
 from .constants import UNITS
 from time import time
-from typing import NamedTuple
+from dataclasses import dataclass
 from . import utils
 from .mixing import get_FD_occupancies
 
@@ -187,10 +187,10 @@ class SystemInfo:
                     f"argument passed to coupling_value_function not callable"
                 )
             args = len(inspect.signature(_coupling_value_function).parameters)
-            nargs = 6
+            nargs = 2
             if args != nargs:
                 raise ValueError(
-                    f"coupling_function should have {nargs} arguments (rxn_ids, snapshot, new_pe, initial_pe, new_computes, initial_computes), found {args}"
+                    f"coupling_function should have {nargs} arguments (rxn_ids, snapshot), found {args}"
                 )
             self.coupling_value_functions.append(_coupling_value_function)
 
@@ -200,10 +200,10 @@ class SystemInfo:
                     f"argument passed to coupling_forces_function not callable"
                 )
             args = len(inspect.signature(_coupling_forces_function).parameters)
-            nargs = 5
+            nargs = 4
             if args != nargs:
                 raise ValueError(
-                    f"coupling_function should have {nargs} arguments (rxn_ids, snapshot, computes, new_forces, initial_forces), found {args}"
+                    f"coupling_function should have {nargs} arguments (rxn_ids, snapshot, new_forces, initial_forces), found {args}"
                 )
             self.coupling_forces_functions.append(_coupling_forces_function)
 
@@ -221,7 +221,7 @@ class SystemInfo:
                 )
 
             self.reactions.append(
-                SystemInfo.Reaction(
+                Reaction(
                     X=self.atom_types[reaction[0]],
                     H=self.atom_types[reaction[1]],
                     Y=self.atom_types[reaction[2]],
@@ -231,13 +231,6 @@ class SystemInfo:
                 )
             )
 
-    class Reaction(NamedTuple):
-        X: str
-        H: str
-        Y: str
-        type_changes0: dict
-        type_changes1: dict
-        cutoffs: dict
 
     def _set_temperature(self, _temp):
         self.temperature = float(_temp)
@@ -548,8 +541,8 @@ class Trajectory:
                 num_frames += 1
         return frames
 
-
-class Frame(NamedTuple):
+@dataclass
+class Frame:
     frame: int
     natoms: int
     pbc: np.ndarray
@@ -606,3 +599,12 @@ def logger(
     logger.addHandler(handler)
 
     return logger
+
+@dataclass
+class Reaction:
+    X: str
+    H: str
+    Y: str
+    type_changes0: dict
+    type_changes1: dict
+    cutoffs: dict
