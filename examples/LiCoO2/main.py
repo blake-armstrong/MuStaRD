@@ -74,6 +74,7 @@ def main():
         "lammps_unit_system": "metal",
         "neighbour_list_update": 10,
         # "fermi_mixing": True,
+        "shells": 3,
         "reactions": [
             {
                 "reaction": (None, "Co2", "Co3"),
@@ -92,7 +93,7 @@ def main():
             }
         ],
     }
-    mpi_list = np.ones(10) * 1
+    mpi_list = np.ones(32) * 1
     msevb = Mustard(
         commands,
         inputs,
@@ -103,7 +104,7 @@ def main():
     msevb.add_trajectory(filename="reaction.xyz", write_frequency=100, rxn=True)
     msevb.add_output(filename=None, write_frequency=100)
     msevb.add_output(filename="mustard.log", write_frequency=10)
-    msevb.finite_differences(index_array=[0, 1, 2, 3, 4, 5, 6, 7, 8])
+    # msevb.finite_differences(index_array=[0, 1, 2, 3, 4, 5, 6, 7, 8])
     # msevb.minimise(bound=0.1)
     # msevb.step(250)
 

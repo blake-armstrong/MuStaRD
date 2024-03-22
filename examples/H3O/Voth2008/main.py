@@ -22,17 +22,16 @@ def Voth2007_coupling(V_ex, A_val, V_const=VCONST):
 
 
 TYPE_TO_EXCHANGE_Q = {
-    1 : -0.0895456,
-    2 : 0.0252683,
-    3 : -0.0895456,
-    4 : 0.0252683,
+    1: -0.0895456,
+    2: 0.0252683,
+    3: -0.0895456,
+    4: 0.0252683,
 }
 TYPE_TO_EXCHANGE_Q = np.vectorize(TYPE_TO_EXCHANGE_Q.__getitem__)
 H_EXCHANGE_Q = 0.0780180
 
-def coupling_value_function(
-    rxn_ids, snapshot
-):
+
+def coupling_value_function(rxn_ids, snapshot):
 
     snapshot.h_idx = snapshot.atoms[rxn_ids["H"]].idx
     snapshot.x_idx = snapshot.atoms[rxn_ids["X"]].idx
@@ -43,7 +42,9 @@ def coupling_value_function(
     snapshot.dRoopos = utils.get_distance_xyz(x_pos, y_pos, snapshot.frame.box_vectors)
     snapshot.Roo = utils.get_distances(snapshot.dRoopos)
     centrexy_pos = 0.5 * (x_pos + y_pos)
-    snapshot.dqpos = utils.get_distance_xyz(centrexy_pos, h_pos, snapshot.frame.box_vectors)
+    snapshot.dqpos = utils.get_distance_xyz(
+        centrexy_pos, h_pos, snapshot.frame.box_vectors
+    )
     snapshot.q = utils.get_distances(snapshot.dqpos)
     group1_ids = np.concatenate(
         [
@@ -61,9 +62,11 @@ def coupling_value_function(
     group1_qs = exch_qs
     group2_pos = snapshot.frame.pos[snapshot.group2_idxs]
     group2_qs = snapshot.qs[snapshot.group2_idxs]
-    dxs = utils.get_distances_comb_xyz(group1_pos, group2_pos, snapshot.frame.box_vectors)
+    dxs = utils.get_distances_comb_xyz(
+        group1_pos, group2_pos, snapshot.frame.box_vectors
+    )
     dists = utils.get_distances(dxs)
-    dxr = dxs / dists[:, :, None] # type: ignore
+    dxr = dxs / dists[:, :, None]  # type: ignore
     q_prod = group1_qs[:, None] * group2_qs[None, :]
     q_prod_r = q_prod / dists
     V_ex = np.sum(q_prod_r) * CF
@@ -192,7 +195,7 @@ def main():
     msevb = Mustard(
         commands,
         INPUTS,
-        # debug=True,
+        debug=True,
         mpi_list=mpi_list,
     )
 
@@ -200,7 +203,7 @@ def main():
     msevb.add_trajectory(filename="reaction.xyz", write_frequency=100, rxn=True)
     msevb.add_output(filename=None, write_frequency=100)
     msevb.add_output(filename="mustard.log", write_frequency=10)
-    msevb.minimise(bound=0.2)
+    # msevb.minimise(bound=0.2)
     # msevb.minimise(fix=[0, 3, 4])
     # msevb.finite_differences(
     #     file="fd.dat",

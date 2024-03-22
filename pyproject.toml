@@ -1,0 +1,31 @@
+[project]
+name = "MuStaRD"
+readme = "README.md"
+version = "0.0.1"
+requires-python = ">=3.10"
+description = "Multi-State Reaction Descriptions"
+authors = [
+    { name = "Blake I. Armstrong", email = "blakearmstrong21@gmail.com"}
+]
+license = { file="LICENSE.txt" }
+dependencies = [
+    "numpy>=1.26.3",
+    "scipy>=1.12.0",
+    "mdtraj>=1.9.9", 
+    "mpi4py>=3.1.5",
+    "pandas>=2.2.0",
+]
+
+[project.urls]
+homepage =   "https://github.com/blake-armstrong/MuStaRD"
+repository = "https://github.com/blake-armstrong/MuStaRD"
+
+[build-system]
+requires = ["setuptools>=68.0", "numpy>=1.24"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
