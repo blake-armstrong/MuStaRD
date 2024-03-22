@@ -71,19 +71,9 @@ class Mustard:
         self.log("Systems", level="debug")
         for system in self.topology.systems:
             self.log(f"{system}", level="debug")
-            # if system.sites[0] is None:
-            #     continue
-            # if self.universe.me == 0:
-            #     print(
-            #         f"resid = {self.topology.atoms[system.sites[0].pair[1]].molecule}"
-            #     )
         self.msevb.run = any_pairs
         self.lmp.command("run 0 pre yes post no")
         self.msevb.step_count = 0
-        # velocities = np.zeros(shape=(13, 3))
-        # velocities[6] = np.array([-92.59684304, 36.33140022, -10.28853812])
-        # velocities[5] = np.array([-64.02754647, -67.81242607, -36.0825188])
-        # utils.set_velocities(self.lmp, velocities)
 
     def sync_starting_parameters(self, *args):
         return self.universe.global_comm.bcast(args, root=0)

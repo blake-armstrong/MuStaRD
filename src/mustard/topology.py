@@ -494,68 +494,11 @@ class Topology:
         ]
         return pairs_idxs, rxn_pairs
 
-    @staticmethod
-    def _no_update_func(pair, self, dists):
-        indexes = self.rxn_pair_info[tuple(pair)]["indexes"]
-        # system = self.systems[indexes[0]]
-        # site = system.sites[indexes[1]]
-        # site.total_distance = 0.0
-        # shell = site.shell
-        # if shell == 1:
-        #     site.total_distance = dists[system.index - 1]
-        # elif shell > 1:
-        #     self.systems[self.rxn_pair_info[tuple(pair)]["parent"]].
-        #     site.total_distance += dists
-        # system.sites[indexes[1]].dists = dists[system.index - 1]
-        # return system
-
     def get_systems(self, pos, box_vectors):
         if not self.update:
             if len(self.systems) > 1:
                 return True
             return False
-            return
-            pass
-            # pairs = np.array([], dtype=int)
-            # system_idxs = []
-            # site_idxs = []
-            # for system in self.systems[1:]:
-            #    system_idxs += [system.index] * len(system.pairs)
-            #    site_idxs += list(np.arange(len(system.pairs)))
-            #    pairs = np.concatenate([pairs, system.pairs.flatten()], axis=0)
-            # pairs = pairs.reshape(-1, 2)
-            # H_idx = self.id_to_idx(pairs[:, 0])
-            # Y_idx = self.id_to_idx(pairs[:, 1])
-            # H_pos = pos[H_idx]
-            # Y_pos = pos[Y_idx]
-            # dists = utils.get_distances(
-            #    utils.get_distances_xyz(H_pos, Y_pos, box_vectors)
-            # )
-            # print(f"{dists=}")
-            # print(f"{system_idxs=}")
-            # print(f"{site_idxs=}")
-            ## updated_systems = np.apply_along_axis(
-            ##     self._no_update_func, axis=1, arr=pairs, self=self, dists=dists
-            ## )
-            ## indexes = np.apply_along_axis(
-            ##         lambda pair: self.rxn_pair_info[tuple(pair)]["indexes"], axis=1, arr=pairs
-            ## )
-            # for system in self.systems:
-            #    if system.index == 0:
-            #        continue
-            #    for site in system.sites:
-            #        shell = site.shell
-            #        total_distance = 0.0
-            #        while shell > 1:
-            #            parent = self.rxn_pair_info[tuple(site.pair)]["parent"]
-            #            parent_system = self.systems[parent]
-            #            shell = parent_system.sites[0].shell
-            #            total_distance += np.argwhere(pai)
-
-            #
-            #
-            # print(f"{updated_systems=}")
-            # for n, pair in enumerate(pairs):
 
         self.rxn_pair_info = defaultdict(dict)
         pairs_idxs, rxn_pairs = self._get_pairs_idxs(pos, box_vectors)
@@ -581,9 +524,7 @@ class Topology:
             for shell in range(2, self.SI.shells + 1):
                 dont = np.array(pairs_idxs_copy).flatten()
                 dont = self.id_to_idx(
-                    np.unique(
-                        rxn_pairs[dont[dont != None].astype(int)][:, 0].flatten()
-                    )
+                    np.unique(rxn_pairs[dont[dont != None].astype(int)][:, 0].flatten())
                 )
                 # dont = self.id_to_idx(
                 #     rxn_pairs[dont[dont != None].astype(int)].flatten()
@@ -692,9 +633,9 @@ class Topology:
                         shells[nsite][shell][idx]["atoms"] = shells[nsite][shell][
                             state
                         ]["atoms"]
-                        shells[nsite][shell][idx]["residues"] = shells[nsite][
-                            shell
-                        ][state]["residues"]
+                        shells[nsite][shell][idx]["residues"] = shells[nsite][shell][
+                            state
+                        ]["residues"]
                         shells[nsite][shell][idx]["bonds"] = shells[nsite][shell][
                             state
                         ]["bonds"]
@@ -801,17 +742,12 @@ class Topology:
         hpos = frame.pos[site.atoms[h].idx]
         himg = frame.images[site.atoms[h].idx]
         ypos = frame.pos[yidxs]
-        # disp = ypos - hpos
-        # disp -= frame.box_vectors * (disp / frame.box_vectors).round()
         disp = utils.get_distances_xyz(ypos, hpos, frame.box_vectors)
-        # abcabc, _ = utils.extract_box(frame.box_data)
         uhpos = utils.unwrap_coordinates(
             hpos, frame.box_matrix, frame.inv_box_matrix, himg
         )
-        # uhpos = himg * abcabc[:3] + hpos
         uypos = uhpos + disp
         new_imgs = utils.get_periodic_images(uypos, frame.inv_box_matrix)
-        # new_imgs = np.floor(uypos / abcabc[:3]).astype(int)
         return new_imgs, yids
 
     def set_traj_frame(self, frame):
