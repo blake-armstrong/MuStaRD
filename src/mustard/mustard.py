@@ -10,6 +10,8 @@ from mustard.io import SystemInfo, Trajectory, Output
 from mustard.mpi import Universe
 from mustard import utils
 
+import time
+
 
 class Mustard:
     """
@@ -67,6 +69,7 @@ class Mustard:
         self.prev_system = self.topology.current_system
         self.safe = False
         self.rebuild = True
+
         any_pairs = int(self.identify_pairs())
         self.log("Systems", level="debug")
         for system in self.topology.systems:
@@ -93,13 +96,18 @@ class Mustard:
             )
             self.topology.num_systems = self.universe.num_fixed_colors
             if self.topology.num_systems > 1:
-                self.topology.systems = [
-                    self.topology.systems[idx]
-                    for idx in self.topology.dist_sort
-                    if idx < self.topology.num_systems
+                # self.topology.systems = [
+                #     self.topology.systems[idx]
+                #     for idx in self.topology.dist_sort
+                #     if idx < self.topology.num_systems
+                # ]
+                # for i in range(self.topology.num_systems):
+                #     self.topology.systems[i].index = i
+                self.topology.systems = self.topology.systems[
+                    : self.topology.num_systems
                 ]
 
-    def identify_pairs(self):
+    def _identify_pairs(self):
         self.msevb.frame.setattr("vel", utils.get_velocities(self.lmp))
         any_reactions = self.topology.get_systems(
             self.msevb.frame.pos, self.msevb.frame.box_vectors
@@ -130,11 +138,16 @@ class Mustard:
         if self.system_info.scale_box:
             utils.set_box_data(self.lmp, self.msevb.frame.box_data)
         if change_topology:
-            self.topology.change_topology_to_system(self.lmp, system, self.msevb.frame)
             self.msevb.run = 2
+            self.topology.change_topology_to_system(self.lmp, system, self.msevb.frame)
             self.lmp.command("run 0 pre yes post no")
         self.prev_system = system
         return True
+
+    def identify_pairs(self):
+        any_pairs = self._identify_pairs()
+        # self.universe.global_comm.Barrier()
+        return any_pairs
 
     def update_topology(self, system):
         new_imgs, yids = [], []
@@ -167,6 +180,7 @@ class Mustard:
         self.universe.global_comm.Barrier()
 
     def _step(self, n_step=1, out=True):
+        self.msevb.run = 2
         self.msevb.min_state_idx = np.intp(0)
         if self.universe.rank.color == 0 and out:
             if self.universe.me == 0:
@@ -196,6 +210,7 @@ class Mustard:
         )
         self.msevb.run = int(any_pairs)
         self.lmp.command(f"run {n_step} pre {pre} post no update {pre}")
+        self.universe.global_comm.Barrier()
         if self.msevb.min_state_idx == 0:
             return None
         # reaction has occured - update topology
@@ -328,7 +343,7 @@ class Mustard:
             )
             df.to_csv(file, sep="\t", index=False)
         self.output.log(f"Finite differences written to {file}")
-        self.universe.global_comm.Barrier()
+        # self.universe.global_comm.Barrier()
 
     def minimise(
         self, traj=True, file="minimised.pdb", fix=None, bound: float = 1.0, full=True
@@ -342,6 +357,9 @@ class Mustard:
                 frame.pos, frame.box_matrix, frame.inv_box_matrix, frame.images
             )
         coords_shape = unwrapped_starting_pos.shape
+
+        nlup = copy(self.system_info.nl_update)
+        self.system_info.nl_update = 1
 
         if fix is not None:
             if type(fix) not in (list, tuple, np.ndarray):
@@ -370,7 +388,7 @@ class Mustard:
             any_pairs = self.identify_pairs()
             self.msevb.run = int(any_pairs)
             self.lmp.command("run 0 pre yes post no update yes")
-            self.universe.global_comm.Barrier()
+            # self.universe.global_comm.Barrier()
             self.msevb.min_eval = self.universe.global_comm.bcast(
                 self.msevb.min_eval, root=0
             )
@@ -389,8 +407,6 @@ class Mustard:
         cycle = 0
         while True:
             self.output.log(f"  cycle: {cycle}")
-            nlup = copy(self.system_info.nl_update)
-            self.system_info.nl_update = 1
             reaction = self._step(n_step=0, out=False)
             if reaction is None:
                 self.output.log(" ...no change in topology")
@@ -410,9 +426,10 @@ class Mustard:
             cycle += 1
             if cycle > 100:
                 break
-        self.system_info.nl_update = nlup
+        self.universe.global_comm.Barrier()
         any_pairs = self.identify_pairs()
         self.msevb.run = int(any_pairs)
+        self.universe.global_comm.Barrier()
         self.lmp.command("run 0 pre yes post no update yes")
         if not full:
             exit()
@@ -465,7 +482,7 @@ class Mustard:
             )
             utils.set_images(self.lmp, minimised_images)
         utils.set_positions(self.lmp, minimised_wrapped_coords)
-        self.universe.global_comm.Barrier()
+        # self.universe.global_comm.Barrier()
         self.msevb.frame(self.lmp, pos=minimised_wrapped_coords, imgs=minimised_images)
         any_pairs = self.identify_pairs()
         self.msevb.run = int(any_pairs)
@@ -480,6 +497,7 @@ class Mustard:
         self.output.log(f"Minised structure written to {file}")
         if traj:
             self.trajectory.trajs.pop()
+        self.system_info.nl_update = nlup
         del self.cycle
 
     def __del__(self):

@@ -11,6 +11,11 @@ from . import utils
 from lammps import lammps
 
 
+from mpi4py import MPI
+
+ME = MPI.COMM_WORLD.Get_rank()
+
+
 @dataclass
 class SpecificTopology:
     H_ids: np.ndarray
@@ -181,6 +186,7 @@ class Site:
     residues: dict = field(default_factory=dict)
     shell: int = 1
     parent: int = 0
+    pair_idx: int = 0
 
     def __post_init__(self):
         self.total_distance = np.round(np.sum(self.dists), 2)
@@ -353,13 +359,11 @@ class Topology:
         X_idxs,
         H_idxs,
         Y_idxs,
-        residues=None,
-        atoms=None,
+        rxn_num,
+        residues,
+        atoms,
+        bonds,
     ):
-        if residues is None:
-            residues = self.residues
-        if atoms is None:
-            atoms = self.atoms
         dist_cut, ang_cut = (
             cutoffs["distance"],
             cutoffs["angle"],
@@ -382,20 +386,32 @@ class Topology:
         H_ready_idx = H_idxs[(dists_bool).nonzero()[0]]
         Y_ready_idx = Y_idxs[(dists_bool).nonzero()[1]]
         rxn_pairs = np.array([self.ids[H_ready_idx], self.ids[Y_ready_idx]]).T
-        # self.prev_rxn_pairs = rxn_pairs
-        if ang_cut is None or not X_idxs.any():
-            return rxn_pairs, pair_dists, [None] * len(rxn_pairs)
         X_ready_idx = [
-            self.atoms[id].idx
+            self.atoms[eyed].idx
             for idx in H_ready_idx
-            for id in residues[atoms[self.ids[idx]].molecule]
-            if self.atoms[id].idx in X_idxs
+            for eyed in residues[atoms[self.ids[idx]].molecule]
+            if self.atoms[eyed].idx in X_idxs
         ]
+        hid = [self.get_X(self.ids[idx], bonds) for idx in H_ready_idx]
+        mask = [
+            (
+                self.atoms[eyed].type == self.SI.reactions[rxn_num].X
+                if eyed is not None
+                else True
+            )
+            for eyed in hid
+        ]
+        rxn_pairs = rxn_pairs[mask]
+        pair_dists = pair_dists[mask]
+        if not X_idxs.any():
+            return rxn_pairs, pair_dists, [None] * len(rxn_pairs)
+        if ang_cut is None:
+            return rxn_pairs, pair_dists, [None] * len(rxn_pairs)
         # check angles work as well.
         # positions of atoms in angle
-        H_pos = positions[H_ready_idx]
-        X_pos = positions[X_ready_idx]
-        Y_pos = positions[Y_ready_idx]
+        H_pos = positions[np.array(H_ready_idx)[mask]]
+        X_pos = positions[np.array(X_ready_idx)[mask]]
+        Y_pos = positions[np.array(Y_ready_idx)[mask]]
         # get angles..
         angles = utils.get_angles_comb(H_pos, X_pos, Y_pos, box_vectors)
         angle_bool = angles < ang_cut
@@ -414,13 +430,17 @@ class Topology:
         X_idxs,
         H_idxs,
         Y_idxs,
+        rxn_num,
         residues=None,
         atoms=None,
+        bonds=None,
     ):
         if residues is None:
             residues = self.residues
         if atoms is None:
             atoms = self.atoms
+        if bonds is None:
+            bonds = self.bonds
         if not self.update:
             if not self.prev_rxn_pairs.any():
                 return None
@@ -434,7 +454,16 @@ class Topology:
             return self.prev_rxn_pairs, dists, [None] * len(self.prev_rxn_pairs)
 
         return self.full_get_pairs(
-            positions, box_vectors, cutoffs, X_idxs, H_idxs, Y_idxs, residues, atoms
+            positions,
+            box_vectors,
+            cutoffs,
+            X_idxs,
+            H_idxs,
+            Y_idxs,
+            rxn_num,
+            residues=residues,
+            atoms=atoms,
+            bonds=bonds,
         )
 
     def _get_pairs_idxs(self, pos, box_vectors, rxn_infos=None):
@@ -452,6 +481,7 @@ class Topology:
                     self.ST[rxn_num].X_idxs,
                     self.ST[rxn_num].H_idxs,
                     self.ST[rxn_num].Y_idxs,
+                    rxn_num,
                 )
             else:
                 rxn_info = rxn_infos[rxn_num]
@@ -463,13 +493,13 @@ class Topology:
         if not rxn_pairs:
             rxn_pairs = np.array(rxn_pairs).reshape(-1, 2).astype(int)
             self.prev_rxn_pairs = rxn_pairs
-            return pairs_idxs, rxn_pairs
+            return [[None]], rxn_pairs
         pair_dists = np.concatenate(pair_dists, axis=0)
         rxn_pairs = np.concatenate(rxn_pairs, axis=0)
         self.prev_rxn_pairs = rxn_pairs
         sort = np.argsort(np.sum(rxn_pairs**2, axis=1))
         rxn_pairs = rxn_pairs[sort]
-        rxn_nums = np.concatenate(rxn_nums, axis=0)[sort]
+        rxn_nums = np.concatenate(rxn_nums, axis=0)[sort].astype(int)
         hxy_angles = np.concatenate(hxy_angles, axis=0)[sort]
         pair_dists = pair_dists[sort]
         # self.dist_sort = np.argsort(pair_dists)
@@ -484,15 +514,29 @@ class Topology:
             rxn_molecules = rxn_molecules2
         #######################
 
+        shift = len(self.rxn_pair_info)
         for n, pair in enumerate(rxn_pairs):
-            self.rxn_pair_info[tuple(pair)]["num"] = rxn_nums[n]
-            self.rxn_pair_info[tuple(pair)]["dist"] = pair_dists[n]
-            self.rxn_pair_info[tuple(pair)]["angle"] = hxy_angles[n]
+            # self.rxn_pair_info[tuple(pair)]["num"] = rxn_nums[n]
+            # self.rxn_pair_info[tuple(pair)]["dist"] = pair_dists[n]
+            # self.rxn_pair_info[tuple(pair)]["angle"] = hxy_angles[n]
+            self.rxn_pair_info[n + shift]["num"] = rxn_nums[n]
+            self.rxn_pair_info[n + shift]["dist"] = pair_dists[n]
+            self.rxn_pair_info[n + shift]["angle"] = hxy_angles[n]
         pairs_idxs = [
             [None] + list(np.arange(len(rxn_pairs))[rxn_molecules == i])
             for i in np.unique(rxn_molecules)
         ]
+        if not pairs_idxs:
+            pairs_idxs = [[None]]
         return pairs_idxs, rxn_pairs
+
+    @staticmethod
+    def get_X(id_h, bonds: dict):
+        try:
+            # NOTE assumes transferring atom is only bonded to one other atom
+            return bonds[id_h][0]
+        except KeyError:
+            return None
 
     def get_systems(self, pos, box_vectors):
         if not self.update:
@@ -502,15 +546,13 @@ class Topology:
 
         self.rxn_pair_info = defaultdict(dict)
         pairs_idxs, rxn_pairs = self._get_pairs_idxs(pos, box_vectors)
-        for pair in rxn_pairs:
-            self.rxn_pair_info[tuple(pair)]["atoms"] = self.atoms
-            self.rxn_pair_info[tuple(pair)]["bonds"] = self.bonds
-            self.rxn_pair_info[tuple(pair)]["residues"] = self.residues
-            self.rxn_pair_info[tuple(pair)]["parent"] = 0
-            self.rxn_pair_info[tuple(pair)]["shell"] = 1
-            self.rxn_pair_info[tuple(pair)]["tot_dists"] = [
-                self.rxn_pair_info[tuple(pair)]["dist"]
-            ]
+        for n, pair in enumerate(rxn_pairs):
+            self.rxn_pair_info[n]["atoms"] = self.atoms
+            self.rxn_pair_info[n]["bonds"] = self.bonds
+            self.rxn_pair_info[n]["residues"] = self.residues
+            self.rxn_pair_info[n]["parent"] = 0
+            self.rxn_pair_info[n]["shell"] = 1
+            self.rxn_pair_info[n]["tot_dists"] = [self.rxn_pair_info[n]["dist"]]
         if self.SI.shells > 1:
             if len(pairs_idxs) > 1:
                 raise RuntimeError(
@@ -522,14 +564,16 @@ class Topology:
             site = pairs_idxs[0]
             nsite = 0
             for shell in range(2, self.SI.shells + 1):
-                dont = np.array(pairs_idxs_copy).flatten()
-                dont = self.id_to_idx(
-                    np.unique(rxn_pairs[dont[dont != None].astype(int)][:, 0].flatten())
-                )
+                # dont = np.array(pairs_idxs_copy).flatten()
+                # dont = self.id_to_idx(
+                #     np.unique(rxn_pairs[dont[dont != None].astype(int)][:, 0].flatten())
+                # )
+
                 # dont = self.id_to_idx(
                 #     rxn_pairs[dont[dont != None].astype(int)].flatten()
                 # )
                 end_of_site = len(pairs_idxs_copy[nsite])
+
                 for state in site:
                     if state is None:
                         continue
@@ -541,14 +585,10 @@ class Topology:
                     residues = shells[nsite][shell - 1][state]["residues"]
                     pair = rxn_pairs[state]
                     id_h, id_y = pair
-                    try:
-                        id_x = bonds[id_h][
-                            0
-                        ]  # NOTE assumes transferring atom is only bonded to one other atom
-                    except KeyError:
-                        id_x = None
+                    id_x = self.get_X(id_h, bonds)
                     # update topology to reflect new reaction
-                    rxn_num = self.rxn_pair_info[tuple(pair)]["num"]
+                    rxn_num = self.rxn_pair_info[state]["num"]
+                    # rxn_num = self.rxn_pair_info[tuple(pair)]["num"]
                     rxn = self.SI.reactions[rxn_num]
                     hxs = residues[atoms[id_h].molecule]
                     ys = residues[atoms[id_y].molecule]
@@ -587,18 +627,34 @@ class Topology:
                     for ID, atom in new_atoms.items():
                         new_residues[atom.molecule].append(ID)
 
+                    _new_bonds_dict = {
+                        eyed: list(bonds.get(eyed, []))
+                        for eyed in hxs + ys
+                        if bonds.get(eyed)
+                    }
+                    if id_h in _new_bonds_dict:
+                        _new_bonds_dict[_new_bonds_dict[id_h][0]].remove(id_h)
+                        _new_bonds_dict[id_h][0] = id_y
+                        _new_bonds_dict.setdefault(id_y, []).append(id_h)
+                    new_bonds_dict = copy(bonds)
+                    new_bonds_dict.update(
+                        {k: v for k, v in _new_bonds_dict.items() if v}
+                    )
                     ST = self.generate_specific_topology(new_atoms)
+                    dont_idxs = self.id_to_idx(residues[atoms[id_h].molecule])
                     rxn_infos = []
                     for rxn_num, rxn in enumerate(self.SI.reactions):
                         rxn_info = self.get_pairs(
                             pos,
                             box_vectors,
                             rxn.cutoffs,
-                            self._remove_site(ST[rxn_num].X_idxs, dont),
-                            self._remove_site(ST[rxn_num].H_idxs, dont),
-                            self._remove_site(ST[rxn_num].Y_idxs, dont),
+                            self._remove_site(ST[rxn_num].X_idxs, dont_idxs),
+                            self._remove_site(ST[rxn_num].H_idxs, dont_idxs),
+                            self._remove_site(ST[rxn_num].Y_idxs, dont_idxs),
+                            rxn_num,
                             residues=new_residues,
                             atoms=new_atoms,
+                            bonds=new_bonds_dict,
                         )
                         rxn_infos.append(rxn_info)
                     new_pairs_idxs, new_rxn_pairs = self._get_pairs_idxs(
@@ -613,19 +669,6 @@ class Topology:
                     ]
                     pairs_idxs_copy[nsite].extend(new_pairs_idxs)
                     rxn_pairs = np.concatenate([rxn_pairs, new_rxn_pairs], axis=0)
-                    _new_bonds_dict = {
-                        eyed: list(bonds.get(eyed, []))
-                        for eyed in hxs + ys
-                        if bonds.get(eyed)
-                    }
-                    if id_h in _new_bonds_dict:
-                        _new_bonds_dict[_new_bonds_dict[id_h][0]].remove(id_h)
-                        _new_bonds_dict[id_h][0] = id_y
-                        _new_bonds_dict.setdefault(id_y, []).append(id_h)
-                    new_bonds_dict = copy(bonds)
-                    new_bonds_dict.update(
-                        {k: v for k, v in _new_bonds_dict.items() if v}
-                    )
                     shells[nsite][shell][state]["atoms"] = new_atoms
                     shells[nsite][shell][state]["residues"] = new_residues
                     shells[nsite][shell][state]["bonds"] = new_bonds_dict
@@ -639,25 +682,33 @@ class Topology:
                         shells[nsite][shell][idx]["bonds"] = shells[nsite][shell][
                             state
                         ]["bonds"]
-                        pair = rxn_pairs[idx]
-                        self.rxn_pair_info[tuple(pair)]["atoms"] = new_atoms
-                        self.rxn_pair_info[tuple(pair)]["bonds"] = new_bonds_dict
-                        self.rxn_pair_info[tuple(pair)]["residues"] = new_residues
-                        self.rxn_pair_info[tuple(pair)]["parent"] = state + 1
-                        self.rxn_pair_info[tuple(pair)]["shell"] = shell
-                        self.rxn_pair_info[tuple(pair)]["tot_dists"] = (
-                            self.rxn_pair_info[tuple(rxn_pairs[state])]["tot_dists"]
-                            + [self.rxn_pair_info[tuple(pair)]["dist"]]
-                        )
+                        # pair = rxn_pairs[idx]
+                        # self.rxn_pair_info[tuple(pair)]["atoms"] = new_atoms
+                        # self.rxn_pair_info[tuple(pair)]["bonds"] = new_bonds_dict
+                        # self.rxn_pair_info[tuple(pair)]["residues"] = new_residues
+                        # self.rxn_pair_info[tuple(pair)]["parent"] = state + 1
+                        # self.rxn_pair_info[tuple(pair)]["shell"] = shell
+                        # self.rxn_pair_info[tuple(pair)]["tot_dists"] = (
+                        #     self.rxn_pair_info[tuple(rxn_pairs[state])]["tot_dists"]
+                        #     + [self.rxn_pair_info[tuple(pair)]["dist"]]
+                        # )
+                        self.rxn_pair_info[idx]["atoms"] = new_atoms
+                        self.rxn_pair_info[idx]["bonds"] = new_bonds_dict
+                        self.rxn_pair_info[idx]["residues"] = new_residues
+                        self.rxn_pair_info[idx]["parent"] = state + 1
+                        self.rxn_pair_info[idx]["shell"] = shell
+                        self.rxn_pair_info[idx]["tot_dists"] = self.rxn_pair_info[
+                            state
+                        ]["tot_dists"] + [self.rxn_pair_info[idx]["dist"]]
 
                 site = pairs_idxs_copy[nsite][end_of_site:]
             pairs_idxs = pairs_idxs_copy
         systems_idxs = np.array(list(product(*pairs_idxs)))
         # _systems_idxs = copy(systems_idxs)
         systems = []
-        system_collisions = defaultdict(int)
-        self.skips = defaultdict(bool)
-        dist_sort = np.zeros(len(systems_idxs))
+        # system_collisions = defaultdict(int)
+        # self.skips = defaultdict(bool)
+        # dist_sort = np.zeros(len(systems_idxs))
         for n, system_idxs in enumerate(systems_idxs):
             pairs = [
                 rxn_pairs[system_idx] if system_idx is not None else None
@@ -668,14 +719,23 @@ class Topology:
                 if pair is None:
                     sites.append(None)
                     continue
-                dists = self.rxn_pair_info[tuple(pair)]["tot_dists"]
-                atoms = self.rxn_pair_info[tuple(pair)]["atoms"]
-                bonds = self.rxn_pair_info[tuple(pair)]["bonds"]
-                residues = self.rxn_pair_info[tuple(pair)]["residues"]
-                parent = self.rxn_pair_info[tuple(pair)]["parent"]
-                shell = self.rxn_pair_info[tuple(pair)]["shell"]
-                rxn_num = self.rxn_pair_info[tuple(pair)]["num"]
-                self.rxn_pair_info[tuple(pair)]["indexes"] = (n, m)
+                # dists = self.rxn_pair_info[tuple(pair)]["tot_dists"]
+                # atoms = self.rxn_pair_info[tuple(pair)]["atoms"]
+                # bonds = self.rxn_pair_info[tuple(pair)]["bonds"]
+                # residues = self.rxn_pair_info[tuple(pair)]["residues"]
+                # parent = self.rxn_pair_info[tuple(pair)]["parent"]
+                # shell = self.rxn_pair_info[tuple(pair)]["shell"]
+                # rxn_num = self.rxn_pair_info[tuple(pair)]["num"]
+                pair_idx = n - 1
+                dists = self.rxn_pair_info[pair_idx]["tot_dists"]
+                atoms = self.rxn_pair_info[pair_idx]["atoms"]
+                bonds = self.rxn_pair_info[pair_idx]["bonds"]
+                residues = self.rxn_pair_info[pair_idx]["residues"]
+                parent = self.rxn_pair_info[pair_idx]["parent"]
+                shell = self.rxn_pair_info[pair_idx]["shell"]
+                rxn_num = self.rxn_pair_info[pair_idx]["num"]
+                self.rxn_pair_info[pair_idx]["pair"] = tuple(pair)
+                # self.rxn_pair_info[tuple(pair)]["indexes"] = (n, m)
                 site = Site(
                     index=m,
                     rxn_num=rxn_num,
@@ -686,27 +746,28 @@ class Topology:
                     residues=residues,
                     parent=parent,
                     shell=shell,
+                    pair_idx=pair_idx,
                 )
                 sites.append(site)
-                system_collisions[n] += 1
+                # system_collisions[n] += 1
 
             # if any of the pairs share the same atoms
             # don't try that system
-            self.skips[n] = False
-            if system_collisions[n] > 1:
-                weary_atoms = []
-                for site in sites:
-                    weary_atoms += list(site.pair)
-                if len(set(weary_atoms)) < len(weary_atoms):
-                    self.skips[n] = True
+            # self.skips[n] = False
+            # if system_collisions[n] > 1:
+            #    weary_atoms = []
+            #    for site in sites:
+            #        weary_atoms += list(site.pair)
+            #    if len(set(weary_atoms)) < len(weary_atoms):
+            #        self.skips[n] = True
 
             system = System(
                 index=n,
                 sites=tuple(sites),
             )
-            dist_sort[n] = system.total_distance
+            # dist_sort[n] = system.total_distance
             systems.append(system)
-        self.dist_sort = np.argsort(dist_sort)
+        # self.dist_sort = np.argsort(dist_sort)
         self.num_systems = len(systems)
         self.num_sites = len(pairs_idxs)
         self.systems = systems
@@ -866,13 +927,14 @@ class Topology:
     def reset_lmp_topology(self):
         self.lmp.command("delete_bonds all multi remove")
         self._reset_lmp_topology(self.ids)
+        # self.lmp.command("run 0 pre yes post no")
 
     def change_topology_to_system(self, lmp, system, frame):
         self.current_system = system
         if system.index == 0:
             return
-        if self.skips[system.index]:
-            return
+        # if self.skips[system.index]:
+        #     return
         create_bonds = []
         set_type_charge = []
         for nsite, site in enumerate(system.sites):
@@ -898,13 +960,7 @@ class Topology:
                 rxn_pair = site.pair
                 rxn_num = site.rxn_num
                 id_h, id_y = rxn_pair
-                try:
-                    id_x = site.bonds[id_h][
-                        # id_x = self.bonds[id_h][
-                        0
-                    ]  # NOTE assumes transferring atom is only bonded to one other atom
-                except KeyError:
-                    id_x = None
+                id_x = self.get_X(id_h, site.bonds)
                 # create groups
                 hxy_group_str = "group HXY id "
                 hxs = site.residues[site.atoms[id_h].molecule]
@@ -926,7 +982,6 @@ class Topology:
                     new_bonds_dict[id_h][0] = id_y
                     new_bonds_dict.setdefault(id_y, []).append(id_h)
                 nbd = {k: v for k, v in new_bonds_dict.items() if v}
-
                 # changes types and charges
                 # its possible to just edit the array returned from extract_atoms
                 # or call scatter_atoms, probably faster than looping through set
@@ -962,7 +1017,6 @@ class Topology:
                 ]
                 create_bonds += self.create_bonds(new_types, nbd)
                 create_bonds += ["group HXY delete"]
-
         create_bonds[-2] = create_bonds[-2].replace("no", "yes")
         lmp.commands_list(set_type_charge + create_bonds)
         self.lmp.command("reset_atoms mol all single yes")

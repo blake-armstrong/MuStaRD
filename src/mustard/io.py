@@ -117,7 +117,9 @@ class SystemInfo:
         if type(_charges) != dict:
             raise ValueError(f"Unrecognised type for input {_charges}. Expected dict")
         if len(_charges) != len(self.atom_types) - 1:
-            raise ValueError("Atom type dictionary should be the same length as type charges dictionary")
+            raise ValueError(
+                "Atom type dictionary should be the same length as type charges dictionary"
+            )
         charges = {}
         for k, v in _charges.items():
             charges[self.atom_types[k]] = float(v)
@@ -230,7 +232,6 @@ class SystemInfo:
                     cutoffs=cutoffs,
                 )
             )
-
 
     def _set_temperature(self, _temp):
         self.temperature = float(_temp)
@@ -541,6 +542,7 @@ class Trajectory:
                 num_frames += 1
         return frames
 
+
 @dataclass
 class Frame:
     frame: int
@@ -600,11 +602,12 @@ def logger(
 
     return logger
 
+
 @dataclass
 class Reaction:
-    X: str
-    H: str
-    Y: str
+    X: int
+    H: int
+    Y: int
     type_changes0: dict
     type_changes1: dict
     cutoffs: dict

@@ -30,6 +30,7 @@ class MSEVB:
         self.sync = True
 
     def __call__(self, lmp, ntimestep, nlocal, tag, x, f):
+        # self.universe.sub_comm.Barrier()
         self.ntimestep = ntimestep
         callback = self.callback_main
         if self.run == 0:
@@ -75,34 +76,15 @@ class MSEVB:
         # virial = None
         # if self.SI.scale_box:
         #     virial = utils.get_virial(lmp, pr2vir=self.SI.units["pr2vir"])
-        pes = np.zeros(self.topology.num_systems, dtype="d")
-        cs = self.get_computes(lmp)
-        computes = None
-        if cs is not None:
-            computes = np.zeros((self.topology.num_systems, len(cs)), dtype="d")
-        if self.universe.me == 0:
-            source = MPI.ANY_SOURCE
-            pes[0] = pe
-            if computes is not None:
-                computes[0, :] = cs
-            for system in range(1, self.topology.num_systems):
-                pes[system] = self.universe.global_comm.recv(source=source, tag=system)
-                if computes is not None:
-                    computes[system, :] = self.universe.global_comm.recv(
-                        source=source, tag=system + 400
-                    )
-        if (
-            self.universe.rank.color != 0
-            and self.universe.rank.color < self.topology.num_systems
-            and self.universe.sub_rank == 0
-        ):
-            self.universe.global_comm.send(pe, dest=0, tag=self.universe.rank.color)
-            if cs is not None:
-                self.universe.global_comm.send(
-                    cs, dest=0, tag=self.universe.rank.color + 400
-                )
+        sendpes = np.zeros(self.universe.total_colors, dtype="d")
+        pes = np.zeros(self.universe.total_colors, dtype="d")
+        if self.universe.sub_rank == 0:
+            sendpes[self.universe.rank.color] = pe
+        self.universe.global_comm.Allreduce(sendpes, pes, op=MPI.SUM)
+        pes = pes[: self.topology.num_systems]
         self.frame(lmp, pos=total_x, vel=total_v, forces=current_forces)
         mix_states = self.mix_states()
+        computes = None
         min_eval, min_evec_coeffs, cpl_forces = mix_states(
             pes,
             computes,
@@ -143,6 +125,7 @@ class MSEVB:
         # mixed_virial = None
         # if virials is not None:
         #     mixed_virial = np.einsum("ij,i->j", virials, amplitudes)
+        # self.universe.global_comm.Barrier()
 
     def hellmann_feynman(self, matrix, evec):
         return np.einsum("ijkl,i,j->kl", matrix, evec, evec)
@@ -195,8 +178,10 @@ class MSEVB:
         self.log(occupancies, level="debug")
         return np.min(eig_vals), min_evec_coeffs
 
-    def get_coupling(self, pair, frame, init_pe, new_pe, forces, init_cmp=None, new_cmp=None):
-        pair = tuple(pair)
+    def get_coupling(
+        self, pair_idx, frame, init_pe, new_pe, forces, init_cmp=None, new_cmp=None
+    ):
+        pair = self.topology.rxn_pair_info[pair_idx]["pair"]
         h, y = pair
         try:
             x = self.topology.bonds[h][
@@ -211,9 +196,9 @@ class MSEVB:
         ):
             new_cmp = dict(zip(self.SI.computes, new_cmp))
             init_cmp = dict(zip(self.SI.computes, init_cmp))
-        rxn_num = self.topology.rxn_pair_info[pair]["num"]
-        energies = {"new" : new_pe, "initial" : init_pe}
-        computes = {"new" : new_cmp, "initial" : init_cmp}
+        rxn_num = self.topology.rxn_pair_info[pair_idx]["num"]
+        energies = {"new": new_pe, "initial": init_pe}
+        computes = {"new": new_cmp, "initial": init_cmp}
         self.topology.update_snapshot(frame, self.step_count, energies, computes)
         rxn_ids = {"X": x, "H": h, "Y": y}
         cpl_val = self.SI.coupling_value_functions[rxn_num](
@@ -259,8 +244,11 @@ class MSEVB:
             if computes is not None:
                 init_compute = computes[0]
                 new_compute = computes[self.universe.rank.color]
+            site = system.sites[0]
+            if site is None:
+                raise ValueError("site is None")
             cpl_val, cpl_forces = self.get_coupling(
-                system.pairs[0],
+                site.pair_idx,
                 frame,
                 pes[0],
                 pes[self.universe.rank.color],
@@ -286,13 +274,13 @@ class MSEVB:
         cpl_forces = np.array([[0.0, 0.0, 0.0]])
         return min_eval, min_evec_coeffs, cpl_forces
 
-    #def mix_states_scf(
+    # def mix_states_scf(
     #    self,
     #    pes,
     #    computes,
     #    frame,
     #    forces,
-    #):
+    # ):
     #    # rxn_pairs, systems_idxs, pairs_idxs, _ = pair_info
     #    # num_sites = len(pairs_idxs)
     #    us = defaultdict(dict)
