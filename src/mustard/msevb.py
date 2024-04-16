@@ -73,9 +73,6 @@ class MSEVB:
                 level="debug",
                 rank=-1,
             )
-        # virial = None
-        # if self.SI.scale_box:
-        #     virial = utils.get_virial(lmp, pr2vir=self.SI.units["pr2vir"])
         sendpes = np.zeros(self.universe.total_colors, dtype="d")
         pes = np.zeros(self.universe.total_colors, dtype="d")
         if self.universe.sub_rank == 0:
@@ -85,7 +82,12 @@ class MSEVB:
         self.frame(lmp, pos=total_x, vel=total_v, forces=current_forces)
         mix_states = self.mix_states()
         computes = None
-        min_eval, min_evec_coeffs, cpl_forces = mix_states(
+        (
+            min_eval,
+            min_evec_coeffs,
+            amplitudes,
+            cpl_forces,
+        ) = mix_states(
             pes,
             computes,
             self.frame,
@@ -93,9 +95,6 @@ class MSEVB:
         )
         self.log(f"Minimum Eigenvalue: {min_eval}", level="debug")
         min_evec_coeffs = self.universe.global_comm.bcast(min_evec_coeffs, root=0)
-        amplitudes = min_evec_coeffs**2
-        self.log(f"Amplitudes: {amplitudes}", level="debug")
-        min_state_idx = np.argmax(amplitudes)
         m = np.zeros(
             shape=(
                 self.topology.num_systems,
@@ -114,6 +113,7 @@ class MSEVB:
                 m[self.universe.rank.color, 0][:, :] = cpl_forces
         mbuff = np.empty_like(m)
         self.universe.global_comm.Allreduce(m, mbuff, op=MPI.SUM)
+        min_state_idx = self.universe.global_comm.bcast(np.argmax(amplitudes), root=0)
         mixed_forces = self.hellmann_feynman(mbuff, min_evec_coeffs)
         self.min_state_idx = min_state_idx
         self.min_eval = float(min_eval)
@@ -166,17 +166,19 @@ class MSEVB:
 
     def get_min_EVB_state(self, matrix):
         # matrix diagonalisation
-        eig_vals, eig_vecs = np.linalg.eig(matrix)
-        eig_vals = eig_vals.real
-        occupancies = self.SI.get_occupancies(eig_vals, self.SI)
-        min_evec_coeffs = np.sum(occupancies * eig_vecs, axis=1)
         self.log("System matrix: ", level="debug")
         self.log(matrix, level="debug")
+        eig_vals, eig_vecs = np.linalg.eig(matrix)
         self.log("Eigen values: ", level="debug")
         self.log(eig_vals, level="debug")
+        eig_vals = eig_vals.real
+        occupancies = self.SI.get_occupancies(eig_vals, self.SI)
         self.log("Occupancies: ", level="debug")
         self.log(occupancies, level="debug")
-        return np.min(eig_vals), min_evec_coeffs
+        amplitudes = np.sum(occupancies * eig_vecs**2, axis=1)
+        self.log(f"Amplitudes: {amplitudes}", level="debug")
+        min_evec_coeffs = np.sqrt(amplitudes)
+        return np.sum(occupancies * eig_vals), min_evec_coeffs, amplitudes
 
     def get_coupling(
         self, pair_idx, frame, init_pe, new_pe, forces, init_cmp=None, new_cmp=None
@@ -262,9 +264,10 @@ class MSEVB:
                 )
         min_eval = 0.0
         min_evec_coeffs = np.zeros(shape=self.topology.num_systems)
+        amps = np.empty_like(min_evec_coeffs)
         if self.universe.me == 0:
-            min_eval, min_evec_coeffs = self.get_min_EVB_state(matrix)
-        return min_eval, min_evec_coeffs, cpl_forces
+            min_eval, min_evec_coeffs, amps = self.get_min_EVB_state(matrix)
+        return min_eval, min_evec_coeffs, amps, cpl_forces
 
     def mix_states_scf(self, pes, computes, frame, forces):
         raise RuntimeError("multi site not ready yet")

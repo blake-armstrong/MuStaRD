@@ -311,11 +311,13 @@ class Output:
             if self.rank == 0:
                 self.logger = logger(str(id(fname)), filename=fname, fmt="%(message)s")
             self.info = "{:>10} {:>19.10f} {:>19.10f}"
-            self.header = "      Step          Pe(mixed)          E_total"
+            self.header = (
+                "      Step          Pe(mixed)          E_total            E_conserve"
+            )
             for title in self.properties:
                 self.header += f"{title.title():>20}"
                 self.info += " {:>19.10f}"
-            self.header += "   Speed(ns/day)"
+            self.header += "      Speed(ns/day)"
             self.info += " {:>15.8f}"
             # FIXME: timestep units
             self.timestep = lmp.extract_global("dt")
@@ -324,9 +326,11 @@ class Output:
         def _header(self):
             self.logger.info(self.header)
 
-        def _write(self, lmp, step, speed, pe, ke):
+        def _write(self, lmp, step, speed, pe, ke, ecpl):
             props = [lmp.get_thermo(prop) for prop in self.properties]
-            self.logger.info(self.info.format(step, pe, pe + ke, *props, speed))
+            self.logger.info(
+                self.info.format(step, pe, pe + ke, pe + ke + ecpl, *props, speed)
+            )
 
         def write(self, step, pe, lmp):
             if step % self.write_frequency == 0:
@@ -338,7 +342,8 @@ class Output:
                         * (self.write_frequency * self.timestep)
                     ) / 1000
                 ke = lmp.get_thermo("ke")
-                self._write(lmp, step, speed, pe, ke)
+                ecpl = lmp.get_thermo("ecouple")
+                self._write(lmp, step, speed, pe, ke, ecpl)
                 self.t0 = t1
 
         def log(self, info):

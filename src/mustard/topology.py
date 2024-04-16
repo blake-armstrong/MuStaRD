@@ -605,15 +605,14 @@ class Topology:
                             switch = True
                             continue
                         new_types[eyed] = rxn.type_changes0[atoms[eyed].type]
-
                     new_atoms = copy(atoms)
                     for eyed in hxs + ys:
                         typ = new_types[eyed]
                         molecule = self.atoms[eyed].molecule
                         if eyed == id_h:
-                            molecule = self.atoms[id_y].molecule
+                            molecule = atoms[id_y].molecule
                         if eyed == id_y and switch:
-                            molecule = self.atoms[id_h].molecule
+                            molecule = atoms[id_h].molecule
                         new_atoms[eyed] = Atom(
                             idx=self.atoms[eyed].idx,
                             type=typ,
@@ -626,7 +625,6 @@ class Topology:
                     new_residues = defaultdict(list)
                     for ID, atom in new_atoms.items():
                         new_residues[atom.molecule].append(ID)
-
                     _new_bonds_dict = {
                         eyed: list(bonds.get(eyed, []))
                         for eyed in hxs + ys

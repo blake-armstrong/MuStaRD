@@ -388,7 +388,6 @@ class Mustard:
             any_pairs = self.identify_pairs()
             self.msevb.run = int(any_pairs)
             self.lmp.command("run 0 pre yes post no update yes")
-            # self.universe.global_comm.Barrier()
             self.msevb.min_eval = self.universe.global_comm.bcast(
                 self.msevb.min_eval, root=0
             )
