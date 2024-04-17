@@ -106,6 +106,8 @@ class MSEVB:
             self.universe.rank.color < self.topology.num_systems
             and self.universe.sub_rank == 0
         ):
+            print(f"{current_forces=}")
+            print(f"{cpl_forces=}")
             m[self.universe.rank.color, self.universe.rank.color][:, :] = current_forces
             if self.universe.rank.color != 0:
                 # HERE
@@ -169,9 +171,11 @@ class MSEVB:
         self.log("System matrix: ", level="debug")
         self.log(matrix, level="debug")
         eig_vals, eig_vecs = np.linalg.eig(matrix)
+        eig_vals = eig_vals.real
         self.log("Eigen values: ", level="debug")
         self.log(eig_vals, level="debug")
-        eig_vals = eig_vals.real
+        self.log("Eigen vectors: ", level="debug")
+        self.log(eig_vecs, level="debug")
         occupancies = self.SI.get_occupancies(eig_vals, self.SI)
         self.log("Occupancies: ", level="debug")
         self.log(occupancies, level="debug")
