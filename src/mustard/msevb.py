@@ -106,8 +106,6 @@ class MSEVB:
             self.universe.rank.color < self.topology.num_systems
             and self.universe.sub_rank == 0
         ):
-            print(f"{current_forces=}")
-            print(f"{cpl_forces=}")
             m[self.universe.rank.color, self.universe.rank.color][:, :] = current_forces
             if self.universe.rank.color != 0:
                 # HERE
@@ -179,9 +177,9 @@ class MSEVB:
         occupancies = self.SI.get_occupancies(eig_vals, self.SI)
         self.log("Occupancies: ", level="debug")
         self.log(occupancies, level="debug")
-        amplitudes = np.sum(occupancies * eig_vecs**2, axis=1)
+        min_evec_coeffs = np.sum(occupancies * eig_vecs, axis=1)
+        amplitudes = min_evec_coeffs**2
         self.log(f"Amplitudes: {amplitudes}", level="debug")
-        min_evec_coeffs = np.sqrt(amplitudes)
         return np.sum(occupancies * eig_vals), min_evec_coeffs, amplitudes
 
     def get_coupling(
