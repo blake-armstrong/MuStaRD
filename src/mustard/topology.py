@@ -187,6 +187,7 @@ class Site:
     bonds: dict = field(default_factory=dict)
     residues: dict = field(default_factory=dict)
     qs: np.ndarray = np.array([])
+    types: np.ndarray = np.array([])
     shell: int = 1
     parent: int = 0
     pair_idx: int = 0
@@ -592,9 +593,13 @@ class Topology:
                     shells[nsite][1][state]["atoms"] = self.atoms
                     shells[nsite][1][state]["bonds"] = self.bonds
                     shells[nsite][1][state]["residues"] = self.residues
+                    shells[nsite][1][state]["qs"] = self.qs
+                    shells[nsite][1][state]["types"] = self.types
                     atoms = shells[nsite][shell - 1][state]["atoms"]
                     bonds = shells[nsite][shell - 1][state]["bonds"]
                     residues = shells[nsite][shell - 1][state]["residues"]
+                    qs = shells[nsite][shell - 1][state]["qs"]
+                    types = shells[nsite][shell - 1][state]["types"]
                     pair = rxn_pairs[state]
                     id_h, id_y = pair
                     id_x = utils.get_X(id_h, bonds)
@@ -618,6 +623,8 @@ class Topology:
                             continue
                         new_types[eyed] = rxn.type_changes0[atoms[eyed].type]
                     new_atoms = copy(atoms)
+                    new_qs = copy(qs)
+                    new_types = copy(types)
                     for eyed in hxs + ys:
                         typ = new_types[eyed]
                         molecule = atoms[eyed].molecule
@@ -625,15 +632,18 @@ class Topology:
                             molecule = atoms[id_y].molecule
                         if eyed == id_y and switch:
                             molecule = atoms[id_h].molecule
+                        idx = atoms[eyed].idx
                         new_atoms[eyed] = Atom(
-                            idx=atoms[eyed].idx,
+                            idx=idx,
                             type=typ,
                             charge=self.SI.type_charges[typ],
                             molecule=molecule,
                             mass=atoms[eyed].mass,
                             image=atoms[eyed].image,
                         )
-                    new_qs = np.array([new_atoms[eyed].charge for eyed in self.ids])
+                        new_qs[idx] = new_atoms[eyed].charge
+                        new_types[idx] = new_atoms[eyed].type
+
                     new_residues = defaultdict(list)
                     for ID, atom in new_atoms.items():
                         new_residues[atom.molecule].append(ID)
@@ -682,6 +692,8 @@ class Topology:
                     shells[nsite][shell][state]["atoms"] = new_atoms
                     shells[nsite][shell][state]["residues"] = new_residues
                     shells[nsite][shell][state]["bonds"] = new_bonds_dict
+                    shells[nsite][shell][state]["qs"] = new_qs
+                    shells[nsite][shell][state]["types"] = new_types
                     for idx in new_pairs_idxs:
                         shells[nsite][shell][idx]["atoms"] = shells[nsite][shell][
                             state
@@ -706,6 +718,7 @@ class Topology:
                         self.rxn_pair_info[idx]["bonds"] = new_bonds_dict
                         self.rxn_pair_info[idx]["residues"] = new_residues
                         self.rxn_pair_info[idx]["qs"] = new_qs
+                        self.rxn_pair_info[idx]["types"] = new_types
                         self.rxn_pair_info[idx]["parent"] = state + 1
                         self.rxn_pair_info[idx]["shell"] = shell
                         self.rxn_pair_info[idx]["tot_dists"] = self.rxn_pair_info[
@@ -746,6 +759,7 @@ class Topology:
                 shell = self.rxn_pair_info[pair_idx]["shell"]
                 rxn_num = self.rxn_pair_info[pair_idx]["num"]
                 qs = self.rxn_pair_info[pair_idx]["qs"]
+                types = self.rxn_pair_info[pair_idx]["types"]
                 self.rxn_pair_info[pair_idx]["pair"] = tuple(pair)
                 # self.rxn_pair_info[tuple(pair)]["indexes"] = (n, m)
                 site = Site(
@@ -757,6 +771,7 @@ class Topology:
                     bonds=bonds,
                     residues=residues,
                     qs=qs,
+                    types=types,
                     parent=parent,
                     shell=shell,
                     pair_idx=pair_idx,
