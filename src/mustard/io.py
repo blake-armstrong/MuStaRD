@@ -295,7 +295,7 @@ class Output:
             self.rank = rank
             if self.rank == 0:
                 self.logger = logger(str(id(fname)), filename=fname, fmt="%(message)s")
-            self.info = "{:>10} {:>19.10f} {:>19.10f}"
+            self.info = "{:>10} {:>19.10f} {:>19.10f} {:>19.10f}"
             self.header = (
                 "      Step          Pe(mixed)          E_total            E_conserve"
             )
