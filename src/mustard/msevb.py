@@ -200,7 +200,12 @@ class MSEVB:
         computes = {"new": new_cmp, "initial": init_cmp}
         forces = {"new": frame.forces, "initial": init_forces}
         self.topology.update_snapshot(
-            frame, self.step_count, energies=energies, computes=computes, forces=forces
+            frame,
+            self.step_count,
+            site=self.topology.rxn_pair_info[pair_idx]["site"],
+            energies=energies,
+            computes=computes,
+            forces=forces,
         )
         rxn_ids = {"X": x, "H": h, "Y": y}
         cpl_val, cpl_forces = self.SI.coupling[rxn_num](rxn_ids, self.topology.snapshot)

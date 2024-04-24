@@ -342,15 +342,25 @@ class Topology:
             forces={},
         )
 
-    def update_snapshot(self, frame, step, energies=None, computes=None, forces=None):
+    def update_snapshot(
+        self, frame, step, site=None, energies=None, computes=None, forces=None
+    ):
         self.snapshot.setattr("frame", frame)
-        self.snapshot.setattr("ids", self.ids)
-        self.snapshot.setattr("types", self.types)
-        self.snapshot.setattr("atoms", self.atoms)
-        self.snapshot.setattr("residues", self.residues)
-        self.snapshot.setattr("bonds", self.bonds)
-        self.snapshot.setattr("qs", self.qs)
         self.snapshot.setattr("step", step)
+        if site is None:
+            self.snapshot.setattr("ids", self.ids)
+            self.snapshot.setattr("types", self.types)
+            self.snapshot.setattr("atoms", self.atoms)
+            self.snapshot.setattr("residues", self.residues)
+            self.snapshot.setattr("bonds", self.bonds)
+            self.snapshot.setattr("qs", self.qs)
+        else:
+            self.snapshot.setattr("ids", site.ids)
+            self.snapshot.setattr("types", site.types)
+            self.snapshot.setattr("atoms", site.atoms)
+            self.snapshot.setattr("residues", site.residues)
+            self.snapshot.setattr("bonds", site.bonds)
+            self.snapshot.setattr("qs", site.qs)
         if computes is not None:
             self.snapshot.setattr("computes", computes)
         if energies is not None:
@@ -394,7 +404,7 @@ class Topology:
         Y_ready_idx = Y_idxs[(dists_bool).nonzero()[1]]
         rxn_pairs = np.array([self.ids[H_ready_idx], self.ids[Y_ready_idx]]).T
         X_ready_idx = [
-            self.atoms[eyed].idx
+            atoms[eyed].idx
             for idx in H_ready_idx
             for eyed in residues[atoms[self.ids[idx]].molecule]
             if atoms[eyed].idx in X_idxs
@@ -473,7 +483,9 @@ class Topology:
             bonds=bonds,
         )
 
-    def _get_pairs_idxs(self, pos, box_vectors, rxn_infos=None):
+    def _get_pairs_idxs(self, pos, box_vectors, rxn_infos=None, atoms=None):
+        if atoms is None:
+            atoms = self.atoms
         rxn_pairs = []
         rxn_nums = []
         pair_dists = []
@@ -512,8 +524,8 @@ class Topology:
         # self.dist_sort = np.argsort(pair_dists)
 
         # NOTE: The following is very bad and makes dangerous assumptions.
-        rxn_molecules1 = np.array([self.atoms[pair[0]].molecule for pair in rxn_pairs])
-        rxn_molecules2 = np.array([self.atoms[pair[1]].molecule for pair in rxn_pairs])
+        rxn_molecules1 = np.array([atoms[pair[0]].molecule for pair in rxn_pairs])
+        rxn_molecules2 = np.array([atoms[pair[1]].molecule for pair in rxn_pairs])
         rm1l = len(set(rxn_molecules1))
         rm2l = len(set(rxn_molecules2))
         rxn_molecules = rxn_molecules1
@@ -607,18 +619,18 @@ class Topology:
                     new_atoms = copy(atoms)
                     for eyed in hxs + ys:
                         typ = new_types[eyed]
-                        molecule = self.atoms[eyed].molecule
+                        molecule = atoms[eyed].molecule
                         if eyed == id_h:
                             molecule = atoms[id_y].molecule
                         if eyed == id_y and switch:
                             molecule = atoms[id_h].molecule
                         new_atoms[eyed] = Atom(
-                            idx=self.atoms[eyed].idx,
+                            idx=atoms[eyed].idx,
                             type=typ,
                             charge=self.SI.type_charges[typ],
                             molecule=molecule,
-                            mass=self.atoms[eyed].mass,
-                            image=self.atoms[eyed].image,
+                            mass=atoms[eyed].mass,
+                            image=atoms[eyed].image,
                         )
 
                     new_residues = defaultdict(list)
@@ -745,6 +757,7 @@ class Topology:
                     shell=shell,
                     pair_idx=pair_idx,
                 )
+                self.rxn_pair_info[pair_idx]["site"] = site
                 sites.append(site)
                 # system_collisions[n] += 1
 
