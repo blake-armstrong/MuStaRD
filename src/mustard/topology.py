@@ -563,6 +563,7 @@ class Topology:
             self.rxn_pair_info[n]["bonds"] = self.bonds
             self.rxn_pair_info[n]["residues"] = self.residues
             self.rxn_pair_info[n]["qs"] = self.qs
+            self.rxn_pair_info[n]["types"] = self.types
             self.rxn_pair_info[n]["parent"] = 0
             self.rxn_pair_info[n]["shell"] = 1
             self.rxn_pair_info[n]["tot_dists"] = [self.rxn_pair_info[n]["dist"]]
