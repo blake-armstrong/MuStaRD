@@ -257,3 +257,28 @@ class Wu2008:
 
     def __call__(self, rxn_ids, snapshot):
         return self.coupling_function(rxn_ids, snapshot)
+
+
+class Grimme2015:
+    # https://doi.org/10.1039/C5CP02580J
+    def __init__(self, a: float, b: float):
+        self.a = float(a)
+        self.b = float(b)
+
+    def get_coupling_value(self, dE: float):
+        return self.a * np.exp(-self.b * dE**2)
+
+    def coupling_function(self, rxn_ids, snapshot):
+        dE = snapshot.energies["new"] - snapshot.energies["initial"]
+        cpl = self.get_coupling_value(dE)
+        nF = snapshot.forces["new"]
+        iF = snapshot.forces["initial"]
+        cpl_forces = np.zeros(nF.shape)
+        dF = iF - nF
+        dCddE = -2 * self.b * dE * cpl * dF
+        cpl_forces -= dCddE
+
+        return cpl, cpl_forces
+
+    def __call__(self, rxn_ids, snapshot):
+        return self.coupling_function(rxn_ids, snapshot)

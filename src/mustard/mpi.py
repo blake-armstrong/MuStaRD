@@ -116,17 +116,17 @@ class Universe:
         self.total_colors = self.global_comm.allreduce(self.rank.color, op=MPI.MAX) + 1
 
     def log(self, msg, rank=0, level="info"):
-        log = self.logger.info
+        logger = self.logger.info
         if level == "debug":
-            log = self.logger.debug
+            logger = self.logger.debug
         if level == "warn":
-            log = self.logger.warn
+            logger = self.logger.warn
             msg = f"\033[91m{msg}\033[0m"
         if self.me == rank:
-            log(msg)
+            logger(msg)
             return
         if rank == -1:
-            log(msg)
+            logger(msg)
 
 
 # def synchronize_args(cls):

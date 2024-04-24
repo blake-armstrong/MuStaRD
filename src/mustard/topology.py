@@ -397,7 +397,7 @@ class Topology:
             self.atoms[eyed].idx
             for idx in H_ready_idx
             for eyed in residues[atoms[self.ids[idx]].molecule]
-            if self.atoms[eyed].idx in X_idxs
+            if atoms[eyed].idx in X_idxs
         ]
         hid = [utils.get_X(self.ids[idx], bonds) for idx in H_ready_idx]
         mask = [
