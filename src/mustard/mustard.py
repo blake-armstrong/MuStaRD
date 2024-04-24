@@ -215,7 +215,10 @@ class Mustard:
             return None
         # reaction has occured - update topology
         min_system = self.topology.grab_system(int(self.msevb.min_state_idx))
-        for pair in min_system.pairs:
+        for site in min_system.sites:
+            if site is None:
+                continue
+            pair = site.pair
             h, y = pair
             try:
                 # NOTE assumes transferring atom is only bonded to one other atom
@@ -224,7 +227,7 @@ class Mustard:
                 x = None
             if out:
                 self.output.log(
-                    f"reaction occured at step {self.msevb.step_count} between IDs(xhy) {x} {h} {y}"
+                    f"Reaction of type {site.rxn_num} in shell {site.shell} occured at step {self.msevb.step_count} between IDs(xhy) {x} {h} {y}"
                 )
         self.update_topology(min_system)
         return min_system

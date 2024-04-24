@@ -1,6 +1,7 @@
 import numpy as np
 
-from mustard import Mustard, utils
+from mustard import Mustard
+from mustard.coupling import Vuilleumier1998
 
 V12 = 3.156906788803108
 ALPHA = 0.85
@@ -10,61 +11,7 @@ GAMMA = 0
 # GAMMA = 0.80
 DIST_CUTOFF = 1.9
 
-
-#def calc_coupling_dists(H_pos, X_pos, Y_pos, xyz_pbc):
-#    # O-O distance
-#    dQpos = X_pos - Y_pos
-#    dQpos -= xyz_pbc * (dQpos / xyz_pbc).round()
-#    Q = np.linalg.norm(dQpos, axis=-1)
-#    # distance between the position of the transferring proton and the middle of the O–O distance
-#    dqpos = H_pos - ((dQpos / 2) + Y_pos)
-#    dqpos -= xyz_pbc * (dqpos / xyz_pbc).round()
-#    q = np.linalg.norm(dqpos, axis=-1)
-#    return Q, q
-#
-#
-#def get_dist(pos1, pos2, pbc):
-#    d_pos = pos1 - pos2
-#    d_pos -= pbc * (d_pos / pbc).round()
-#    dist = np.linalg.norm(d_pos, axis=-1)
-#    return dist
-
-
-def Vuilleumier1998_coupling(Q, q, v12=V12, alpha=ALPHA, gamma=GAMMA):
-    # https://doi.org/10.1016/S0009-2614(97)01365-1
-    return v12 * np.exp(-alpha * Q - gamma * q**2)
-
-
-def coupling_value_function(
-    rxn_ids, snapshot
-):
-    snapshot.h_idx = snapshot.atoms[rxn_ids["H"]].idx
-    snapshot.x_idx = snapshot.atoms[rxn_ids["X"]].idx
-    snapshot.y_idx = snapshot.atoms[rxn_ids["Y"]].idx
-    h_pos = snapshot.frame.pos[snapshot.h_idx]
-    x_pos = snapshot.frame.pos[snapshot.x_idx]
-    y_pos = snapshot.frame.pos[snapshot.y_idx]
-    snapshot.dQpos = utils.get_distance_xyz(x_pos, y_pos, snapshot.frame.box_vectors)
-    snapshot.Q = utils.get_distances(snapshot.dQpos)
-    centrexy_pos = 0.5 * (x_pos + y_pos)
-    snapshot.dqpos = utils.get_distance_xyz(h_pos, centrexy_pos, snapshot.frame.box_vectors)
-    q = utils.get_distances(snapshot.dqpos)
-    snapshot.cpl = Vuilleumier1998_coupling(snapshot.Q, q)
-    return snapshot.cpl
-
-
-def coupling_forces_function(rxn_ids, snapshot, new_forces, initial_forces):
-    cpl_forces = np.zeros(shape=initial_forces.shape)
-    derivOO = -ALPHA * snapshot.cpl * snapshot.dQpos.flatten() / snapshot.Q
-    derivHOO = -GAMMA * 2 * snapshot.cpl * snapshot.dqpos.flatten()
-    fOO = -derivOO
-    fHOO = derivHOO
-    cpl_forces[snapshot.x_idx] += fOO
-    cpl_forces[snapshot.y_idx] -= fOO
-    cpl_forces[snapshot.h_idx] -= fHOO
-    cpl_forces[snapshot.x_idx] += 0.5 * fHOO
-    cpl_forces[snapshot.y_idx] += 0.5 * fHOO
-    return cpl_forces
+coupling = Vuilleumier1998(v12=V12, alpha=ALPHA, gamma=GAMMA)
 
 
 def main():
@@ -126,8 +73,7 @@ def main():
                     "distance": DIST_CUTOFF,
                     "angle": None,
                 },
-                "coupling_value_function": coupling_value_function,
-                "coupling_forces_function": coupling_forces_function,
+                "coupling_function": coupling,
             }
         ],
     }
@@ -144,9 +90,11 @@ def main():
     msevb.add_trajectory(filename="reaction.xyz", write_frequency=100, rxn=True)
     msevb.add_output(filename=None, write_frequency=100)
     msevb.add_output(filename="mustard.log", write_frequency=10)
-    msevb.minimise()
+    # msevb.minimise()
     # msevb.finite_differences(file="new_fd.out", delta=1e-3)
-    # msevb.finite_differences(file="new_fd.out", delta=1e-3, index_array=[0, 1, 2, 3, 4, 5, 6, 7])
+    msevb.finite_differences(
+        file="new_fd.out", delta=1e-3, index_array=[0, 1, 2, 3, 4, 5, 6, 7]
+    )
 
     # msevb.step(10000)
 

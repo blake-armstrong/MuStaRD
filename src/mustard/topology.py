@@ -143,6 +143,7 @@ class Snapshot:
         "qs",
         "step",
         "energies",
+        "forces",
         "computes",
     )
     INIT: ClassVar[bool] = False
@@ -155,6 +156,7 @@ class Snapshot:
     qs: np.ndarray
     step: int
     energies: Dict[str, float]
+    forces: Dict[str, np.ndarray]
     computes: Dict[str, dict]
 
     def __post_init__(self):
@@ -337,9 +339,10 @@ class Topology:
             step=0,
             computes={},
             energies={},
+            forces={},
         )
 
-    def update_snapshot(self, frame, step, energies, computes):
+    def update_snapshot(self, frame, step, energies=None, computes=None, forces=None):
         self.snapshot.setattr("frame", frame)
         self.snapshot.setattr("ids", self.ids)
         self.snapshot.setattr("types", self.types)
@@ -348,8 +351,12 @@ class Topology:
         self.snapshot.setattr("bonds", self.bonds)
         self.snapshot.setattr("qs", self.qs)
         self.snapshot.setattr("step", step)
-        self.snapshot.setattr("computes", computes)
-        self.snapshot.setattr("energies", energies)
+        if computes is not None:
+            self.snapshot.setattr("computes", computes)
+        if energies is not None:
+            self.snapshot.setattr("energies", energies)
+        if forces is not None:
+            self.snapshot.setattr("forces", forces)
 
     def full_get_pairs(
         self,
@@ -392,10 +399,10 @@ class Topology:
             for eyed in residues[atoms[self.ids[idx]].molecule]
             if self.atoms[eyed].idx in X_idxs
         ]
-        hid = [self.get_X(self.ids[idx], bonds) for idx in H_ready_idx]
+        hid = [utils.get_X(self.ids[idx], bonds) for idx in H_ready_idx]
         mask = [
             (
-                self.atoms[eyed].type == self.SI.reactions[rxn_num].X
+                atoms[eyed].type == self.SI.reactions[rxn_num].X
                 if eyed is not None
                 else True
             )
@@ -530,14 +537,6 @@ class Topology:
             pairs_idxs = [[None]]
         return pairs_idxs, rxn_pairs
 
-    @staticmethod
-    def get_X(id_h, bonds: dict):
-        try:
-            # NOTE assumes transferring atom is only bonded to one other atom
-            return bonds[id_h][0]
-        except KeyError:
-            return None
-
     def get_systems(self, pos, box_vectors):
         if not self.update:
             if len(self.systems) > 1:
@@ -585,7 +584,7 @@ class Topology:
                     residues = shells[nsite][shell - 1][state]["residues"]
                     pair = rxn_pairs[state]
                     id_h, id_y = pair
-                    id_x = self.get_X(id_h, bonds)
+                    id_x = utils.get_X(id_h, bonds)
                     # update topology to reflect new reaction
                     rxn_num = self.rxn_pair_info[state]["num"]
                     # rxn_num = self.rxn_pair_info[tuple(pair)]["num"]
@@ -958,7 +957,7 @@ class Topology:
                 rxn_pair = site.pair
                 rxn_num = site.rxn_num
                 id_h, id_y = rxn_pair
-                id_x = self.get_X(id_h, site.bonds)
+                id_x = utils.get_X(id_h, site.bonds)
                 # create groups
                 hxy_group_str = "group HXY id "
                 hxs = site.residues[site.atoms[id_h].molecule]

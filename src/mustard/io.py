@@ -25,8 +25,7 @@ _DEFAULTS = {
                 "distance": None,
                 "angle": None,
             },
-            "coupling_value_function": None,
-            "coupling_forces_function": None,
+            "coupling_function": None,
         }
     ],
     "temperature": None,
@@ -133,8 +132,7 @@ class SystemInfo:
         if type(_reactions) == dict:
             _reactions = [_reactions]
         self.reactions = []
-        self.coupling_value_functions = []
-        self.coupling_forces_functions = []
+        self.coupling = []
         for __reaction in _reactions:
             if type(__reaction) != dict:
                 raise ValueError(
@@ -183,31 +181,18 @@ class SystemInfo:
                     self.atom_types[str(v)]
                 )
 
-            _coupling_value_function = __reaction.pop("coupling_value_function")
-            if not callable(_coupling_value_function):
+            _coupling_function = __reaction.pop("coupling_function")
+            if not callable(_coupling_function):
                 raise ValueError(
                     f"argument passed to coupling_value_function not callable"
                 )
-            args = len(inspect.signature(_coupling_value_function).parameters)
+            args = len(inspect.signature(_coupling_function).parameters)
             nargs = 2
             if args != nargs:
                 raise ValueError(
                     f"coupling_function should have {nargs} arguments (rxn_ids, snapshot), found {args}"
                 )
-            self.coupling_value_functions.append(_coupling_value_function)
-
-            _coupling_forces_function = __reaction.pop("coupling_forces_function")
-            if not callable(_coupling_forces_function):
-                raise ValueError(
-                    f"argument passed to coupling_forces_function not callable"
-                )
-            args = len(inspect.signature(_coupling_forces_function).parameters)
-            nargs = 4
-            if args != nargs:
-                raise ValueError(
-                    f"coupling_function should have {nargs} arguments (rxn_ids, snapshot, new_forces, initial_forces), found {args}"
-                )
-            self.coupling_forces_functions.append(_coupling_forces_function)
+            self.coupling.append(_coupling_function)
 
             _cutoffs = __reaction.pop("cutoffs")
             cutoffs = {}

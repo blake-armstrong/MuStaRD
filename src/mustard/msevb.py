@@ -91,7 +91,7 @@ class MSEVB:
             pes,
             computes,
             self.frame,
-            current_forces,
+            self.universe.global_comm.bcast(current_forces, root=0),
         )
         self.log(f"Minimum Eigenvalue: {min_eval}", level="debug")
         min_evec_coeffs = self.universe.global_comm.bcast(min_evec_coeffs, root=0)
@@ -183,16 +183,11 @@ class MSEVB:
         return np.sum(occupancies * eig_vals), min_evec_coeffs, amplitudes
 
     def get_coupling(
-        self, pair_idx, frame, init_pe, new_pe, forces, init_cmp=None, new_cmp=None
+        self, pair_idx, frame, init_pe, new_pe, init_forces, init_cmp=None, new_cmp=None
     ):
         pair = self.topology.rxn_pair_info[pair_idx]["pair"]
         h, y = pair
-        try:
-            x = self.topology.bonds[h][
-                0
-            ]  # NOTE assumes transferring atom is only bonded to one other atom
-        except KeyError:
-            x = None
+        x = utils.get_X(h, self.topology.rxn_pair_info[pair_idx]["bonds"])
         if (
             self.SI.computes is not None
             and init_cmp is not None
@@ -203,17 +198,13 @@ class MSEVB:
         rxn_num = self.topology.rxn_pair_info[pair_idx]["num"]
         energies = {"new": new_pe, "initial": init_pe}
         computes = {"new": new_cmp, "initial": init_cmp}
-        self.topology.update_snapshot(frame, self.step_count, energies, computes)
+        forces = {"new": frame.forces, "initial": init_forces}
+        self.topology.update_snapshot(
+            frame, self.step_count, energies=energies, computes=computes, forces=forces
+        )
         rxn_ids = {"X": x, "H": h, "Y": y}
-        cpl_val = self.SI.coupling_value_functions[rxn_num](
-            rxn_ids, self.topology.snapshot
-        )
-        cpl_forces = self.SI.coupling_forces_functions[rxn_num](
-            rxn_ids,
-            self.topology.snapshot,
-            forces,
-            frame.forces,
-        )
+        cpl_val, cpl_forces = self.SI.coupling[rxn_num](rxn_ids, self.topology.snapshot)
+        cpl_val = float(cpl_val)
         if cpl_forces.shape != frame.forces.shape:
             raise ValueError(
                 "Returned coupling forces shape {cpl_forces.shape} should be the same as forces shape {forces.shape}"
@@ -228,7 +219,7 @@ class MSEVB:
             return self.mix_states_single
         return self.mix_states_scf
 
-    def mix_states_single(self, pes, computes, frame, forces):
+    def mix_states_single(self, pes, computes, frame, init_forces):
         matrix = np.zeros(shape=(self.topology.num_systems, self.topology.num_systems))
         cpl_forces = np.zeros(shape=frame.forces.shape)
         if self.universe.rank.color == 0:
@@ -256,7 +247,7 @@ class MSEVB:
                 frame,
                 pes[0],
                 pes[self.universe.rank.color],
-                forces,
+                init_forces,
                 init_compute,
                 new_compute,
             )

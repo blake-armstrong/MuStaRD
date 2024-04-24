@@ -1,54 +1,15 @@
 import numpy as np
 
-from mustard import Mustard, utils
+from mustard import Mustard
+from mustard.coupling import Raiteri2011
 
 LMB = 0.7998
 ZETA = 16
-
 DIST_CUTOFF = 1.8
 DIST_TAPER = 1.7
-
-
-def Raiteri2011_coupling(Q):
-    # 10.1088/0953-8984/23/33/334213
-    return LMB * np.exp(-ZETA * Q**2)
-
-
-def coupling_value_function(
-    rxn_ids, snapshot
-):
-    snapshot.h_idx = snapshot.atoms[rxn_ids["H"]].idx
-    snapshot.x_idx = snapshot.atoms[rxn_ids["X"]].idx
-    snapshot.y_idx = snapshot.atoms[rxn_ids["Y"]].idx
-    snapshot.h_pos = snapshot.frame.pos[snapshot.h_idx]
-    snapshot.x_pos = snapshot.frame.pos[snapshot.x_idx]
-    snapshot.y_pos = snapshot.frame.pos[snapshot.y_idx]
-    snapshot.dHX = utils.get_distance_xyz(snapshot.h_pos, snapshot.x_pos, snapshot.frame.box_vectors)
-    snapshot.rHX = utils.get_distances(snapshot.dHX)
-    snapshot.dHY = utils.get_distance_xyz(snapshot.h_pos, snapshot.y_pos, snapshot.frame.box_vectors)
-    snapshot.rHY = utils.get_distances(snapshot.dHY)
-    snapshot._Q = snapshot.rHY - snapshot.rHX
-    snapshot.cpl = Raiteri2011_coupling(abs(snapshot._Q))
-    snapshot.taper = utils.MDF(snapshot.rHY, DIST_TAPER, DIST_CUTOFF)
-    return  snapshot.cpl * snapshot.taper 
-
-
-def coupling_forces_function(rxn_ids, snapshot, new_forces, initial_forces):
-    cpl_forces = np.zeros(shape=initial_forces.shape)
-    taper_derivative = 0
-    if snapshot.rHY < DIST_CUTOFF and snapshot.rHY > DIST_TAPER:
-        _dHY = snapshot.dHY.flatten()
-        taper_derivative = utils.dMDF(_dHY[0], _dHY[1], _dHY[2], DIST_TAPER, DIST_CUTOFF)
-    prefactor = -2 * ZETA * snapshot.cpl * snapshot._Q
-    derivHY = prefactor * (snapshot.dHY.flatten() / snapshot.rHY) * snapshot.taper + taper_derivative * snapshot.cpl
-    derivHX = prefactor * -(snapshot.dHX.flatten() / snapshot.rHX) * snapshot.taper
-    fHY = -derivHY
-    fHX = -derivHX
-    cpl_forces[snapshot.h_idx] += fHY
-    cpl_forces[snapshot.y_idx] -= fHY
-    cpl_forces[snapshot.h_idx] += fHX
-    cpl_forces[snapshot.x_idx] -= fHX
-    return cpl_forces
+coupling = Raiteri2011(
+    lmb=LMB, zeta=ZETA, dist_cutoff=DIST_CUTOFF, dist_taper=DIST_TAPER
+)
 
 
 def main():
@@ -107,12 +68,11 @@ def main():
                     "distance": DIST_CUTOFF,
                     "angle": None,
                 },
-                "coupling_value_function": coupling_value_function,
-                "coupling_forces_function": coupling_forces_function,
+                "coupling_function": coupling,
             }
         ],
     }
-    mpi_list = [1,1]
+    mpi_list = [8, 8]
     msevb = Mustard(
         commands,
         inputs,
@@ -127,11 +87,11 @@ def main():
     msevb.add_output(
         filename="mustard.log",
         properties=["temp", "pe", "ke"],
-        write_frequency=100,
+        write_frequency=1,
     )
     # msevb.minimise()
-    # msevb.finite_differences(file="tmp_fd.out", delta=1e-3, index_array=[0,1])
-    msevb.step(1000)
+    msevb.finite_differences(file="tmp_fd.out", delta=1e-3, index_array=[0, 1])
+    # msevb.step(1000)
 
 
 if __name__ == "__main__":

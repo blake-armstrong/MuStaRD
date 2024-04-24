@@ -309,3 +309,11 @@ def get_virial(lmp, pr2vir, vol=None):
 
 def set_virial(lmp, virial_diff):
     lmp.fix_external_set_virial_global("ext", list(virial_diff))
+
+
+def get_X(id_h, bonds: dict):
+    try:
+        # NOTE assumes transferring atom is only bonded to one other atom
+        return bonds[id_h][0]
+    except KeyError:
+        return None
