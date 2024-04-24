@@ -186,6 +186,7 @@ class Site:
     atoms: dict = field(default_factory=dict)
     bonds: dict = field(default_factory=dict)
     residues: dict = field(default_factory=dict)
+    qs: np.ndarray = np.array([])
     shell: int = 1
     parent: int = 0
     pair_idx: int = 0
@@ -347,15 +348,14 @@ class Topology:
     ):
         self.snapshot.setattr("frame", frame)
         self.snapshot.setattr("step", step)
+        self.snapshot.setattr("ids", self.ids)
         if site is None:
-            self.snapshot.setattr("ids", self.ids)
             self.snapshot.setattr("types", self.types)
             self.snapshot.setattr("atoms", self.atoms)
             self.snapshot.setattr("residues", self.residues)
             self.snapshot.setattr("bonds", self.bonds)
             self.snapshot.setattr("qs", self.qs)
         else:
-            self.snapshot.setattr("ids", site.ids)
             self.snapshot.setattr("types", site.types)
             self.snapshot.setattr("atoms", site.atoms)
             self.snapshot.setattr("residues", site.residues)
@@ -561,6 +561,7 @@ class Topology:
             self.rxn_pair_info[n]["atoms"] = self.atoms
             self.rxn_pair_info[n]["bonds"] = self.bonds
             self.rxn_pair_info[n]["residues"] = self.residues
+            self.rxn_pair_info[n]["qs"] = self.qs
             self.rxn_pair_info[n]["parent"] = 0
             self.rxn_pair_info[n]["shell"] = 1
             self.rxn_pair_info[n]["tot_dists"] = [self.rxn_pair_info[n]["dist"]]
@@ -632,7 +633,7 @@ class Topology:
                             mass=atoms[eyed].mass,
                             image=atoms[eyed].image,
                         )
-
+                    new_qs = np.array([na.charge for na in new_atoms])
                     new_residues = defaultdict(list)
                     for ID, atom in new_atoms.items():
                         new_residues[atom.molecule].append(ID)
@@ -704,6 +705,7 @@ class Topology:
                         self.rxn_pair_info[idx]["atoms"] = new_atoms
                         self.rxn_pair_info[idx]["bonds"] = new_bonds_dict
                         self.rxn_pair_info[idx]["residues"] = new_residues
+                        self.rxn_pair_info[idx]["qs"] = new_qs
                         self.rxn_pair_info[idx]["parent"] = state + 1
                         self.rxn_pair_info[idx]["shell"] = shell
                         self.rxn_pair_info[idx]["tot_dists"] = self.rxn_pair_info[
@@ -743,6 +745,7 @@ class Topology:
                 parent = self.rxn_pair_info[pair_idx]["parent"]
                 shell = self.rxn_pair_info[pair_idx]["shell"]
                 rxn_num = self.rxn_pair_info[pair_idx]["num"]
+                qs = self.rxn_pair_info[pair_idx]["qs"]
                 self.rxn_pair_info[pair_idx]["pair"] = tuple(pair)
                 # self.rxn_pair_info[tuple(pair)]["indexes"] = (n, m)
                 site = Site(
@@ -753,6 +756,7 @@ class Topology:
                     atoms=atoms,
                     bonds=bonds,
                     residues=residues,
+                    qs=qs,
                     parent=parent,
                     shell=shell,
                     pair_idx=pair_idx,
