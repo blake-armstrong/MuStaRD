@@ -633,7 +633,7 @@ class Topology:
                             mass=atoms[eyed].mass,
                             image=atoms[eyed].image,
                         )
-                    new_qs = np.array([na.charge for na in new_atoms])
+                    new_qs = np.array([new_atoms[eyed].charge for eyed in self.ids])
                     new_residues = defaultdict(list)
                     for ID, atom in new_atoms.items():
                         new_residues[atom.molecule].append(ID)
