@@ -183,11 +183,9 @@ class MSEVB:
         return np.sum(occupancies * eig_vals), min_evec_coeffs, amplitudes
 
     def get_coupling(
-        self, pair_idx, frame, init_pe, new_pe, init_forces, init_cmp=None, new_cmp=None
+        self, site, frame, init_pe, new_pe, init_forces, init_cmp=None, new_cmp=None
     ):
-        pair = self.topology.rxn_pair_info[pair_idx]["pair"]
-        h, y = pair
-        x = utils.get_X(h, self.topology.rxn_pair_info[pair_idx]["bonds"])
+        x, h, y = site.xhy
         if (
             self.SI.computes is not None
             and init_cmp is not None
@@ -195,20 +193,21 @@ class MSEVB:
         ):
             new_cmp = dict(zip(self.SI.computes, new_cmp))
             init_cmp = dict(zip(self.SI.computes, init_cmp))
-        rxn_num = self.topology.rxn_pair_info[pair_idx]["num"]
         energies = {"new": new_pe, "initial": init_pe}
         computes = {"new": new_cmp, "initial": init_cmp}
         forces = {"new": frame.forces, "initial": init_forces}
         self.topology.update_snapshot(
             frame,
             self.step_count,
-            site=self.topology.rxn_pair_info[pair_idx]["site"],
+            site=site,
             energies=energies,
             computes=computes,
             forces=forces,
         )
         rxn_ids = {"X": x, "H": h, "Y": y}
-        cpl_val, cpl_forces = self.SI.coupling[rxn_num](rxn_ids, self.topology.snapshot)
+        cpl_val, cpl_forces = self.SI.coupling[site.rxn_num](
+            rxn_ids, self.topology.snapshot
+        )
         cpl_val = float(cpl_val)
         if cpl_forces.shape != frame.forces.shape:
             raise ValueError(
@@ -248,7 +247,7 @@ class MSEVB:
             if site is None:
                 raise ValueError("site is None")
             cpl_val, cpl_forces = self.get_coupling(
-                site.pair_idx,
+                site,
                 frame,
                 pes[0],
                 pes[self.universe.rank.color],

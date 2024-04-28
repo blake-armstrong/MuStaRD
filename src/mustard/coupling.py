@@ -8,7 +8,7 @@ class Raiteri2011:
     def __init__(self, lmb, zeta, dist_cutoff=None, dist_taper=None):
         self.lmb = float(lmb)
         self.zeta = float(zeta)
-        self.dist_cutoff = float(dist_cutoff)
+        self.dist_cutoff = dist_cutoff
         self.dist_taper = dist_taper
         self.use_taper = self._get_use_taper()
         self.coupling_function = self._generate_coupling_func()
@@ -19,7 +19,7 @@ class Raiteri2011:
             self.dist_cutoff = float(self.dist_cutoff)
             self.dist_taper = float(self.dist_taper)
             use_taper = True
-        elif self.dist_taper is None and selfdist_cutoff is not None:
+        elif self.dist_taper is None and self.dist_cutoff is not None:
             raise ValueError("Cutoff specified without a taper.")
         elif self.dist_cutoff is None and self.dist_taper is not None:
             raise ValueError("Taper specified without a cutoff.")

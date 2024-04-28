@@ -107,11 +107,9 @@ class Mustard:
                     : self.topology.num_systems
                 ]
 
-    def _identify_pairs(self):
+    def identify_pairs(self):
         self.msevb.frame.setattr("vel", utils.get_velocities(self.lmp))
-        any_reactions = self.topology.get_systems(
-            self.msevb.frame.pos, self.msevb.frame.box_vectors
-        )
+        any_reactions = self.topology.get_systems(self.msevb.frame)
         if not any_reactions:
             self.prev_system = self.topology.systems[0]
             return False
@@ -143,11 +141,6 @@ class Mustard:
             self.lmp.command("run 0 pre yes post no")
         self.prev_system = system
         return True
-
-    def identify_pairs(self):
-        any_pairs = self._identify_pairs()
-        # self.universe.global_comm.Barrier()
-        return any_pairs
 
     def update_topology(self, system):
         new_imgs, yids = [], []
