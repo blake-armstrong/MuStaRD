@@ -1,11 +1,13 @@
-import logging
-import sys
 import mdtraj
 import numpy as np
 import inspect
-from .constants import UNITS
 from time import time
 from dataclasses import dataclass
+from lammps import lammps
+from typing import Union, IO, Callable
+from .topology import Topology, Frame
+from .mpi import Universe, logger
+from .constants import UNITS
 from . import utils
 from .mixing import get_FD_occupancies
 
@@ -36,15 +38,17 @@ _DEFAULTS = {
     "computes": None,
     "fermi_mixing": False,
     "neighbour_list_update": 4,
+    "topology_update": 1,
     "scf_tol": 1e-4,
     "scf_max_iter": 100,
     "shells": 1,
     "pbc": True,
+    "eig_solver": "numpy",
 }
 
 
 class SystemInfo:
-    def __init__(self, input_params):
+    def __init__(self, input_params: dict):
         params = _DEFAULTS.copy()
         params.update(input_params)
         self._set_temperature(params.pop("temperature"))
@@ -74,11 +78,13 @@ class SystemInfo:
         self.FM = self._set_fermi_mixing(params.pop("fermi_mixing"))
         self.get_occupancies = self._set_get_occupancies()
         self.nl_update = self._set_nl_update(params.pop("neighbour_list_update"))
+        self.top_update = self._set_top_update(params.pop("topology_update"))
         self.shells = self._set_shells(params.pop("shells"))
         self.scf_tol = float(params.pop("scf_tol"))
         self.scf_max_iter = int(params.pop("scf_max_iter"))
         self.set_RT(self.temperature * self.units["boltz"])
         self.pbc = bool(params.pop("pbc"))
+        self.eig_solver = self._set_eig_solver(params.pop("eig_solver"))
 
         if params:
             raise ValueError(
@@ -276,74 +282,90 @@ class SystemInfo:
     def _set_nl_update(self, nl_update):
         return int(nl_update)
 
+    def _set_top_update(self, topology_update):
+        return int(topology_update)
+
+    def _set_eig_solver(self, eig_solver):
+        SOLVERS = ("NUMPY", "SYMPY")
+        eig_solver = str(eig_solver).upper()
+        if eig_solver not in SOLVERS:
+            raise ValueError(
+                f"Eigen value solver {eig_solver} not in available solvers: {SOLVERS}"
+            )
+        return eig_solver
+
     def set_RT(self, RT):
         self.RT = RT
 
 
 class Output:
-    class output:
-        def __init__(
-            self,
-            lmp,
-            rank,
-            fname=None,
-            properties=["temp", "pe", "vol"],
-            write_frequency=1000,
-        ):
-            self.write_frequency = write_frequency
-            self.properties = properties
-            self.rank = rank
-            if self.rank == 0:
-                self.logger = logger(str(id(fname)), filename=fname, fmt="%(message)s")
-            self.info = "{:>10} {:>19.10f} {:>19.10f} {:>19.10f}"
-            self.header = (
-                "      Step          Pe(mixed)          E_total            E_conserve"
-            )
-            for title in self.properties:
-                self.header += f"{title.title():>20}"
-                self.info += " {:>19.10f}"
-            self.header += "      Speed(ns/day)"
-            self.info += " {:>15.8f}"
-            # FIXME: timestep units
-            self.timestep = lmp.extract_global("dt")
-            self.t0 = None
+    def __init__(
+        self,
+        lmp: lammps,
+        universe: Universe,
+        fname=None,
+        properties=["temp", "pe", "vol"],
+        write_frequency=1000,
+    ):
+        self.lmp = lmp
+        self.universe = universe
+        self.write_frequency = write_frequency
+        self.properties = properties
+        self.logger = logger(str(id(fname)), filename=fname, fmt="%(message)s")
+        self.timestep = float(str(self.lmp.extract_global("dt")))
+        self.t0 = None
+        self.write_header = True
 
-        def _header(self):
-            self.logger.info(self.header)
+    def header(self):
+        if not self.write_header:
+            return
+        header = "      Step          Pe(mixed)          E_total            E_conserve"
+        self.info = "{:>10} {:>19.10f} {:>19.10f} {:>19.10f}"
+        for title in self.properties:
+            header += f"{title.title():>20}"
+            self.info += " {:>19.10f}"
+        header += "      Speed(ns/day)"
+        self.info += " {:>15.8f}"
+        self.log(header)
+        self.write_header = False
 
-        def _write(self, lmp, step, speed, pe, ke, ecpl):
-            props = [lmp.get_thermo(prop) for prop in self.properties]
-            self.logger.info(
-                self.info.format(step, pe, pe + ke, pe + ke + ecpl, *props, speed)
-            )
+    def _write(self, step, speed, pe, ke, ecpl):
+        props = [self.lmp.get_thermo(prop) for prop in self.properties]
+        if self.universe.me != 0:
+            return
 
-        def write(self, step, pe, lmp):
-            if step % self.write_frequency == 0:
-                t1 = time()
-                speed = 0
-                if self.t0:
-                    speed = (
-                        (86400 / (t1 - self.t0))
-                        * (self.write_frequency * self.timestep)
-                    ) / 1000
-                ke = lmp.get_thermo("ke")
-                ecpl = lmp.get_thermo("ecouple")
-                self._write(lmp, step, speed, pe, ke, ecpl)
-                self.t0 = t1
+        self.log(self.info.format(step, pe, pe + ke, pe + ke + ecpl, *props, speed))
 
-        def log(self, info):
-            if self.rank == 0:
-                self.logger.info(info)
+    def write(self, step: int, pe: float):
+        if step % self.write_frequency != 0:
+            return
+        t1 = time()
+        speed = 0
+        if self.t0:
+            speed = (
+                (86400 / (t1 - self.t0)) * (self.write_frequency * self.timestep)
+            ) / 1000
+        ke = self.lmp.get_thermo("ke")
+        ecpl = self.lmp.get_thermo("ecouple")
+        self._write(step, speed, pe, ke, ecpl)
+        self.t0 = t1
 
+    def log(self, info: str):
+        if self.universe.me != 0:
+            return
+        self.logger.info(info)
+
+
+class Outputs:
     def __init__(self):
         self.outputs = []
 
-    def add_output(self, output):
+    def add_output(self, output: Output):
         self.outputs.append(output)
 
-    def _header(self):
+    def header(self):
         for output in self.outputs:
-            output._header()
+            output.header()
 
     def write(self, *args):
         for output in self.outputs:
@@ -355,91 +377,114 @@ class Output:
 
 
 class Trajectory:
-    class trajectory:
-        def __init__(self, fname=None, write_frequency=1e10, xyz=False):
-            self.fname = fname
-            self.write_frequency = write_frequency
-            self.xyz = xyz
-            if self.fname is not None:
-                # if self.rxn:
-                if self.xyz:
-                    self.xyz_file = open(str(fname), "w")
-                else:
-                    self.dcd_file = mdtraj.open(fname, "w")
+    def __init__(
+        self,
+        lmp: lammps,
+        universe: Universe,
+        file_name: Union[str, None] = None,
+        write_frequency=1e10,
+        xyz=False,
+    ):
+        self.lmp = lmp
+        self.universe = universe
+        self.write_frequency = int(write_frequency)
+        self.xyz = bool(xyz)
+        self.io = self._set_output(file_name)
+        self._write = self._set_write()
 
-        def _write(self, lmp, box_data, universe, topology, pos=None):
-            abcabc, abc = utils.extract_box(box_data)
-            na = lmp.extract_global("natoms")
-            z = np.zeros((na, 3))  # type: ignore
-            xu = lmp.numpy.extract_fix("ux", 1, 2)
-            ids = lmp.numpy.extract_atom("id")
-            if ids.size != 0:
-                z[topology.id_to_idx(ids)] = xu
-            if universe.me == 0:
-                for i in range(1, universe.sub_size):
-                    _z = universe.global_comm.recv(source=i, tag=i)
-                    z += _z
-            else:
-                universe.global_comm.send(z, dest=0, tag=universe.me)
-            if universe.me == 0:
-                unwrapped_pos = z
-                if pos is not None:
-                    unwrapped_pos = pos
-                if self.xyz:
-                    self.xyz_file.write(f"{len(unwrapped_pos)}\n")
-                    # self.xyz_file.write("Step\n")
-                    self.xyz_file.write(
-                        'Lattice="{0[0]:.3f} {0[1]:.3f} {0[2]:.3f} {0[3]:.3f} {0[4]:.3f} {0[5]:.3f} {0[6]:.3f} {0[7]:.3f} {0[8]:.3f}"\n'.format(
-                            abc
-                        )
-                    )
-                    self.xyz_file.writelines(
-                        [
-                            "{0} {1[0]:} {1[1]:} {1[2]:}\n".format(typ, pos)
-                            for typ, pos in zip(topology.xyz_types, unwrapped_pos)
-                        ]
-                    )
-                    self.xyz_file.write(
-                        f"Bonds {self._fmt(topology.top_ref['bonds'])}\n"
-                    )
-                    self.xyz_file.write(
-                        f"Angles {self._fmt(topology.top_ref['angles'])}\n"
-                    )
-                    self.xyz_file.write(
-                        f"Impropers {self._fmt(topology.top_ref['impropers'])}\n"
-                    )
-                    self.xyz_file.write(
-                        f"Dihedrals {self._fmt(topology.top_ref['dihedrals'])}\n"
-                    )
-                    self.xyz_file.flush()
-                else:
-                    self.dcd_file.write(
-                        unwrapped_pos.astype(np.float32),
-                        cell_lengths=list(abcabc[:3]),
-                        cell_angles=abcabc[3:],
-                    )
+    def _set_output(self, fname: Union[str, None]) -> IO:
+        if fname is None:
+            file_type = "dcd"
+            if self.xyz:
+                file_type = "xyz"
+            fname = f"trajectory.{file_type}"
+        fname = str(fname)
+        if self.xyz:
+            return open(fname, "w")
+        else:
+            return mdtraj.open(fname, "w")
 
-        def _fmt(self, arr):
-            return np.array2string(arr, separator=",", formatter={"int": "{}".format})
+    def _unwrap_positions(
+        self, topology: Topology, pos=None
+    ) -> Union[None, np.ndarray]:
+        # abcabc, abc = utils.extract_box(box_data)
+        if pos is not None:
+            return pos
+        na = int(str(self.lmp.extract_global("natoms")))
+        z = np.zeros((na, 3))
+        xu = self.lmp.numpy.extract_fix("ux", 1, 2)
+        ids = self.lmp.numpy.extract_atom("id")
+        if ids is None:
+            raise RuntimeError("ids is None")
+        if ids.size != 0:
+            z[topology.id_to_idx(ids)] = xu
+        if self.universe.me == 0:
+            for i in range(1, self.universe.sub_size):
+                _z = self.universe.global_comm.recv(source=i, tag=i)
+                z += _z
+        else:
+            self.universe.global_comm.send(z, dest=0, tag=self.universe.me)
+        if self.universe.me != 0:
+            return
+        unwrapped_pos = z
+        return unwrapped_pos
 
-        def write(self, step, *args, **kwargs):
-            if self.fname:
-                if step % self.write_frequency == 0:
-                    self._write(*args, **kwargs)
-            else:
-                raise ValueError("No trajectory was added but write called.")
+    def _set_write(self) -> Callable:
+        if self.xyz:
 
-        def close(self):
-            if self.fname:
-                if self.xyz:
-                    self.xyz_file.close()
-                else:
-                    self.dcd_file.close()
+            def _write_xyz(unwrapped_pos: np.ndarray, frame: Frame, topology: Topology):
+                self.io.write(f"{len(unwrapped_pos)}\n")
+                self.io.write(
+                    'Lattice="{0[0]:.3f} {0[1]:.3f} {0[2]:.3f} {0[3]:.3f} {0[4]:.3f} {0[5]:.3f} {0[6]:.3f} {0[7]:.3f} {0[8]:.3f}"\n'.format(
+                        frame.box_vectors
+                    )
+                )
+                self.io.writelines(
+                    [
+                        "{0} {1[0]:} {1[1]:} {1[2]:}\n".format(typ, pos)
+                        for typ, pos in zip(topology.xyz_types, unwrapped_pos)
+                    ]
+                )
+                self.io.write(f"Bonds {self._fmt(topology.top_ref['bonds'])}\n")
+                self.io.write(f"Angles {self._fmt(topology.top_ref['angles'])}\n")
+                self.io.write(f"Impropers {self._fmt(topology.top_ref['impropers'])}\n")
+                self.io.write(f"Dihedrals {self._fmt(topology.top_ref['dihedrals'])}\n")
+                self.io.flush()
 
+            return _write_xyz
+        else:
+
+            def _write_dcd(unwrapped_pos: np.ndarray, frame: Frame, *args):
+                self.io.write(  # type: ignore
+                    unwrapped_pos.astype(np.float32),
+                    cell_lengths=list(frame.box_lengths[:3]),
+                    cell_angles=frame.box_lengths[3:],
+                )
+
+            return _write_dcd
+
+    def _fmt(self, arr):
+        return np.array2string(arr, separator=",", formatter={"int": "{}".format})
+
+    def write(self, step: int, frame: Frame, topology: Topology, pos=None):
+        if step % self.write_frequency != 0:
+            return
+        if self.universe.rank.color != 0:
+            return
+        unwrapped_pos = self._unwrap_positions(topology, pos)
+        if self.universe.me != 0:
+            return
+        self._write(unwrapped_pos, frame, topology)
+
+    def close(self):
+        self.io.close()
+
+
+class Trajectorys:
     def __init__(self):
         self.trajs = []
 
-    def add_trajectory(self, trajectory):
+    def add_trajectory(self, trajectory: Trajectory):
         self.trajs.append(trajectory)
 
     def write(self, *args):
@@ -454,7 +499,10 @@ class Trajectory:
     def get_z(mass):
         z = []
         for m in mass:
-            z.append(mdtraj.element.Element.getByMass(m).atomic_number)  # type: ignore
+            element = mdtraj.element.Element.getByMass(m)
+            if element is None:
+                raise RuntimeError("Could not determine element.")
+            z.append(element.atomic_number)
         return z
 
     @staticmethod
@@ -516,7 +564,7 @@ class Trajectory:
                 split_dihedrals = _dihedrals.split()
                 dihedrals = eval(f"np.array({split_dihedrals[-1]}, dtype=int)")
                 frames.append(
-                    Frame(
+                    TrajectoryFrame(
                         frame=num_frames,
                         natoms=na,
                         pbc=abcabc,
@@ -534,7 +582,7 @@ class Trajectory:
 
 
 @dataclass
-class Frame:
+class TrajectoryFrame:
     frame: int
     natoms: int
     pbc: np.ndarray
@@ -545,52 +593,6 @@ class Frame:
     angles: np.ndarray
     impropers: np.ndarray
     dihedrals: np.ndarray
-
-
-def logger(
-    name,
-    filename=None,
-    level=logging.DEBUG,
-    fmt="%(asctime)s-%(levelname)s: %(message)s",
-    datefmt="%H:%M:%S",
-):
-    handler = logging.StreamHandler(sys.stdout)
-    if filename:
-        handler = logging.FileHandler(filename, mode="w")
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
-    handler.setLevel(level)
-
-    class CustomFormatter(logging.Formatter):
-        white = "\x1b[1;39m"
-        grey = "\x1b[38;20m"
-        yellow = "\x1b[33;21m"
-        red = "\x1b[31;20m"
-        bold_red = "\x1b[31;1m"
-        reset = "\x1b[0m"
-
-        fmts = {
-            logging.DEBUG: grey + fmt + reset,
-            logging.INFO: white + fmt + reset,
-            logging.WARNING: yellow + fmt + reset,
-            logging.ERROR: red + fmt + reset,
-            logging.CRITICAL: bold_red + fmt + reset,
-        }
-
-        def format(self, record):
-            log_fmt = self.fmts.get(record.levelno)
-            formatter = logging.Formatter(log_fmt, datefmt=datefmt)
-            return formatter.format(record)
-
-    # formatter = logging.Formatter(fmt, datefmt=datefmt)
-    formatter = logging.Formatter(fmt, datefmt=datefmt)
-    if filename is None:
-        formatter = CustomFormatter()
-    handler.setFormatter(formatter)
-
-    logger.addHandler(handler)
-
-    return logger
 
 
 @dataclass

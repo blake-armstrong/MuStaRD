@@ -1,17 +1,19 @@
 from mpi4py import MPI
+from dataclasses import dataclass
+from typing import Union
 import numpy as np
 import logging
-from .io import logger
+import sys
 
 
+@dataclass
 class Rank:
-    def __init__(self, color, modify):
-        self.color = color
-        self.modify = modify
+    color: int
+    modify: bool
 
 
 class Universe:
-    def __init__(self, mpi_list, debug):
+    def __init__(self, mpi_list: Union[None, list, np.ndarray, tuple], debug: bool):
         self.global_comm = MPI.COMM_WORLD
         self.num_procs = self.global_comm.Get_size()
         self.me = self.global_comm.Get_rank()
@@ -129,16 +131,65 @@ class Universe:
             logger(msg)
 
 
-# def synchronize_args(cls):
-#     def _sync(*args):
-#         return [MPI.COMM_WORLD.bcast(arg, root=0) for arg in args]
-#
-#     original_init = cls.__init__
-#
-#     def new_init(self, *args, **kwargs):
-#         synchronized_args = _sync(*args)
-#         original_init(self, *synchronized_args, **kwargs)
-#
-#     cls.__init__ = new_init
-#     MPI.COMM_WORLD.Barrier()
-#     return cls
+def logger(
+    name,
+    filename=None,
+    level=logging.DEBUG,
+    fmt="%(asctime)s-%(levelname)s: %(message)s",
+    datefmt="%H:%M:%S",
+):
+    handler = logging.StreamHandler(sys.stdout)
+    if filename:
+        handler = logging.FileHandler(filename, mode="w")
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    handler.setLevel(level)
+
+    class CustomFormatter(logging.Formatter):
+        white = "\x1b[1;39m"
+        grey = "\x1b[38;20m"
+        yellow = "\x1b[33;21m"
+        red = "\x1b[31;20m"
+        bold_red = "\x1b[31;1m"
+        reset = "\x1b[0m"
+
+        fmts = {
+            logging.DEBUG: grey + fmt + reset,
+            logging.INFO: white + fmt + reset,
+            logging.WARNING: yellow + fmt + reset,
+            logging.ERROR: red + fmt + reset,
+            logging.CRITICAL: bold_red + fmt + reset,
+        }
+
+        def format(self, record):
+            log_fmt = self.fmts.get(record.levelno)
+            formatter = logging.Formatter(log_fmt, datefmt=datefmt)
+            return formatter.format(record)
+
+    formatter = logging.Formatter(fmt, datefmt=datefmt)
+    if filename is None:
+        formatter = CustomFormatter()
+    handler.setFormatter(formatter)
+
+    logger.addHandler(handler)
+
+    return logger
+
+
+def synchronize(cls):
+    def _sync_args(args):
+        return [MPI.COMM_WORLD.bcast(arg, root=0) for arg in args]
+
+    def _sync_kwargs(kwargs):
+        return {k: MPI.COMM_WORLD.bcast(v, root=0) for k, v in kwargs.items()}
+
+    original_init = cls.__init__
+
+    def new_init(self, *args, **kwargs):
+        synchronized_args = _sync_args(args)
+        synchronized_kwargs = _sync_kwargs(kwargs)
+        original_init(self, *synchronized_args, **synchronized_kwargs)
+
+    cls.__init__ = new_init
+    MPI.COMM_WORLD.Barrier()
+    return cls

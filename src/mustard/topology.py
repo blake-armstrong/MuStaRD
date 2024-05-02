@@ -344,18 +344,23 @@ class Topology:
         self.snapshot.setattr("frame", frame)
         self.snapshot.setattr("step", step)
         self.snapshot.setattr("ids", self.ids)
-        if site is None:
-            self.snapshot.setattr("types", self.types)
-            self.snapshot.setattr("atoms", self.atoms)
-            self.snapshot.setattr("residues", self.residues)
-            self.snapshot.setattr("bonds", self.bonds)
-            self.snapshot.setattr("qs", self.qs)
-        else:
-            self.snapshot.setattr("types", site.types)
-            self.snapshot.setattr("atoms", site.atoms)
-            self.snapshot.setattr("residues", site.residues)
-            self.snapshot.setattr("bonds", site.bonds)
-            self.snapshot.setattr("qs", site.qs)
+        modify = self
+        if site is not None:
+            modify = site
+        for attr in ("atoms", "bonds", "residues", "types", "qs"):
+            self.snapshot.setattr(attr, modify.__getattribute__(attr))
+        # if site is None:
+        #     self.snapshot.setattr("types", self.types)
+        #     self.snapshot.setattr("atoms", self.atoms)
+        #     self.snapshot.setattr("residues", self.residues)
+        #     self.snapshot.setattr("bonds", self.bonds)
+        #     self.snapshot.setattr("qs", self.qs)
+        # else:
+        #     self.snapshot.setattr("types", site.types)
+        #     self.snapshot.setattr("atoms", site.atoms)
+        #     self.snapshot.setattr("residues", site.residues)
+        #     self.snapshot.setattr("bonds", site.bonds)
+        #     self.snapshot.setattr("qs", site.qs)
         if computes is not None:
             self.snapshot.setattr("computes", computes)
         if energies is not None:
@@ -585,23 +590,12 @@ class Topology:
         if self.SI.shells == 1:
             return self._get_systems(sites, frame)
 
-        # pairs_idxs_copy = deepcopy(pairs_idxs)
-        # site = pairs_idxs[nsite]
         start = 0
         for shell in range(2, self.SI.shells + 1):
             stop = len(sites)
             for site in sites[start:]:
                 if site.xhy is None:
                     continue
-                # init_atoms = self.rxn_pair_info[pair_idx]["atoms"]
-                # init_bonds = self.rxn_pair_info[pair_idx]["bonds"]
-                # init_residues = self.rxn_pair_info[pair_idx]["residues"]
-                # init_qs = self.rxn_pair_info[pair_idx]["qs"]
-                # init_types = self.rxn_pair_info[pair_idx]["types"]
-                # rxn_num = self.rxn_pair_info[pair_idx]["num"]
-                # pair = self.rxn_pair_info[pair_idx]["pair"]
-                # id_h, id_y = pair
-                # id_x = utils.get_X(id_h, init_bonds)
                 id_x, id_h, id_y = site.xhy
                 hxs = site.residues[site.atoms[id_h].molecule]
                 ys = site.residues[site.atoms[id_y].molecule]
@@ -617,8 +611,12 @@ class Topology:
                     type_changes = self.SI.reactions[site.rxn_num].type_changes1
                     if eyed in (id_x, id_h, id_y):
                         type_changes = self.SI.reactions[site.rxn_num].type_changes0
-                    new_types[eyed] = new_type = type_changes[site.atoms[eyed].type]
-                    new_qs[eyed] = new_q = self.SI.type_charges[new_type]
+                    new_types[site.atoms[eyed].idx] = new_type = type_changes[
+                        site.atoms[eyed].type
+                    ]
+                    new_qs[site.atoms[eyed].idx] = new_q = self.SI.type_charges[
+                        new_type
+                    ]
                     molecule = site.atoms[eyed].molecule
                     if eyed == id_h:
                         molecule = site.atoms[id_y].molecule
@@ -652,9 +650,6 @@ class Topology:
                 for rxn_num, rxn in enumerate(self.SI.reactions):
                     new_X_idxs = self._remove_site(ST[rxn_num].X_idxs, dont_idxs)
                     new_H_idxs = self._remove_site(ST[rxn_num].H_idxs, dont_idxs)
-                    # print(f"{ST[rxn_num].H_idxs=}")
-                    # print(f"{dont_idxs=}")
-                    # print(f"{new_H_idxs=}")
                     new_Y_idxs = self._remove_site(ST[rxn_num].Y_idxs, dont_idxs)
                     rxn_info = self.get_pairs(
                         frame.pos,
@@ -982,7 +977,7 @@ class Topology:
         self._reset_lmp_topology(self.ids)
         # self.lmp.command("run 0 pre yes post no")
 
-    def change_topology_to_system(self, lmp, system, frame):
+    def change_topology_to_system(self, lmp, system):
         self.current_system = system
         if system.index == 0:
             return
@@ -1006,93 +1001,6 @@ class Topology:
         lammps_commands.append("group HXY delete")
         lammps_commands.append("reset_atoms mol all single yes")
         lmp.commands_list(lammps_commands)
-        # if self.skips[system.index]:
-        #     return
-        create_bonds = []
-        set_type_charge = []
-        # for nsite, site in enumerate(system.sites):
-        #     if site is None:
-        #         continue
-        #     parent_systems = []
-        #     shell = site.shell
-        #     parent = site.parent
-        #     while shell > 0:
-        #         parent_system = self.systems[parent]
-        #         parent_systems.append(parent_system)
-        #         if parent_system.index != 0:
-        #             parent = parent_system.sites[nsite].parent
-        #         shell -= 1
-        #     parent_systems.reverse()
-        #     change_topology_systems = parent_systems + [system]
-        #     for _system in change_topology_systems[1:]:
-        #         site = _system.sites[nsite]
-        #         # for rxn_pair, rxn_num in zip(system.pairs, rxn_nums):
-        #         # bonds = site.bonds
-        #         # atoms = site.atoms
-        #         # residues = site.residues
-        #         rxn_pair = site.pair
-        #         rxn_num = site.rxn_num
-        #         id_h, id_y = rxn_pair
-        #         id_x = utils.get_X(id_h, site.bonds)
-        #         # create groups
-        #         hxy_group_str = "group HXY id "
-        #         hxs = site.residues[site.atoms[id_h].molecule]
-        #         ys = site.residues[site.atoms[id_y].molecule]
-        #         for eyed in hxs + ys:
-        #             hxy_group_str += f"{eyed} "
-        #
-        #         # removes all bonds, angles, dihedrals and impropers involving these ids
-        #         # lmp.commands_list([hxy_group_str, "delete_bonds HXY multi remove"])
-        #         create_bonds += [hxy_group_str, "delete_bonds HXY multi remove"]
-        #         ids_for_change = hxs + ys
-        #         new_bonds_dict = {
-        #             eyed: list(site.bonds.get(eyed, []))
-        #             for eyed in ids_for_change
-        #             if site.bonds.get(eyed)
-        #         }
-        #         if id_h in new_bonds_dict:
-        #             new_bonds_dict[new_bonds_dict[id_h][0]].remove(id_h)
-        #             new_bonds_dict[id_h][0] = id_y
-        #             new_bonds_dict.setdefault(id_y, []).append(id_h)
-        #         nbd = {k: v for k, v in new_bonds_dict.items() if v}
-        #         # changes types and charges
-        #         # its possible to just edit the array returned from extract_atoms
-        #         # or call scatter_atoms, probably faster than looping through set
-        #         new_types = {}
-        #         rxn_ids = (id_h, id_y, id_x)
-        #         for eyed in rxn_ids:
-        #             if eyed is None:
-        #                 continue
-        #             new_types[eyed] = self.SI.reactions[rxn_num].type_changes0[
-        #                 site.atoms[eyed].type
-        #             ]
-        #             set_type_charge.append(f"set atom {eyed} type {new_types[eyed]}")
-        #             set_type_charge.append(
-        #                 f"set atom {eyed} charge {self.SI.type_charges[new_types[eyed]]}"
-        #             )
-        #             ids_for_change.remove(eyed)
-        #         for eyed in ids_for_change:
-        #             if eyed is None:
-        #                 continue
-        #             new_types[eyed] = self.SI.reactions[rxn_num].type_changes1[
-        #                 site.atoms[eyed].type
-        #             ]
-        #             set_type_charge.append(f"set atom {eyed} type {new_types[eyed]}")
-        #             set_type_charge.append(
-        #                 f"set atom {eyed} charge {self.SI.type_charges[new_types[eyed]]}"
-        #             )
-        #         new_imgs, yids = self.get_new_imgs(id_h, id_y, frame, site=site)
-        #         if not self.SI.pbc:
-        #             new_imgs *= 0
-        #         create_bonds += [
-        #             f"set atom {ID} image {imgs[0]} {imgs[1]} {imgs[2]}"
-        #             for ID, imgs in zip(yids, new_imgs)
-        #         ]
-        #         create_bonds += self.create_bonds(new_types, nbd)
-        #         create_bonds += ["group HXY delete"]
-        # create_bonds[-2] = create_bonds[-2].replace("no", "yes")
-        # lmp.commands_list(set_type_charge + create_bonds)
-        # self.lmp.command("reset_atoms mol all single yes")
 
     def create_bonds(self, atoms: dict, bonds: dict) -> list:
         types = {eyed: atom.type for eyed, atom in atoms.items()}

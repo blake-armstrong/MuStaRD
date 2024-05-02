@@ -1,6 +1,5 @@
 import numpy as np
-from collections import defaultdict
-from copy import copy
+from sympy import Matrix
 from mpi4py import MPI
 from .topology import Topology
 from .io import SystemInfo
@@ -9,6 +8,10 @@ from . import utils
 
 
 class MSEVB:
+    NONE = 0
+    MAIN = 1
+    UPDATE = 2
+
     def __init__(
         self,
         universe: Universe,
@@ -19,8 +22,9 @@ class MSEVB:
         self.log = self.universe.log
         self.topology = topology
         self.SI = SI
+        self.get_eig_vecs = self._get_eig_vecs()
         self.frame = self.topology.frame
-        self.run: int = 0
+        self.run: int = MSEVB.NONE
         self.min_eval: float = 0.0
         self.min_state_idx: np.intp = np.intp(0)
         self.step_count: int = 0
@@ -30,12 +34,11 @@ class MSEVB:
         self.sync = True
 
     def __call__(self, lmp, ntimestep, nlocal, tag, x, f):
-        # self.universe.sub_comm.Barrier()
         self.ntimestep = ntimestep
         callback = self.callback_main
-        if self.run == 0:
+        if self.run == MSEVB.NONE:
             callback = self.callback_none
-        if self.run == 2:
+        if self.run == MSEVB.UPDATE:
             callback = self.callback_update
         return callback(lmp, ntimestep, nlocal, tag, x, f)
 
@@ -122,10 +125,11 @@ class MSEVB:
         self.current_mixed_forces = mixed_forces
         self.log(f"Mixed forces: {mixed_forces}", level="debug")
         # TODO: deal with virial/pressure later
-        # mixed_virial = None
-        # if virials is not None:
-        #     mixed_virial = np.einsum("ij,i->j", virials, amplitudes)
-        # self.universe.global_comm.Barrier()
+
+    def _get_eig_vecs(self):
+        if self.SI.eig_solver == "SYMPY":
+            return self.get_eig_vecs_sympy
+        return self.get_eig_vecs_numpy
 
     def hellmann_feynman(self, matrix, evec):
         return np.einsum("ijkl,i,j->kl", matrix, evec, evec)
@@ -166,14 +170,14 @@ class MSEVB:
 
     def get_min_EVB_state(self, matrix):
         # matrix diagonalisation
-        self.log("System matrix: ", level="debug")
-        self.log(matrix, level="debug")
-        eig_vals, eig_vecs = np.linalg.eig(matrix)
-        eig_vals = eig_vals.real
+        with np.printoptions(precision=6, suppress=True, linewidth=10000):
+            self.log("System matrix: ", level="debug")
+        eig_vals, eig_vecs = self.get_eig_vecs(matrix)
         self.log("Eigen values: ", level="debug")
         self.log(eig_vals, level="debug")
         self.log("Eigen vectors: ", level="debug")
-        self.log(eig_vecs, level="debug")
+        with np.printoptions(precision=6, suppress=True, linewidth=10000):
+            self.log(eig_vecs, level="debug")
         occupancies = self.SI.get_occupancies(eig_vals, self.SI)
         self.log("Occupancies: ", level="debug")
         self.log(occupancies, level="debug")
@@ -181,6 +185,55 @@ class MSEVB:
         amplitudes = min_evec_coeffs**2
         self.log(f"Amplitudes: {amplitudes}", level="debug")
         return np.sum(occupancies * eig_vals), min_evec_coeffs, amplitudes
+
+    def get_min_EVB_state_sympy(self, matrix: np.ndarray):
+        # matrix diagonalisation
+        self.log("System matrix: ", level="debug")
+        with np.printoptions(precision=6, suppress=True, linewidth=10000):
+            self.log(matrix, level="debug")
+        matrixobj = Matrix(list(matrix))
+        _eig_vecs = matrixobj.eigenvects()
+        eig_vecs = []
+        eig_vals = []
+        for val, _, vec in _eig_vecs:
+            eig_vals.append(val)
+            if len(vec) > 1:
+                raise RuntimeError("More than one eigenvector for an eigenvalue.")
+            eig_vecs.append(list(vec[0].normalized()))
+        eig_vecs = np.array(eig_vecs, dtype=float).T
+        eig_vals = np.array(eig_vals, dtype=float)
+        self.log("Eigen values: ", level="debug")
+        self.log(eig_vals, level="debug")
+        self.log("Eigen vectors: ", level="debug")
+        with np.printoptions(precision=6, suppress=True, linewidth=10000):
+            self.log(eig_vecs, level="debug")
+        occupancies = self.SI.get_occupancies(eig_vals, self.SI)
+        self.log("Occupancies: ", level="debug")
+        self.log(occupancies, level="debug")
+        min_evec_coeffs = np.sum(occupancies * eig_vecs, axis=1)
+        amplitudes = min_evec_coeffs**2
+        self.log(f"Amplitudes: {amplitudes}", level="debug")
+        return np.sum(occupancies * eig_vals), min_evec_coeffs, amplitudes
+
+    def get_eig_vecs_numpy(self, matrix: np.ndarray):
+        eig_vals, eig_vecs = np.linalg.eig(matrix)
+        eig_vals = eig_vals.real
+        eig_vecs = eig_vecs.real
+        return eig_vals, eig_vecs
+
+    def get_eig_vecs_sympy(self, matrix: np.ndarray):
+        matrixobj = Matrix(list(matrix))
+        _eig_vecs = matrixobj.eigenvects()
+        eig_vecs = []
+        eig_vals = []
+        for val, _, vec in _eig_vecs:
+            eig_vals.append(val)
+            if len(vec) > 1:
+                raise RuntimeError("More than one eigenvector for an eigenvalue.")
+            eig_vecs.append(list(vec[0].normalized()))
+        eig_vecs = np.array(eig_vecs, dtype=float).T
+        eig_vals = np.array(eig_vals, dtype=float)
+        return eig_vals, eig_vecs
 
     def get_coupling(
         self, site, frame, init_pe, new_pe, init_forces, init_cmp=None, new_cmp=None
