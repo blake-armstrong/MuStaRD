@@ -4,7 +4,10 @@ from typing import Dict
 
 
 class Raiteri2011:
-    # 10.1088/0953-8984/23/33/334213
+    """
+    10.1088/0953-8984/23/33/334213
+    """
+
     def __init__(self, lmb, zeta, dist_cutoff=None, dist_taper=None):
         self.lmb = float(lmb)
         self.zeta = float(zeta)
@@ -97,7 +100,10 @@ class Raiteri2011:
 
 
 class Vuilleumier1998:
-    # https://doi.org/10.1016/S0009-2614(97)01365-1
+    """
+    https://doi.org/10.1016/S0009-2614(97)01365-1
+    """
+
     def __init__(self, v12, alpha, gamma):
         self.v12 = float(v12)
         self.alpha = float(alpha)
@@ -136,7 +142,10 @@ class Vuilleumier1998:
 
 
 class Wu2008:
-    # https://doi.org/10.1021/jp076658h
+    """
+    https://doi.org/10.1021/jp076658h
+    """
+
     def __init__(
         self,
         vconst: float,
@@ -260,7 +269,10 @@ class Wu2008:
 
 
 class Grimme2015:
-    # https://doi.org/10.1039/C5CP02580J
+    """
+    https://doi.org/10.1039/C5CP02580J
+    """
+
     def __init__(self, a: float, b: float):
         self.a = float(a)
         self.b = float(b)

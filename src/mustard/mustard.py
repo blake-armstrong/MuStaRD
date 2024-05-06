@@ -27,6 +27,7 @@ class Mustard:
         self.universe = Universe(mpi_list, debug)
         self.log = self.universe.log
         self.system_info = MIO.SystemInfo(reaction_parameters)
+        self.log(self.system_info)
         self.lmp = self._set_lmp()
         self._init_lmp(user_commands)
         self.topology = Topology(self.lmp, self.system_info)
@@ -42,6 +43,26 @@ class Mustard:
         self.safe = False
         self.rebuild = True
         self._init_msevb()
+
+    # def _print_user_defaults(self):
+    #     for key, value in d.items():
+    #     if isinstance(value, dict):
+    #         print(' ' * indent + str(key) + ':')
+    #         pretty_print_dict(value, indent + 4)
+    #     else:
+    #         print(' ' * indent + str(key) + ': ' + str(value))
+    #     for k1, v1 in self.system_info.user_params.items():
+    #         if type(v1) != dict:
+    #             self.log(f"{k1:>25} {v1:<25}")
+    #             continue
+    #         for k2, v2 in v1.items():
+    #             if type(v2) != dict:
+    #                 self.log(f"{k2:>25} {v2:<25}")
+    #                 continue
+    #             for k2, v2 in v1.items():
+    #                 if type(v2) != dict:
+    #                     self.log(f"{k2:>25} {v2:<25}")
+    #                     continue
 
     def _set_lmp(self) -> lammps:
         cmdargs = ["-nocite", "-screen", "none", "-log", "none"]

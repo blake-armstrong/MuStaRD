@@ -1,7 +1,8 @@
 import numpy as np
 from sympy import Matrix
 from mpi4py import MPI
-from .topology import Topology
+from typing import Union, Tuple, Dict
+from .topology import Topology, Frame, Site
 from .io import SystemInfo
 from .mpi import Universe
 from . import utils
@@ -42,7 +43,7 @@ class MSEVB:
             callback = self.callback_update
         return callback(lmp, ntimestep, nlocal, tag, x, f)
 
-    def callback_update(self, lmp, ntimestep, nlocal, tag, x, f):
+    def callback_update(self, *args):
         pass
 
     def callback_none(self, lmp, ntimestep, nlocal, tag, x, f):
@@ -65,65 +66,45 @@ class MSEVB:
         self.current_mixed_forces = mixed_forces
 
     def callback_main(self, lmp, ntimestep, nlocal, tag, x, f):
+        color = self.universe.rank.color
         new_forces = lmp.numpy.fix_external_get_force("ext")
         current_forces = utils.get_forces(lmp)
         idxs = self.topology.id_to_idx(tag)
+        if len(idxs) < 1:
+            raise ValueError("No idxs.")
         total_x, total_v = self.sync_x_v(lmp, x, idxs)
         pe = lmp.extract_compute("get_pe", 0, 0)
         if self.universe.sub_rank == 0:
             self.log(
-                f"Potential energy for color {self.universe.rank.color}: {pe}",
+                f"Potential energy for color {color}: {pe}",
                 level="debug",
                 rank=-1,
             )
         sendpes = np.zeros(self.universe.total_colors, dtype="d")
         pes = np.zeros(self.universe.total_colors, dtype="d")
         if self.universe.sub_rank == 0:
-            sendpes[self.universe.rank.color] = pe
+            sendpes[color] = pe
         self.universe.global_comm.Allreduce(sendpes, pes, op=MPI.SUM)
         pes = pes[: self.topology.num_systems]
         self.frame(lmp, pos=total_x, vel=total_v, forces=current_forces)
-        mix_states = self.mix_states()
-        computes = None
+        root_forces = self.universe.global_comm.bcast(current_forces, root=0)
         (
             min_eval,
             min_evec_coeffs,
             amplitudes,
-            cpl_forces,
-        ) = mix_states(
+            dmatrix,
+        ) = self.mix_states(
             pes,
-            computes,
             self.frame,
-            self.universe.global_comm.bcast(current_forces, root=0),
+            root_forces,
         )
-        self.log(f"Minimum Eigenvalue: {min_eval}", level="debug")
-        min_evec_coeffs = self.universe.global_comm.bcast(min_evec_coeffs, root=0)
-        m = np.zeros(
-            shape=(
-                self.topology.num_systems,
-                self.topology.num_systems,
-                *current_forces.shape,
-            )
-        )
-        if (
-            self.universe.rank.color < self.topology.num_systems
-            and self.universe.sub_rank == 0
-        ):
-            m[self.universe.rank.color, self.universe.rank.color][:, :] = current_forces
-            if self.universe.rank.color != 0:
-                # HERE
-                m[0, self.universe.rank.color][:, :] = cpl_forces
-                m[self.universe.rank.color, 0][:, :] = cpl_forces
-        mbuff = np.empty_like(m)
-        self.universe.global_comm.Allreduce(m, mbuff, op=MPI.SUM)
-        min_state_idx = self.universe.global_comm.bcast(np.argmax(amplitudes), root=0)
-        mixed_forces = self.hellmann_feynman(mbuff, min_evec_coeffs)
-        self.min_state_idx = min_state_idx
+        mixed_forces = self.hellmann_feynman(dmatrix, min_evec_coeffs)
+        self.min_state_idx = np.argmax(amplitudes)
         self.min_eval = float(min_eval)
-        if len(idxs) > 0:
-            new_forces[:, :] = mixed_forces[idxs] - current_forces[idxs]
+        new_forces[:, :] = mixed_forces[idxs] - current_forces[idxs]
         self.current_mixed_forces = mixed_forces
-        self.log(f"Mixed forces: {mixed_forces}", level="debug")
+        with np.printoptions(precision=8, suppress=True, linewidth=10000):
+            self.log(f"Mixed forces:\n{mixed_forces}", level="debug")
         # TODO: deal with virial/pressure later
 
     def _get_eig_vecs(self):
@@ -168,60 +149,54 @@ class MSEVB:
             cs[n] = c
         return cs
 
-    def get_min_EVB_state(self, matrix):
-        # matrix diagonalisation
+    def get_min_EVB_state(
+        self, matrix: np.ndarray
+    ) -> Tuple[float, np.ndarray, np.ndarray]:
+        """
+        System Hamiltonian represented as a Numpy matrix is diagonalised using
+        either Numpy or Sympy (see self.get_eig_vecs()).
+
+        The occupancies for each Eigen value are determined, see get_occupancies()
+        in io.py. Occupancies are used to calculate and return the minimum
+        Eigen value (min_eval), minimum Eigen vector coefficients (min_evec_coeffs),
+        and the squares of the minimum Eigen vector coefficients (ampltiudes).
+
+        Also deals with logging the output for Debug=True.
+        """
         with np.printoptions(precision=6, suppress=True, linewidth=10000):
-            self.log("System matrix: ", level="debug")
+            self.log(f"System matrix:\n{matrix}", level="debug")
         eig_vals, eig_vecs = self.get_eig_vecs(matrix)
-        self.log("Eigen values: ", level="debug")
-        self.log(eig_vals, level="debug")
-        self.log("Eigen vectors: ", level="debug")
         with np.printoptions(precision=6, suppress=True, linewidth=10000):
-            self.log(eig_vecs, level="debug")
+            self.log(f"Eigen values:\n{eig_vals}", level="debug")
+            self.log(f"Eigen vectors:\n{eig_vecs}", level="debug")
         occupancies = self.SI.get_occupancies(eig_vals, self.SI)
-        self.log("Occupancies: ", level="debug")
-        self.log(occupancies, level="debug")
         min_evec_coeffs = np.sum(occupancies * eig_vecs, axis=1)
         amplitudes = min_evec_coeffs**2
-        self.log(f"Amplitudes: {amplitudes}", level="debug")
-        return np.sum(occupancies * eig_vals), min_evec_coeffs, amplitudes
+        min_eval = float(np.sum(occupancies * eig_vals))
+        with np.printoptions(precision=8, suppress=True, linewidth=10000):
+            self.log(f"Occupancies:\n{occupancies}", level="debug")
+            self.log(f"Eigen Vector:\n{min_evec_coeffs}", level="debug")
+            self.log(f"Amplitudes:\n{amplitudes}", level="debug")
+            self.log(f"Minimum Eigenvalue: {min_eval}", level="debug")
+        return min_eval, min_evec_coeffs, amplitudes
 
-    def get_min_EVB_state_sympy(self, matrix: np.ndarray):
-        # matrix diagonalisation
-        self.log("System matrix: ", level="debug")
-        with np.printoptions(precision=6, suppress=True, linewidth=10000):
-            self.log(matrix, level="debug")
-        matrixobj = Matrix(list(matrix))
-        _eig_vecs = matrixobj.eigenvects()
-        eig_vecs = []
-        eig_vals = []
-        for val, _, vec in _eig_vecs:
-            eig_vals.append(val)
-            if len(vec) > 1:
-                raise RuntimeError("More than one eigenvector for an eigenvalue.")
-            eig_vecs.append(list(vec[0].normalized()))
-        eig_vecs = np.array(eig_vecs, dtype=float).T
-        eig_vals = np.array(eig_vals, dtype=float)
-        self.log("Eigen values: ", level="debug")
-        self.log(eig_vals, level="debug")
-        self.log("Eigen vectors: ", level="debug")
-        with np.printoptions(precision=6, suppress=True, linewidth=10000):
-            self.log(eig_vecs, level="debug")
-        occupancies = self.SI.get_occupancies(eig_vals, self.SI)
-        self.log("Occupancies: ", level="debug")
-        self.log(occupancies, level="debug")
-        min_evec_coeffs = np.sum(occupancies * eig_vecs, axis=1)
-        amplitudes = min_evec_coeffs**2
-        self.log(f"Amplitudes: {amplitudes}", level="debug")
-        return np.sum(occupancies * eig_vals), min_evec_coeffs, amplitudes
-
-    def get_eig_vecs_numpy(self, matrix: np.ndarray):
+    def get_eig_vecs_numpy(self, matrix: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Diagonalises square matrix (matrix) using Numpy and returns the
+        Eigen values and Eigen vectors as Numpy arrays, respectively.
+        See https://numpy.org/doc/stable/reference/generated/numpy.linalg.eig.html.
+        """
         eig_vals, eig_vecs = np.linalg.eig(matrix)
         eig_vals = eig_vals.real
         eig_vecs = eig_vecs.real
         return eig_vals, eig_vecs
 
-    def get_eig_vecs_sympy(self, matrix: np.ndarray):
+    def get_eig_vecs_sympy(self, matrix: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Diagonalises square matrix (matrix) using Sympy and returns the
+        Eigen values and Eigen vectors as Numpy arrays, respectively.
+        See https://docs.sympy.org/latest/tutorials/intro-tutorial/matrices.html.
+        """
         matrixobj = Matrix(list(matrix))
         _eig_vecs = matrixobj.eigenvects()
         eig_vecs = []
@@ -236,18 +211,21 @@ class MSEVB:
         return eig_vals, eig_vecs
 
     def get_coupling(
-        self, site, frame, init_pe, new_pe, init_forces, init_cmp=None, new_cmp=None
-    ):
+        self,
+        site: Site,
+        frame: Frame,
+        energies: Dict[str, float],
+        init_forces: np.ndarray,
+    ) -> Tuple[float, np.ndarray]:
+        """
+        The coupling value (cpl_val) and coupling forces (cpl_forces) are
+        evaluated for a given Site object using the user-input for the
+        'coupling_function' input and returned.
+        """
+        if site.xhy is None:
+            raise ValueError("site.xhy is None.")
         x, h, y = site.xhy
-        if (
-            self.SI.computes is not None
-            and init_cmp is not None
-            and new_cmp is not None
-        ):
-            new_cmp = dict(zip(self.SI.computes, new_cmp))
-            init_cmp = dict(zip(self.SI.computes, init_cmp))
-        energies = {"new": new_pe, "initial": init_pe}
-        computes = {"new": new_cmp, "initial": init_cmp}
+        computes = {"new": 0.0, "initial": 0.0}
         forces = {"new": frame.forces, "initial": init_forces}
         self.topology.update_snapshot(
             frame,
@@ -258,68 +236,88 @@ class MSEVB:
             forces=forces,
         )
         rxn_ids = {"X": x, "H": h, "Y": y}
+        if site.rxn_num is None:
+            raise ValueError("site.rxn_num is None.")
         cpl_val, cpl_forces = self.SI.coupling[site.rxn_num](
             rxn_ids, self.topology.snapshot
         )
         cpl_val = float(cpl_val)
         if cpl_forces.shape != frame.forces.shape:
             raise ValueError(
-                "Returned coupling forces shape {cpl_forces.shape} should be the same as forces shape {forces.shape}"
+                (
+                    "Returned coupling forces shape {cpl_forces.shape} "
+                    "should be the same as forces shape {forces.shape}"
+                )
             )
         return cpl_val, cpl_forces
 
-    def mix_states(self):
+    def mix_states(self, *args) -> Tuple[float, np.ndarray, np.ndarray, np.ndarray]:
         num_sites = self.topology.num_sites
-        if num_sites == 0:
+        if num_sites < 1:
             raise RuntimeError("should not have happened")
         if num_sites == 1:
-            return self.mix_states_single
-        return self.mix_states_scf
+            return self.mix_states_single(*args)
+        return self.mix_states_scf(*args)
 
-    def mix_states_single(self, pes, computes, frame, init_forces):
-        matrix = np.zeros(shape=(self.topology.num_systems, self.topology.num_systems))
-        cpl_forces = np.zeros(shape=frame.forces.shape)
-        if self.universe.rank.color == 0:
-            if self.universe.me == 0:
-                matrix[0, 0] = pes[0]
-                for state in range(1, self.topology.num_systems):
-                    cpl_val = self.universe.global_comm.recv(
-                        source=MPI.ANY_SOURCE, tag=state
-                    )
-                    matrix[state, state] = pes[state]
-                    loc = self.topology.systems[state].sites[0].parent
-                    matrix[state, loc] = cpl_val
-                    matrix[loc, state] = cpl_val
-        elif self.universe.rank.color < self.topology.num_systems:
-            init_compute, new_compute = None, None
-            system = self.topology.current_system
-            if computes is not None:
-                init_compute = computes[0]
-                new_compute = computes[self.universe.rank.color]
-            site = system.sites[0]
-            if site is None:
-                raise ValueError("site is None")
-            cpl_val, cpl_forces = self.get_coupling(
-                site,
-                frame,
-                pes[0],
-                pes[self.universe.rank.color],
-                init_forces,
-                init_compute,
-                new_compute,
+    def _mix_states_single(
+        self,
+        pes: np.ndarray,
+        frame: Frame,
+        init_forces: np.ndarray,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        matrix_size = self.topology.num_systems
+        matrix = np.zeros(shape=(matrix_size, matrix_size))
+        dmatrix = np.zeros(
+            shape=(
+                matrix_size,
+                matrix_size,
+                *frame.forces.shape,
             )
-            if self.universe.sub_rank == 0:
-                self.universe.global_comm.send(
-                    cpl_val, dest=0, tag=self.universe.rank.color
-                )
-        min_eval = 0.0
-        min_evec_coeffs = np.zeros(shape=self.topology.num_systems)
-        amps = np.empty_like(min_evec_coeffs)
-        if self.universe.me == 0:
-            min_eval, min_evec_coeffs, amps = self.get_min_EVB_state(matrix)
-        return min_eval, min_evec_coeffs, amps, cpl_forces
+        )
+        cpl_forces = np.zeros(shape=frame.forces.shape)
+        if self.universe.rank.color >= matrix_size:
+            return matrix, dmatrix
+        color = self.universe.rank.color
+        my_pe = pes[color]
+        if self.universe.sub_rank == 0:
+            matrix[color, color] = my_pe
+            dmatrix[color, color][:, :] = frame.forces
+        if color == 0:
+            return matrix, dmatrix
+        system = self.topology.current_system
+        site = system.sites[0]
+        if site is None:
+            raise ValueError("site is None")
+        parent = site.parent
+        energies = {"new": my_pe, "initial": pes[0]}
+        cpl_val, cpl_forces = self.get_coupling(
+            site,
+            frame,
+            energies,
+            init_forces,
+        )
+        if self.universe.sub_rank != 0:
+            return matrix, dmatrix
+        matrix[color, parent] = cpl_val
+        matrix[parent, color] = cpl_val
+        dmatrix[color, parent][:, :] = cpl_forces
+        dmatrix[parent, color][:, :] = cpl_forces
+        return matrix, dmatrix
 
-    def mix_states_scf(self, pes, computes, frame, forces):
+    def mix_states_single(
+        self,
+        pes: np.ndarray,
+        frame: Frame,
+        init_forces: np.ndarray,
+    ) -> Tuple[float, np.ndarray, np.ndarray, np.ndarray]:
+        matrix, dmatrix = self._mix_states_single(pes, frame, init_forces)
+        mbuff = np.empty_like(matrix)
+        self.universe.global_comm.Allreduce(matrix, mbuff, op=MPI.SUM)
+        dmbuff = np.empty_like(dmatrix)
+        self.universe.global_comm.Allreduce(dmatrix, dmbuff, op=MPI.SUM)
+        return *self.get_min_EVB_state(mbuff), dmbuff
+
+    def mix_states_scf(self, pes, frame, forces):
         raise RuntimeError("multi site not ready yet")
         # TODO:
         min_eval = 0.0

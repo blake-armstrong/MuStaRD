@@ -1,9 +1,19 @@
 import numpy as np
 
+_TOLERANCE_1 = 1e-10
+_TOLERANCE_2 = 1e-12
 
-def get_FD_occupancies(eig_vals: np.ndarray, RT: float) -> np.ndarray:
-    # Finds the Fermi energy and returns the occupation weights of states.
-    # Based on the routine fermid from SIESTA originally written by J.M.Soler.
+
+def get_FD_occupancies(
+    eig_vals: np.ndarray,
+    RT: float,
+    tol1: float = _TOLERANCE_1,
+    tol2: float = _TOLERANCE_2,
+) -> np.ndarray:
+    """
+    Finds the Fermi energy and returns the occupation weights of states.
+    Based on the routine fermid from SIESTA originally written by J.M.Soler.
+    """
 
     nitermax = 150
     nb = len(eig_vals)
@@ -20,10 +30,10 @@ def get_FD_occupancies(eig_vals: np.ndarray, RT: float) -> np.ndarray:
         sumq = np.sum(occupancies)
         dsumq = np.sum(dstepf)
 
-        if abs(sumq - 1) < 1e-10:
+        if abs(sumq - 1) < tol1:
             return occupancies
 
-        if abs(dsumq) > 1e-12:
+        if abs(dsumq) > tol2:
             mu += (1 - sumq) / dsumq
 
     raise RuntimeError("Calculation of Fermi level energy has failed to converge.")

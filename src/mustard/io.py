@@ -31,8 +31,8 @@ _DEFAULTS = {
         }
     ],
     "temperature": None,
-    "fd_tol_1": 1e-6,
-    "fd_tol_2": 1e-6,
+    "fermi_tolerance_1": 1e-10,
+    "fermi_tolerance_2": 1e-12,
     "constant_volume": True,
     "lammps_unit_system": None,
     "computes": None,
@@ -51,40 +51,53 @@ class SystemInfo:
     def __init__(self, input_params: dict):
         params = _DEFAULTS.copy()
         params.update(input_params)
-        self._set_temperature(params.pop("temperature"))
-        fdt2 = self._set_fd_tols(params.pop("fd_tol_1"))
-        fdt3 = self._set_fd_tols(params.pop("fd_tol_2"))
-        self.fd_tols = (fdt2, fdt3)
-        self._set_const_vol(params.pop("constant_volume"))
-
-        self.atom_types, self.reverse_atom_types = self._set_types(
-            params.pop("atom_types")
+        self.repr = dict()
+        self.units = self._set_unit_system(key := "lammps_unit_system", params.pop(key))
+        self.temperature = self._set_temperature(
+            key := "temperature", _temp=params.pop(key)
         )
-        self.bond_types = self._set_potential_types(params.pop("bond_types"))
-        self.angle_types = self._set_potential_types(params.pop("angle_types"))
-        self.proper_types = self._set_potential_types(params.pop("proper_types"))
-        self.improper_types = self._set_potential_types(params.pop("improper_types"))
-        self.type_charges = self._set_type_charges(params.pop("type_charges"))
-        self.num_types = (
-            len(self.atom_types),
-            len(self.bond_types),
-            len(self.angle_types),
-            len(self.proper_types),
-            len(self.improper_types),
-        )
-        self._set_reaction_species(params.pop("reactions"))
-        self.computes = self._set_computes(params.pop("computes"))
-        self.units = self._set_unit_system(params.pop("lammps_unit_system"))
-        self.FM = self._set_fermi_mixing(params.pop("fermi_mixing"))
-        self.get_occupancies = self._set_get_occupancies()
-        self.nl_update = self._set_nl_update(params.pop("neighbour_list_update"))
-        self.top_update = self._set_top_update(params.pop("topology_update"))
-        self.shells = self._set_shells(params.pop("shells"))
-        self.scf_tol = float(params.pop("scf_tol"))
-        self.scf_max_iter = int(params.pop("scf_max_iter"))
+        self.scale_box = self._set_const_vol(key := "constant_volume", params.pop(key))
         self.set_RT(self.temperature * self.units["boltz"])
-        self.pbc = bool(params.pop("pbc"))
-        self.eig_solver = self._set_eig_solver(params.pop("eig_solver"))
+        self.nl_update = self._set_nl_update(
+            key := "neighbour_list_update", params.pop(key)
+        )
+        self.shells = self._set_shells(key := "shells", params.pop(key))
+        self.pbc = self._set_pbc(key := "pbc", params.pop(key))
+        self.eig_solver = self._set_eig_solver(key := "eig_solver", params.pop(key))
+        self.scf_tol = self._set_scf_tol(key := "scf_tol", params.pop(key))
+        self.scf_max_iter = self._set_scf_max_iter(
+            key := "scf_max_iter", params.pop(key)
+        )
+        self.top_update = self._set_top_update(
+            key := "topology_update", params.pop(key)
+        )
+        self.atom_types, self.reverse_atom_types = self._set_types(
+            key := "atom_types", params.pop(key)
+        )
+        self.bond_types = self._set_potential_types(
+            key := "bond_types", params.pop(key), "Bond types"
+        )
+        self.angle_types = self._set_potential_types(
+            key := "angle_types", params.pop(key), "Angle types"
+        )
+        self.proper_types = self._set_potential_types(
+            key := "proper_types", params.pop(key), "Proper types"
+        )
+        self.improper_types = self._set_potential_types(
+            key := "improper_types", params.pop(key), "Improper types"
+        )
+        self.type_charges = self._set_type_charges(
+            key := "type_charges", params.pop("type_charges")
+        )
+        self.num_types = self._set_num_types()
+        self.FM = self._set_fermi_mixing(key := "fermi_mixing", params.pop(key))
+        self.fdt1 = self._set_fd_tols(key := "fermi_tolerance_1", params.pop(key), "1")
+        self.fdt2 = self._set_fd_tols(key := "fermi_tolerance_2", params.pop(key), "2")
+        self.computes = self._set_computes(key := "computes", params.pop(key))
+        self.reactions, self.coupling = self._set_reaction_species(
+            key := "reactions", params.pop(key)
+        )
+        self.get_occupancies = self._set_get_occupancies()
 
         if params:
             raise ValueError(
@@ -94,31 +107,69 @@ class SystemInfo:
                 )
             )
 
-    def _set_types(self, _types):
+    def __str__(self):
+        repr = "MuStaRD Parameters:\n"
+        for k, v in self.repr.items():
+            if k is None:
+                continue
+            if not v:
+                continue
+            repr += f"{v}\n"
+        return repr
+
+    def __repr__(self):
+        return self.__str__()
+
+    def _set_types(self, key, _types):
         if type(_types) != dict:
             raise ValueError(f"Unrecognised type for input {_types}. Expected dict")
         types = {}
         reverse_types = {}
         for k, v in _types.items():
-            key = str(k)
+            _key = str(k)
             value_int = int(v)
-            types[key] = value_int
-            reverse_types[value_int] = key
+            types[_key] = value_int
+            reverse_types[value_int] = _key
         types[None] = None
         reverse_types[None] = None
+        if key is not None:
+            repr = f"Atom types ({key})"
+            _repr = f"{repr:>40}:\n"
+            _ws = len(repr) - 1
+            inc = 40 - _ws + 4
+            inc = 40 - 4
+            for k, v in types.items():
+                if k is None:
+                    continue
+                _repr += f"{str(k):>{inc}}: {str(v):<{inc}}\n"
+            # _repr += f"{'          ':>40}"
+            li = _repr.rsplit("\n", 1)
+            _repr = "".join(li)
+            self.repr[key] = _repr
         return types, reverse_types
 
-    def _set_potential_types(self, _types):
-        types, _ = self._set_types(_types)
+    def _set_potential_types(self, key, _types, repr: str):
+        types, _ = self._set_types(None, _types)
         new_types = {}
         for k, v in types.items():
             if k is None:
                 continue
             ptypes = [str(self.atom_types[p]) for p in k.split("-")]
             new_types["-".join(ptypes)] = v
+        if new_types:
+            _repr = f"{repr:>40}: {' '}\n"
+            _ws = len(repr) - 1
+            inc = 40 - _ws + 4
+            for k, v in new_types.items():
+                _repr += f"{k:>{inc}}: {v:<{inc}}\n"
+            li = _repr.rsplit("\n", 1)
+            _repr = "".join(li)
+        else:
+            _repr = f"{repr:>40}: {'None'}"
+        self.repr[key] = _repr
         return new_types
 
-    def _set_type_charges(self, _charges):
+    def _set_type_charges(self, key, _charges):
         if type(_charges) != dict:
             raise ValueError(f"Unrecognised type for input {_charges}. Expected dict")
         if len(_charges) != len(self.atom_types) - 1:
@@ -128,17 +179,44 @@ class SystemInfo:
         charges = {}
         for k, v in _charges.items():
             charges[self.atom_types[k]] = float(v)
+        _str = f"Type charges ({key})"
+        _repr = f"{_str:>40}: {' '}\n"
+        _ws = len(_str) - 1
+        inc = 40 - _ws + 4
+        inc = 40 - 4
+        for k, v in charges.items():
+            _repr += f"{k:>{inc}}: {v:>{9}.6f}\n"
+        li = _repr.rsplit("\n", 1)
+        _repr = "".join(li)
+        self.repr[key] = _repr
         return charges
 
-    def _set_reaction_species(self, _reactions):
+    def _set_num_types(self):
+        num_types = (
+            len(self.atom_types),
+            len(self.bond_types),
+            len(self.angle_types),
+            len(self.proper_types),
+            len(self.improper_types),
+        )
+        _repr = f"{'No. Types':>40}:\n"
+        _repr += f"{'Atom types':>36}: {num_types[0]:<36}\n"
+        _repr += f"{'Bond types':>36}: {num_types[1]:<36}\n"
+        _repr += f"{'Angle types':>36}: {num_types[2]:<36}\n"
+        _repr += f"{'Proper types':>36}: {num_types[3]:<36}\n"
+        _repr += f"{'Improper types':>36}: {num_types[4]:<36}"
+        self.repr["num_types"] = _repr
+        return num_types
+
+    def _set_reaction_species(self, key, _reactions):
         if type(_reactions) not in (list, tuple, dict):
             raise ValueError(
                 f"Unrecognised type for input {_reactions}. Expected a list/tuple of dictionaries or a single dictionary"
             )
         if type(_reactions) == dict:
             _reactions = [_reactions]
-        self.reactions = []
-        self.coupling = []
+        reactions = []
+        coupling = []
         for __reaction in _reactions:
             if type(__reaction) != dict:
                 raise ValueError(
@@ -198,7 +276,7 @@ class SystemInfo:
                 raise ValueError(
                     f"coupling_function should have {nargs} arguments (rxn_ids, snapshot), found {args}"
                 )
-            self.coupling.append(_coupling_function)
+            coupling.append(_coupling_function)
 
             _cutoffs = __reaction.pop("cutoffs")
             cutoffs = {}
@@ -213,7 +291,7 @@ class SystemInfo:
                     f"Unknown keys in reaction parameters: {_cutoffs.keys()}"
                 )
 
-            self.reactions.append(
+            reactions.append(
                 Reaction(
                     X=self.atom_types[reaction[0]],
                     H=self.atom_types[reaction[1]],
@@ -223,28 +301,47 @@ class SystemInfo:
                     cutoffs=cutoffs,
                 )
             )
+        _repr = "\n"
+        for n, r in enumerate(reactions):
+            _repr += f"{f'Reaction {n}':>40} \n"
+            _repr += f"{r}"
+            _repr += f"{'Coupling Function':>40}:\n"
+            _repr += f"{str(coupling[n]):>40}\n"
 
-    def _set_temperature(self, _temp):
-        self.temperature = float(_temp)
+        self.repr[key] = _repr
+        return reactions, coupling
 
-    def _set_fd_tols(self, _fdt):
-        return float(_fdt)
+    def _set_temperature(self, key, _temp):
+        temp = float(_temp)
+        self.repr[key] = f"{'Temperature':>40}: {temp:<40}"
+        return temp
 
-    def _set_const_vol(self, _cv):
-        self.scale_box = not bool(_cv)
-        if self.scale_box:
+    def _set_fd_tols(self, key, _fdt, n):
+        fdt = float(_fdt)
+        _repr = ""
+        if self.FM:
+            _repr = f"{'Fermi-Dirac Tolerance':>40} {n}: {fdt:<40}"
+        self.repr[key] = _repr
+        return fdt
+
+    def _set_const_vol(self, key, _cv):
+        scale_box = not bool(_cv)
+        if scale_box:
             raise ValueError("Only constant volume right now.")
+        self.repr[key] = f"{'Variable Box Size':>40}: {str(scale_box):<40}"
+        return scale_box
 
-    def _set_unit_system(self, unit):
+    def _set_unit_system(self, key, unit):
         if UNITS is None:
             raise ValueError(f"Unit system required. Pick one of {UNITS.keys()}")
         if unit not in UNITS.keys():
             raise ValueError(
                 f"Unit system {unit} not part of the LAMMPS unit systems {UNITS.keys()}"
             )
+        self.repr[key] = f"{'LAMMPS Unit System':>40}: {unit:<40}"
         return UNITS[unit]
 
-    def _set_computes(self, computes):
+    def _set_computes(self, key, computes):
         if computes is None:
             return None
         if type(computes) == str:
@@ -253,20 +350,27 @@ class SystemInfo:
             raise ValueError(
                 f"Unexpected type for computes {computes}. Expect a str or list of strs"
             )
-        return [str(compute) for compute in computes]
+        cps = [str(compute) for compute in computes]
+        self.repr[key] = f"{'Computes':>40}: {str(cps):<40}"
+        return cps
 
-    def _set_shells(self, shells):
-        return int(shells)
+    def _set_shells(self, key, _shells):
+        shells = int(_shells)
+        self.repr[key] = f"{'Shells':>40}: {shells:<40}"
+        return shells
 
-    def _set_fermi_mixing(self, fm):
-        return bool(fm)
+    def _set_fermi_mixing(self, key, _fm):
+        fm = bool(_fm)
+        self.repr[key] = f"{'Use Fermi Mixing':>40}: {str(fm):<40}"
+        return fm
 
     def _set_get_occupancies(self):
         if self.FM and self.temperature > 1e-6:
-            # fermi mixing
 
             def get_occupancies_FM(eig_vals, SI):
-                return get_FD_occupancies(eig_vals, SI.RT)
+                return get_FD_occupancies(
+                    eig_vals, SI.RT, tol1=self.fdt1, tol2=self.fdt2
+                )
 
             return get_occupancies_FM
 
@@ -279,20 +383,40 @@ class SystemInfo:
 
             return get_occupancies_NO_FM
 
-    def _set_nl_update(self, nl_update):
-        return int(nl_update)
+    def _set_nl_update(self, key, _nl_update):
+        nl_update = int(_nl_update)
+        self.repr[key] = f"{'Neighbour List Rebuild Frequency':>40}: {nl_update:<40}"
+        return nl_update
 
-    def _set_top_update(self, topology_update):
-        return int(topology_update)
+    def _set_top_update(self, key, _topology_update):
+        topology_update = int(_topology_update)
+        self.repr[key] = f"{'EVB States Rebuild Frequency':>40}: {topology_update:<40}"
+        return topology_update
 
-    def _set_eig_solver(self, eig_solver):
+    def _set_eig_solver(self, key, eig_solver):
         SOLVERS = ("NUMPY", "SYMPY")
         eig_solver = str(eig_solver).upper()
         if eig_solver not in SOLVERS:
             raise ValueError(
                 f"Eigen value solver {eig_solver} not in available solvers: {SOLVERS}"
             )
+        self.repr[key] = f"{'Eigen Solver':>40}: {eig_solver:<40}"
         return eig_solver
+
+    def _set_scf_tol(self, key, _scf_tol):
+        scf_tol = float(_scf_tol)
+        self.repr[key] = f"{'SCF Tolerance':>40}: {scf_tol:<40}"
+        return scf_tol
+
+    def _set_scf_max_iter(self, key, _scf_max_iter):
+        scf_max_iter = int(_scf_max_iter)
+        self.repr[key] = f"{'SCF Max Iterations':>40}: {scf_max_iter:<40}"
+        return scf_max_iter
+
+    def _set_pbc(self, key, _pbc):
+        pbc = bool(_pbc)
+        self.repr[key] = f"{'PBC':>40}: {pbc:<40}"
+        return pbc
 
     def set_RT(self, RT):
         self.RT = RT
@@ -319,17 +443,18 @@ class Output:
     def header(self):
         if not self.write_header:
             return
-        header = "      Step          Pe(mixed)          E_total            E_conserve"
+        header = f"{'Step':>10} {'Pe(mixed)':>19} {'E_total':>19} {'E_conserve':>19}"
         self.info = "{:>10} {:>19.10f} {:>19.10f} {:>19.10f}"
         for title in self.properties:
-            header += f"{title.title():>20}"
+            header += f" {title.title():>19}"
             self.info += " {:>19.10f}"
-        header += "      Speed(ns/day)"
+        header += f" {'Speed(ns/day)':>15}"
         self.info += " {:>15.8f}"
         self.log(header)
         self.write_header = False
+        self.universe.global_comm.Barrier()
 
-    def _write(self, step, speed, pe, ke, ecpl):
+    def _write(self, step: int, speed: float, pe: float, ke: float, ecpl: float):
         props = [self.lmp.get_thermo(prop) for prop in self.properties]
         if self.universe.me != 0:
             return
@@ -345,8 +470,8 @@ class Output:
             speed = (
                 (86400 / (t1 - self.t0)) * (self.write_frequency * self.timestep)
             ) / 1000
-        ke = self.lmp.get_thermo("ke")
-        ecpl = self.lmp.get_thermo("ecouple")
+        ke = float(str(self.lmp.get_thermo("ke")))
+        ecpl = float(str(self.lmp.get_thermo("ecouple")))
         self._write(step, speed, pe, ke, ecpl)
         self.t0 = t1
 
@@ -407,7 +532,6 @@ class Trajectory:
     def _unwrap_positions(
         self, topology: Topology, pos=None
     ) -> Union[None, np.ndarray]:
-        # abcabc, abc = utils.extract_box(box_data)
         if pos is not None:
             return pos
         na = int(str(self.lmp.extract_global("natoms")))
@@ -441,7 +565,7 @@ class Trajectory:
                 )
                 self.io.writelines(
                     [
-                        "{0} {1[0]:} {1[1]:} {1[2]:}\n".format(typ, pos)
+                        "{0} {1[0]:.8f} {1[1]:.8f} {1[2]:.8f}\n".format(typ, pos)
                         for typ, pos in zip(topology.xyz_types, unwrapped_pos)
                     ]
                 )
@@ -603,3 +727,33 @@ class Reaction:
     type_changes0: dict
     type_changes1: dict
     cutoffs: dict
+
+    def __str__(self):
+        _repr1 = "Type Changes [X-H--Y]"
+        _repr2 = f"{self.X}-{self.H}--{self.Y}"
+        _repr2 += " --> "
+        _repr2 += f"{self.type_changes0[self.X]}-{self.type_changes0[self.H]}--{self.type_changes0[self.Y]}"
+        repr = f"{_repr1:>40}: {_repr2:<40}\n"
+        # for k, v in self.type_changes0.items():
+        #     repr += "{:>25}: {:<25}\n".format(str(k), str(v))
+        _repr = "Type Changes [non XHY]"
+        repr += f"{_repr:>40}:\n"
+        for k, v in self.type_changes1.items():
+            repr += "{:>42}{} --> {:<40}\n".format("", str(k), str(v))
+        _repr = "Cutoffs"
+        repr += f"{_repr:>40}\n"
+        for k, v in self.cutoffs.items():
+            repr += "{:>40}: {:<40}\n".format(str(k).title(), str(v))
+        return repr
+
+
+# def print_user_params(user_params: dict, log: Callable):
+#     # _ind, inc = 25, 4
+#     # for k, v in d.items():
+#     #     if isinstance(v, dict):
+#     #         log(f"{k:>{_ind}}:")
+#     #         pretty_user_params(v, log, _ind + ind + inc)
+#     #     elif isinstance(v, list):
+#     #
+#     #     else:
+#     #         log(f"{k:>{_ind}}: {v:<{_ind}}")
