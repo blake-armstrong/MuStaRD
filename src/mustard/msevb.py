@@ -1,7 +1,7 @@
 import numpy as np
 from sympy import Matrix
 from mpi4py import MPI
-from typing import Union, Tuple, Dict
+from typing import Callable, Tuple, Dict
 from .topology import Topology, Frame, Site
 from .io import SystemInfo
 from .mpi import Universe
@@ -36,11 +36,14 @@ class MSEVB:
 
     def __call__(self, lmp, ntimestep, nlocal, tag, x, f):
         self.ntimestep = ntimestep
-        callback = self.callback_main
         if self.run == MSEVB.NONE:
             callback = self.callback_none
-        if self.run == MSEVB.UPDATE:
+        elif self.run == MSEVB.MAIN:
+            callback = self.callback_main
+        elif self.run == MSEVB.UPDATE:
             callback = self.callback_update
+        else:
+            raise RuntimeError("Undefined run command")
         return callback(lmp, ntimestep, nlocal, tag, x, f)
 
     def callback_update(self, *args):
@@ -107,12 +110,12 @@ class MSEVB:
             self.log(f"Mixed forces:\n{mixed_forces}", level="debug")
         # TODO: deal with virial/pressure later
 
-    def _get_eig_vecs(self):
+    def _get_eig_vecs(self) -> Callable:
         if self.SI.eig_solver == "SYMPY":
             return self.get_eig_vecs_sympy
         return self.get_eig_vecs_numpy
 
-    def hellmann_feynman(self, matrix, evec):
+    def hellmann_feynman(self, matrix: np.ndarray, evec: np.ndarray) -> np.ndarray:
         return np.einsum("ijkl,i,j->kl", matrix, evec, evec)
 
     def sync_x_v(self, lmp, pos, idxs):
@@ -186,9 +189,9 @@ class MSEVB:
         Eigen values and Eigen vectors as Numpy arrays, respectively.
         See https://numpy.org/doc/stable/reference/generated/numpy.linalg.eig.html.
         """
-        eig_vals, eig_vecs = np.linalg.eig(matrix)
-        eig_vals = eig_vals.real
-        eig_vecs = eig_vecs.real
+        eig_vals, eig_vecs = np.linalg.eigh(matrix)
+        # eig_vals = eig_vals.real
+        # eig_vecs = eig_vecs.real
         return eig_vals, eig_vecs
 
     def get_eig_vecs_sympy(self, matrix: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
