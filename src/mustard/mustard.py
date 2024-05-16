@@ -27,7 +27,7 @@ class Mustard:
         self.universe = Universe(mpi_list, debug)
         self.log = self.universe.log
         self.system_info = MIO.SystemInfo(reaction_parameters)
-        self.log(self.system_info)
+        self.log(str(self.system_info))
         self.lmp = self._set_lmp()
         self._init_lmp(user_commands)
         self.topology = Topology(self.lmp, self.system_info)
@@ -43,26 +43,6 @@ class Mustard:
         self.safe = False
         self.rebuild = True
         self._init_msevb()
-
-    # def _print_user_defaults(self):
-    #     for key, value in d.items():
-    #     if isinstance(value, dict):
-    #         print(' ' * indent + str(key) + ':')
-    #         pretty_print_dict(value, indent + 4)
-    #     else:
-    #         print(' ' * indent + str(key) + ': ' + str(value))
-    #     for k1, v1 in self.system_info.user_params.items():
-    #         if type(v1) != dict:
-    #             self.log(f"{k1:>25} {v1:<25}")
-    #             continue
-    #         for k2, v2 in v1.items():
-    #             if type(v2) != dict:
-    #                 self.log(f"{k2:>25} {v2:<25}")
-    #                 continue
-    #             for k2, v2 in v1.items():
-    #                 if type(v2) != dict:
-    #                     self.log(f"{k2:>25} {v2:<25}")
-    #                     continue
 
     def _set_lmp(self) -> lammps:
         cmdargs = ["-nocite", "-screen", "none", "-log", "none"]
@@ -97,9 +77,9 @@ class Mustard:
 
     def _init_msevb(self):
         self.msevb.run = self.identify_pairs()
-        self.log("Systems", level="debug")
+        self.log("Systems", level=Universe.DEBUG)
         for system in self.topology.systems:
-            self.log(f"{system}", level="debug")
+            self.log(f"{system}", level=Universe.DEBUG)
         self.lmp.command("run 0 pre yes post no")
         self.msevb.step_count = 0
 
@@ -114,7 +94,7 @@ class Mustard:
                     f"This means only the first {self.universe.num_fixed_colors} "
                     "will be evaluated. "
                 ),
-                level="warn",
+                level=Universe.WARN,
             )
             self.topology.num_systems = self.universe.num_fixed_colors
             if self.topology.num_systems > 1:
@@ -137,7 +117,7 @@ class Mustard:
             return MSEVB.NONE
 
         for system in self.topology.systems:
-            self.log(f"{system}", level="debug")
+            self.log(f"{system}", level=Universe.DEBUG)
 
         self._redistribute_evb_states(self.topology.num_systems)
 
@@ -196,9 +176,9 @@ class Mustard:
         self.rebuild = True
         self.universe.global_comm.Barrier()
 
-    def _basic_step(self, n_step: int):
+    def _basic_step(self, n_step: int) -> System:
         self.msevb.run = MSEVB.UPDATE
-        self.msevb.min_state_idx = np.intp(0)
+        self.msevb.min_system = Topology.EMPTY_SYSTEM
         self.topology.update = False
         pre = "no"
         if self.msevb.step_count % self.system_info.nl_update == 0 or self.rebuild:
@@ -208,17 +188,17 @@ class Mustard:
             self.topology.update = True  # recalculates possible EVB states
         self.msevb.run = self.identify_pairs()
         self.log(
-            f"Number of identified systems: {self.topology.num_systems}", level="debug"
+            f"Number of identified systems: {self.topology.num_systems}",
+            level=Universe.DEBUG,
         )
         self.msevb.ntimestep = self.universe.global_comm.bcast(
             self.msevb.ntimestep, root=0
         )
         self.lmp.command(f"run {n_step} pre {pre} post no update {pre}")
-        min_system = self.topology.grab_system(int(self.msevb.min_state_idx))
-        if self.msevb.min_state_idx != 0:
+        if self.msevb.min_system.index != 0:
             # reaction has occured - update topology
-            self.update_topology(min_system)
-        return min_system
+            self.update_topology(self.msevb.min_system)
+        return self.msevb.min_system
 
     def _full_step(self, n_step: int = 1):
         self.output.write(self.msevb.step_count, self.msevb.min_eval)
@@ -228,7 +208,7 @@ class Mustard:
             self.topology,
         )
         system = self._basic_step(n_step)
-        if self.msevb.min_state_idx == 0:
+        if self.msevb.min_system.index == 0:
             return
         for site in system.sites:
             if site.xhy is None:
@@ -243,8 +223,10 @@ class Mustard:
         if steps == 0:
             self._full_step(n_step=0)
             return
-        for _ in range(steps):
+        for step in range(steps):
+            self.log(f"Step {step}", level=Universe.DEBUG)
             self._full_step()
+            self.log("\n", level=Universe.DEBUG)
             self.msevb.step_count += 1
 
     def add_output(self, filename=None, properties=None, write_frequency=1000):
@@ -286,7 +268,7 @@ class Mustard:
                     "finite differences forces should therefore be the "
                     "same as those without any msevb effects."
                 ),
-                level="warn",
+                level=Universe.WARN,
             )
         self.lmp.command("run 0 pre yes post no update yes")
         ref_mixed_forces = copy(self.msevb.current_mixed_forces)
@@ -412,7 +394,7 @@ class Mustard:
         while True:
             self.output.log(f"  cycle: {cycle}")
             min_system = self._basic_step(n_step=0)
-            if self.msevb.min_state_idx == 0:
+            if self.msevb.min_system.index == 0:
                 self.output.log(" ...no change in topology")
                 break
 

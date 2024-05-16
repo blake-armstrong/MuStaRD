@@ -13,6 +13,10 @@ class Rank:
 
 
 class Universe:
+    DEBUG = 0
+    INFO = 1
+    WARN = 2
+
     def __init__(self, mpi_list: Union[None, list, np.ndarray, tuple], debug: bool):
         self.global_comm = MPI.COMM_WORLD
         self.num_procs = self.global_comm.Get_size()
@@ -117,17 +121,20 @@ class Universe:
         self.global_comm.Barrier()
         self.total_colors = self.global_comm.allreduce(self.rank.color, op=MPI.MAX) + 1
 
-    def log(self, msg, rank=0, level="info"):
-        logger = self.logger.info
-        if level == "debug":
+    def log(self, msg: str, rank: int = 0, level: int = INFO):
+        if level == Universe.DEBUG:
             logger = self.logger.debug
-        if level == "warn":
+        elif level == Universe.INFO:
+            logger = self.logger.info
+        elif level == Universe.WARN:
             logger = self.logger.warn
             msg = f"\033[91m{msg}\033[0m"
-        if self.me == rank:
+        else:
+            logger = self.logger.info
+        if rank == -1:
             logger(msg)
             return
-        if rank == -1:
+        if self.me == rank:
             logger(msg)
 
 

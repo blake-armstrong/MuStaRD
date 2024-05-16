@@ -1,11 +1,13 @@
 import mdtraj
 import numpy as np
 import inspect
+
 from time import time
 from dataclasses import dataclass
 from lammps import lammps
 from typing import Union, IO, Callable
-from .topology import Topology, Frame
+
+from .topology import Topology, Frame, TrajectoryFrame
 from .mpi import Universe, logger
 from .constants import UNITS
 from . import utils
@@ -706,20 +708,6 @@ class Trajectorys:
 
 
 @dataclass
-class TrajectoryFrame:
-    frame: int
-    natoms: int
-    pbc: np.ndarray
-    pos: np.ndarray
-    imgs: np.ndarray
-    types: np.ndarray
-    bonds: np.ndarray
-    angles: np.ndarray
-    impropers: np.ndarray
-    dihedrals: np.ndarray
-
-
-@dataclass
 class Reaction:
     X: int
     H: int
@@ -734,8 +722,6 @@ class Reaction:
         _repr2 += " --> "
         _repr2 += f"{self.type_changes0[self.X]}-{self.type_changes0[self.H]}--{self.type_changes0[self.Y]}"
         repr = f"{_repr1:>40}: {_repr2:<40}\n"
-        # for k, v in self.type_changes0.items():
-        #     repr += "{:>25}: {:<25}\n".format(str(k), str(v))
         _repr = "Type Changes [non XHY]"
         repr += f"{_repr:>40}:\n"
         for k, v in self.type_changes1.items():
@@ -745,15 +731,3 @@ class Reaction:
         for k, v in self.cutoffs.items():
             repr += "{:>40}: {:<40}\n".format(str(k).title(), str(v))
         return repr
-
-
-# def print_user_params(user_params: dict, log: Callable):
-#     # _ind, inc = 25, 4
-#     # for k, v in d.items():
-#     #     if isinstance(v, dict):
-#     #         log(f"{k:>{_ind}}:")
-#     #         pretty_user_params(v, log, _ind + ind + inc)
-#     #     elif isinstance(v, list):
-#     #
-#     #     else:
-#     #         log(f"{k:>{_ind}}: {v:<{_ind}}")
