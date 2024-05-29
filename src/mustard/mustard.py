@@ -1,8 +1,10 @@
 import numpy as np
+
 from copy import copy
 from typing import Union
 from lammps import lammps
 from scipy.optimize import minimize
+from mpi4py import MPI
 
 import mustard.io as MIO
 from mustard.msevb import MSEVB
@@ -83,31 +85,47 @@ class Mustard:
         self.lmp.command("run 0 pre yes post no")
         self.msevb.step_count = 0
 
-    def _redistribute_evb_states(self, num_total_colors):
-        if num_total_colors <= self.universe.total_colors:
+    def compare_systems_with_colors(self):
+        if self.topology.num_systems <= self.universe.total_colors:
             return
-        if self.topology.num_systems > self.universe.num_fixed_colors:
-            self.log(
-                (
-                    f"{self.topology.num_systems} states were identified but "
-                    f"only {self.universe.num_fixed_colors} systems are available. "
-                    f"This means only the first {self.universe.num_fixed_colors} "
-                    "will be evaluated. "
-                ),
-                level=Universe.WARN,
-            )
+        self.log(
+            (
+                f"{self.topology.num_systems} states were identified but "
+                f"only {self.universe.num_fixed_colors} systems are available. "
+                f"This means only the first {self.universe.num_fixed_colors} "
+                "will be evaluated. "
+            ),
+            level=Universe.WARN,
+        )
+        if self.topology.num_sites == 1:
             self.topology.num_systems = self.universe.num_fixed_colors
             if self.topology.num_systems > 1:
-                # self.topology.systems = [
-                #     self.topology.systems[idx]
-                #     for idx in self.topology.dist_sort
-                #     if idx < self.topology.num_systems
-                # ]
-                # for i in range(self.topology.num_systems):
-                #     self.topology.systems[i].index = i
                 self.topology.systems = self.topology.systems[
                     : self.topology.num_systems
                 ]
+            return
+        while True:
+            remove_idx = None
+            for i in self.topology.grouped_site_idxs:
+                if len(i) > 2:
+                    remove_idx = i[-1]
+                    break
+            if remove_idx is None:
+                sites = [
+                    self.topology.sites[site_idx]
+                    for site_idx in self.topology.grouped_site_idxs[0]
+                ]
+            else:
+                sites = (
+                    self.topology.sites[:remove_idx]
+                    + self.topology.sites[remove_idx + 1 :]
+                )
+            for n, site in enumerate(sites):
+                site.index = n
+
+            self.topology.sites_to_systems(sites, self.msevb.frame)
+            if self.topology.num_systems <= self.universe.total_colors:
+                return
 
     def identify_pairs(self) -> int:
         self.msevb.frame.setattr("vel", utils.get_velocities(self.lmp))
@@ -116,35 +134,49 @@ class Mustard:
             self.prev_system = self.topology.systems[0]
             return MSEVB.NONE
 
+        self.compare_systems_with_colors()
+
         for system in self.topology.systems:
             self.log(f"{system}", level=Universe.DEBUG)
 
-        self._redistribute_evb_states(self.topology.num_systems)
-
         system = self.topology.grab_system(self.universe.rank.color)
         change_topology = True
-        if system.index == 0:
+        if self.universe.rank.color == 0:
             self.prev_system = system
             return MSEVB.MAIN
 
-        if np.array_equal(self.prev_system.pairs, system.pairs) and self.safe:
-            change_topology = False
-        if change_topology:
-            self.topology.reset_lmp_topology()
-            self.safe = True
         utils.set_positions(self.lmp, self.msevb.frame.pos)
         utils.set_velocities(self.lmp, self.msevb.frame.vel)
         utils.set_images(self.lmp, self.msevb.frame.images)
         if self.system_info.scale_box:
             utils.set_box_data(self.lmp, self.msevb.frame.box_data)
+
+        if system.index == 0:
+            if self.prev_system.index != 0:
+                self.msevb.run = MSEVB.UPDATE
+                self.topology.reset_lmp_topology()
+                self.rebuild = True
+                # self.lmp.command("run 0 pre yes post no")
+            self.prev_system = system
+            self.safe = True
+            return MSEVB.MAIN
+
+        if np.array_equal(self.prev_system.pairs, system.pairs) and self.safe:
+            change_topology = False
+
         if change_topology:
+            self.topology.reset_lmp_topology()
             self.msevb.run = MSEVB.UPDATE
+            # self.lmp.command("run 0 pre yes post no")
+            self.safe = True
             self.topology.change_topology_to_system(self.lmp, system)
-            self.lmp.command("run 0 pre yes post no")
+            self.rebuild = True
+            # self.lmp.command("run 0 pre yes post no")
+
         self.prev_system = system
         return MSEVB.MAIN
 
-    def update_topology(self, system: System):
+    def update_topology(self, system: System) -> None:
         new_imgs, yids = [], []
         for site in system.sites:
             if site.pair is None:
@@ -181,12 +213,13 @@ class Mustard:
         self.msevb.min_system = Topology.EMPTY_SYSTEM
         self.topology.update = False
         pre = "no"
-        if self.msevb.step_count % self.system_info.nl_update == 0 or self.rebuild:
-            pre = "yes"  # pre = yes recomputes neighlist
-            self.rebuild = False
         if self.msevb.step_count % self.system_info.top_update == 0:
             self.topology.update = True  # recalculates possible EVB states
         self.msevb.run = self.identify_pairs()
+        self.rebuild = self.universe.global_comm.allreduce(self.rebuild, op=MPI.LOR)
+        if self.msevb.step_count % self.system_info.nl_update == 0 or self.rebuild:
+            pre = "yes"  # pre = yes recomputes neighlist
+            self.rebuild = False
         self.log(
             f"Number of identified systems: {self.topology.num_systems}",
             level=Universe.DEBUG,
@@ -194,7 +227,8 @@ class Mustard:
         self.msevb.ntimestep = self.universe.global_comm.bcast(
             self.msevb.ntimestep, root=0
         )
-        self.lmp.command(f"run {n_step} pre {pre} post no update {pre}")
+        self.lmp.command(f"run {n_step} pre {pre} post no update yes")
+        # self.lmp.command(f"run {n_step} pre {pre} post no update {pre}")
         if self.msevb.min_system.index != 0:
             # reaction has occured - update topology
             self.update_topology(self.msevb.min_system)

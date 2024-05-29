@@ -136,58 +136,12 @@ class TrajectoryFrame:
     dihedrals: np.ndarray
 
 
-@dataclass  # partially immutable
-class Snapshot:
-    """
-    Class for storing information accessible to coupling function calls.
-    """
-
-    PRIVATE_VARIABLES: ClassVar[tuple] = (
-        "frame",
-        "ids",
-        "types",
-        "atoms",
-        "residues",
-        "bonds",
-        "qs",
-        "step",
-        "energies",
-        "forces",
-        "computes",
-    )
-    INIT: ClassVar[bool] = False
-    frame: Frame
-    ids: np.ndarray
-    types: np.ndarray
-    atoms: dict
-    residues: dict
-    bonds: dict
-    qs: np.ndarray
-    step: int
-    energies: Dict[str, float]
-    forces: Dict[str, np.ndarray]
-    computes: Dict[str, dict]
-
-    def __post_init__(self):
-        Snapshot.INIT = True
-
-    def __setattr__(self, prop, val):
-        if Snapshot.INIT:
-            if prop in Snapshot.PRIVATE_VARIABLES:
-                raise RuntimeError(
-                    (
-                        f"Variable {prop} in Snapshot not intended for external modification by user. "
-                        f"To do this anyway call snapshot.setattr(prop={prop}, val={val})"
-                    )
-                )
-        super().__setattr__(prop, val)
-
-    def setattr(self, prop, val):
-        super().__setattr__(prop, val)
-
-
-@dataclass(frozen=True)
+@dataclass
 class Site:
+    """
+    Do not use dist or dist_xyz in coupling function, they will not be correct.
+    """
+
     pair: Union[np.ndarray, None]
     xhy: Union[Tuple[Union[None, int], int, int], None]
     rxn_num: Union[int, None]
@@ -216,6 +170,48 @@ class Site:
             f"parent={self.parent}"
             ")"
         )
+
+
+@dataclass  # partially immutable
+class Snapshot:
+    """
+    Class for storing information accessible to coupling function calls.
+    """
+
+    PRIVATE_VARIABLES: ClassVar[tuple] = (
+        "frame",
+        "ids",
+        "site",
+        "step",
+        "energies",
+        "forces",
+        "computes",
+    )
+    INIT: ClassVar[bool] = False
+    frame: Frame
+    ids: np.ndarray
+    site: Site
+    step: int
+    energies: Dict[str, float]
+    forces: Dict[str, np.ndarray]
+    computes: Union[Dict[str, dict], None]
+
+    def __post_init__(self):
+        Snapshot.INIT = True
+
+    def __setattr__(self, prop, val):
+        if Snapshot.INIT:
+            if prop in Snapshot.PRIVATE_VARIABLES:
+                raise RuntimeError(
+                    (
+                        f"Variable {prop} in Snapshot not intended for external modification by user. "
+                        f"To do this anyway call snapshot.setattr(prop={prop}, val={val})"
+                    )
+                )
+        super().__setattr__(prop, val)
+
+    def setattr(self, prop, val):
+        super().__setattr__(prop, val)
 
 
 @dataclass
@@ -303,8 +299,8 @@ class Topology:
         self.reactions = [
             Reaction(
                 num=rxn_num,
-                distance_cutoff=rxn["cutoffs"].distance,
-                angle_cutoff=rxn["cutoffs"].angle,
+                distance_cutoff=rxn.cutoffs["distance"],
+                angle_cutoff=rxn.cutoffs["angle"],
             )
             for rxn_num, rxn in enumerate(self.SI.reactions)
         ]
@@ -399,34 +395,30 @@ class Topology:
         return Snapshot(
             frame=self.frame,
             ids=self.ids,
-            types=self.types,
-            atoms=self.atoms,
-            residues=self.residues,
-            bonds=self.bonds,
-            qs=self.qs,
+            site=Site(pair=None, xhy=None, rxn_num=None, index=0),
             step=0,
-            computes={},
             energies={},
             forces={},
+            computes=None,
         )
 
     def update_snapshot(
-        self, frame, step, site=None, energies=None, computes=None, forces=None
+        self,
+        frame: Frame,
+        step: int,
+        site: Site,
+        energies: Dict[str, float],
+        forces: Dict[str, np.ndarray],
+        computes: Union[Dict[str, dict], None] = None,
     ) -> None:
         self.snapshot.setattr("frame", frame)
         self.snapshot.setattr("step", step)
         self.snapshot.setattr("ids", self.ids)
-        modify = self
-        if site is not None:
-            modify = site
-        for attr in ("atoms", "bonds", "residues", "types", "qs"):
-            self.snapshot.setattr(attr, modify.__getattribute__(attr))
+        self.snapshot.setattr("site", site)
+        self.snapshot.setattr("energies", energies)
+        self.snapshot.setattr("forces", forces)
         if computes is not None:
             self.snapshot.setattr("computes", computes)
-        if energies is not None:
-            self.snapshot.setattr("energies", energies)
-        if forces is not None:
-            self.snapshot.setattr("forces", forces)
 
     def full_get_pairs(
         self,
@@ -465,16 +457,19 @@ class Topology:
             if topology.atoms[eyed].idx in specific_topology.X_idxs
         ]
         hid = [utils.get_X(self.ids[idx], topology.bonds) for idx in H_ready_idx]
-        mask = [
-            (
-                topology.atoms[eyed].type == self.SI.reactions[reaction.num].X
-                if eyed is not None
-                else True
-            )
-            for eyed in hid
-        ]
+        mask = np.array(
+            [
+                (
+                    topology.atoms[eyed].type == self.SI.reactions[reaction.num].X
+                    if eyed is not None
+                    else True
+                )
+                for eyed in hid
+            ]
+        )
         rxn_pairs = rxn_pairs[mask]
         pair_dists = pair_dists[mask]
+        pair_dists_xyz = pair_dists_xyz[mask]
         if not specific_topology.X_idxs.any() or reaction.angle_cutoff is None:
             return [
                 Pair(
@@ -566,11 +561,16 @@ class Topology:
         sort = np.argsort([pair.tag for pair in pairs_info])
         sorted_pairs_info = [pairs_info[s] for s in sort]
 
-        # NOTE: This is done to group pairs by the same residue
+        # NOTE: This is done to group pairs by the same residue \
         # to allow for multi-site SCF solving.
         residue_info = np.array(
-            [topology.atoms[pair.ids[0]].molecule, topology.atoms[pair.ids[1]].molecule]
-            for pair in sorted_pairs_info
+            [
+                [
+                    topology.atoms[pair.ids[0]].molecule,
+                    topology.atoms[pair.ids[1]].molecule,
+                ]
+                for pair in sorted_pairs_info
+            ]
         )
         residues = residue_info[:, 0]
         if len(np.unique(residue_info[:, 1])) < len(np.unique(residues)):
@@ -599,7 +599,13 @@ class Topology:
         sites = []
         for nsite, pair_idxs in enumerate(pairs_idxs):
             sites.append(
-                Site(pair=None, xhy=None, rxn_num=None, index=len(sites), site=nsite)
+                Site(
+                    pair=None,
+                    xhy=None,
+                    rxn_num=None,
+                    index=len(sites),
+                    site=nsite,
+                )
             )
             for pair_idx in pair_idxs:
                 pair = idx_to_pair[pair_idx]
@@ -627,7 +633,7 @@ class Topology:
                 )
 
         if self.SI.shells == 1:
-            return self._get_systems(sites, frame)
+            return self.sites_to_systems(sites, frame)
 
         if nsites > 1:
             raise RuntimeError(
@@ -735,9 +741,9 @@ class Topology:
                     )
             start = stop
 
-        return self._get_systems(sites, frame)
+        return self.sites_to_systems(sites, frame)
 
-    def _get_systems(self, sites: list, frame: Frame) -> bool:
+    def sites_to_systems(self, sites: list, frame: Frame) -> bool:
         grouped_site_idxs = defaultdict(list)
         for site in sites:
             grouped_site_idxs[site.site].append(site.index)
@@ -870,11 +876,16 @@ class Topology:
     def _remove_site(idxs, rxn_pair):
         return idxs[np.isin(idxs, rxn_pair.flatten(), invert=True)]
 
-    def grab_system(self, system_idx: int):
+    def _grab_system(self, system_idx: int) -> System:
         try:
             return self.systems[system_idx]
         except IndexError:
             return self.empty_system()
+
+    def grab_system(self, system_idx: int) -> System:
+        system = self._grab_system(system_idx)
+        self.current_system = system
+        return system
 
     def set_lmp(self, lmp_obj):
         self.lmp = lmp_obj
@@ -1017,7 +1028,7 @@ class Topology:
         self._reset_lmp_topology(self.ids)
         # self.lmp.command("run 0 pre yes post no")
 
-    def change_topology_to_system(self, lmp, system):
+    def change_topology_to_system(self, lmp: lammps, system: System) -> None:
         self.current_system = system
         if system.index == 0:
             return

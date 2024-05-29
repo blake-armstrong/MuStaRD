@@ -41,8 +41,9 @@ _DEFAULTS = {
     "fermi_mixing": False,
     "neighbour_list_update": 4,
     "topology_update": 1,
-    "scf_tol": 1e-4,
+    "scf_tol": 1e-8,
     "scf_max_iter": 100,
+    "scf_mix_method": "average",
     "shells": 1,
     "pbc": True,
     "eig_solver": "numpy",
@@ -69,6 +70,9 @@ class SystemInfo:
         self.scf_tol = self._set_scf_tol(key := "scf_tol", params.pop(key))
         self.scf_max_iter = self._set_scf_max_iter(
             key := "scf_max_iter", params.pop(key)
+        )
+        self.scf_mix_method = self._set_scf_mix_method(
+            key := "scf_mix_method", params.pop(key)
         )
         self.top_update = self._set_top_update(
             key := "topology_update", params.pop(key)
@@ -273,10 +277,10 @@ class SystemInfo:
                     f"argument passed to coupling_value_function not callable"
                 )
             args = len(inspect.signature(_coupling_function).parameters)
-            nargs = 2
+            nargs = 1
             if args != nargs:
                 raise ValueError(
-                    f"coupling_function should have {nargs} arguments (rxn_ids, snapshot), found {args}"
+                    f"coupling_function should have {nargs} arguments (snapshot), found {args}"
                 )
             coupling.append(_coupling_function)
 
@@ -415,9 +419,19 @@ class SystemInfo:
         self.repr[key] = f"{'SCF Max Iterations':>40}: {scf_max_iter:<40}"
         return scf_max_iter
 
+    def _set_scf_mix_method(self, key, _scf_mix_method):
+        MIX_METHODS = ("AVERAGE", "WEIGHTED")
+        mix_method = str(_scf_mix_method).upper()
+        if mix_method not in MIX_METHODS:
+            raise ValueError(
+                f"SCF force mixing method {mix_method} not in available mixing methods: {MIX_METHODS}"
+            )
+        self.repr[key] = f"{'SCF force mixing method':>40}: {mix_method:<40}"
+        return mix_method
+
     def _set_pbc(self, key, _pbc):
         pbc = bool(_pbc)
-        self.repr[key] = f"{'PBC':>40}: {pbc:<40}"
+        self.repr[key] = f"{'PBC':>40}: {str(pbc):<40}"
         return pbc
 
     def set_RT(self, RT):

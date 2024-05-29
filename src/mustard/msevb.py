@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 from sympy import Matrix
 from mpi4py import MPI
@@ -27,6 +28,7 @@ class MSEVB:
         self.topology = topology
         self.SI = SI
         self.get_eig_vecs = self._get_eig_vecs()
+        self.get_atom_coeffs = self._get_mix_scf_forces()
         self.frame = self.topology.frame
         self.run: int = MSEVB.NONE
         self.min_eval: float = 0.0
@@ -47,7 +49,7 @@ class MSEVB:
             callback = self.callback_update
         else:
             raise RuntimeError("Undefined run command")
-        return callback(lmp, ntimestep, nlocal, tag, x, f)
+        callback(lmp, ntimestep, nlocal, tag, x, f)
 
     def callback_update(self, *args):
         pass
@@ -67,8 +69,11 @@ class MSEVB:
                 rank=-1,
             )
         self.min_eval = pe
+        self.log(f"Final energy: {self.min_eval}", level=Universe.DEBUG)
         if len(idxs) > 0:
             new_forces[:, :] = mixed_forces[idxs] - current_forces[idxs]
+        with np.printoptions(precision=8, suppress=True, linewidth=10000):
+            self.log(f"Mixed forces:\n{mixed_forces}", level=Universe.DEBUG)
         self.current_mixed_forces = mixed_forces
 
     def callback_main(self, lmp, ntimestep, nlocal, tag, x, f):
@@ -103,6 +108,7 @@ class MSEVB:
         self.min_eval = min_eval
         new_forces[:, :] = mixed_forces[idxs] - current_forces[idxs]
         self.current_mixed_forces = mixed_forces
+        self.log(f"Final energy: {self.min_eval}", level=Universe.DEBUG)
         with np.printoptions(precision=8, suppress=True, linewidth=10000):
             self.log(f"Mixed forces:\n{mixed_forces}", level=Universe.DEBUG)
         # TODO: deal with virial/pressure later
@@ -222,10 +228,7 @@ class MSEVB:
         evaluated for a given Site object using the user-input for the
         'coupling_function' input and returned.
         """
-        if site.xhy is None:
-            raise ValueError("site.xhy is None.")
-        x, h, y = site.xhy
-        computes = {"new": 0.0, "initial": 0.0}
+        computes = None
         forces = {"new": frame.forces, "initial": init_forces}
         self.topology.update_snapshot(
             frame,
@@ -235,12 +238,9 @@ class MSEVB:
             computes=computes,
             forces=forces,
         )
-        rxn_ids = {"X": x, "H": h, "Y": y}
         if site.rxn_num is None:
             raise ValueError("site.rxn_num is None.")
-        cpl_val, cpl_forces = self.SI.coupling[site.rxn_num](
-            rxn_ids, self.topology.snapshot
-        )
+        cpl_val, cpl_forces = self.SI.coupling[site.rxn_num](self.topology.snapshot)
         cpl_val = float(cpl_val)
         if cpl_forces.shape != frame.forces.shape:
             raise ValueError(
@@ -282,6 +282,7 @@ class MSEVB:
         if self.universe.sub_rank == 0:
             matrix[color, color] = my_pe
             dmatrix[color, color][:, :] = frame.forces
+
         if color == 0:
             return matrix, dmatrix
         system = self.topology.current_system
@@ -320,19 +321,52 @@ class MSEVB:
         min_system = self.topology.systems[np.argmax(amplitudes)]
         return min_eval, min_system, mixed_forces
 
+    def _get_all_forces_for_scf(
+        self,
+        frame: Frame,
+    ) -> np.ndarray:
+        all_forces = np.zeros(shape=(self.topology.num_systems, *frame.forces.shape))
+        if self.universe.rank.color >= self.topology.num_systems:
+            return all_forces
+        if self.universe.sub_rank != 0:
+            return all_forces
+        all_forces[self.universe.rank.color][:, :] = frame.forces
+        return all_forces
+
+    def get_all_forces_for_scf(self, frame: Frame) -> np.ndarray:
+        all_forces = self._get_all_forces_for_scf(frame)
+        all_forces_buff = np.empty_like(all_forces)
+        self.universe.global_comm.Allreduce(all_forces, all_forces_buff, op=MPI.SUM)
+        return all_forces_buff
+
+    def mix_scf_forces_average(
+        self, atom_coeffs: np.ndarray, num_sites: int
+    ) -> np.ndarray:
+        return np.full(atom_coeffs.shape, 1 / num_sites)
+
+    def mix_scf_forces_weighted(
+        self, atom_coeffs: np.ndarray, num_sites: int
+    ) -> np.ndarray:
+        full_coeffs = np.sum(atom_coeffs, axis=0)
+        mask = full_coeffs > 0.0
+        for n in range(num_sites):
+            atom_coeffs[n][mask] /= full_coeffs[mask]
+            atom_coeffs[n][~mask] = 1 / num_sites
+        return atom_coeffs
+
+    def _get_mix_scf_forces(self) -> Callable:
+        if self.SI.scf_mix_method == "AVERAGE":
+            return self.mix_scf_forces_average
+        return self.mix_scf_forces_weighted
+
     def mix_states_scf(
         self,
         pes: np.ndarray,
         frame: Frame,
         init_forces: np.ndarray,
     ) -> Tuple[float, System, np.ndarray]:
-        matrix_size = self.topology.num_systems
-        all_forces = np.zeros(shape=(matrix_size, *frame.forces.shape))
-        if self.universe.sub_rank == 0:
-            all_forces[self.universe.rank.color][:, :] = frame.forces
-        all_forces_buff = np.empty_like(all_forces)
-        self.universe.global_comm.Allreduce(all_forces, all_forces_buff, op=MPI.SUM)
-        site_coefficients = np.zeros(shape=matrix_size)
+        all_forces = self.get_all_forces_for_scf(frame)
+        site_coefficients = np.zeros(shape=self.topology.num_systems)
         lowest_energy_idx = np.argmin(pes)
         lowest_energy_system = self.topology.systems[lowest_energy_idx]
         lowest_energy_sites = [site.index for site in lowest_energy_system.sites]
@@ -340,9 +374,11 @@ class MSEVB:
         previous_energy = pes[lowest_energy_idx]
         min_state_idxs = np.zeros(self.topology.num_sites, dtype=int)
         niter = 0
+        stored_forces = np.zeros(shape=(self.topology.num_sites, *frame.forces.shape))
         while True:
             current_energy = 0.0
             final_forces = np.zeros(shape=frame.forces.shape)
+            atom_coeffs = np.zeros(shape=(self.topology.num_sites, *frame.forces.shape))
             self.log(f"SCF Cycle: {niter:>5}", level=Universe.DEBUG)
             self.log(f"  Current energy: {previous_energy:18.8f}", level=Universe.DEBUG)
             for n, site_idxs in enumerate(self.topology.grouped_site_idxs):
@@ -353,6 +389,7 @@ class MSEVB:
                 )
                 locs = []
                 non_n_sites = np.delete(self.topology.systems_idxs, n, axis=1)
+                atom_coeffs[n] *= 0.0
                 for m, state_idx in enumerate(site_idxs):
                     locs.append(state_idx)
                     # System idxs involving the same site (state_idx)
@@ -364,7 +401,7 @@ class MSEVB:
                     state_pe = np.sum(pes[system_idxs] * summed_site_coefficients)
                     # TODO: Use einsum
                     state_forces = np.sum(
-                        all_forces_buff[system_idxs]
+                        all_forces[system_idxs]
                         * summed_site_coefficients[:, None, None],
                         axis=0,
                     )
@@ -387,14 +424,14 @@ class MSEVB:
                     matrix[m, 0] = cpl_val
                     dmatrix[0, m][:, :] = cpl_forces
                     dmatrix[m, 0][:, :] = cpl_forces
+                    atom_coeffs[n][:, :] += cpl_forces**2
                 min_eval, min_evec_coeffs, amplitudes = self.get_min_EVB_state(matrix)
                 mixed_forces = self.hellmann_feynman(dmatrix, min_evec_coeffs)
-                final_forces += mixed_forces
+                stored_forces[n][:, :] = mixed_forces
                 site_coefficients[locs] = amplitudes
                 current_energy += min_eval
                 min_state_idxs[n] = np.argmax(amplitudes) + local_matrix_size * n
             current_energy /= self.topology.num_sites
-            final_forces /= self.topology.num_sites
             if abs(current_energy - previous_energy) < self.SI.scf_tol:
                 self.log(
                     f"  Converged energy: {current_energy:18.8f}", level=Universe.DEBUG
@@ -406,6 +443,12 @@ class MSEVB:
                     f"Could not converge SCF in {self.SI.scf_max_iter} cycles."
                 )
             niter += 1
+        full_atom_coeffs = self.get_atom_coeffs(atom_coeffs, self.topology.num_sites)
+        # check = np.sum(full_atom_coeffs) / (
+        #     frame.forces.shape[0] * frame.forces.shape[1]
+        # )
+        final_forces = np.sum(stored_forces * full_atom_coeffs, axis=0)
+
         min_system_idx = np.argwhere(
             (self.topology.systems_idxs == min_state_idxs).all(axis=1)
         )
@@ -414,6 +457,7 @@ class MSEVB:
                 f"Could not find minimum system index. Got {min_system_idx}"
             )
         min_system = self.topology.systems[min_system_idx[0][0]]
+
         return current_energy, min_system, final_forces
 
     def _get_mix_properties(self, systems_idxs, get_us, properties):

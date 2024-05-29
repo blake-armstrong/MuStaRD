@@ -1,42 +1,77 @@
-from . import utils
 import numpy as np
-from typing import Dict, Union
+
+from typing import Dict, Union, Tuple
+
+from . import utils
+from .topology import Snapshot
 
 
-class Raiteri2011:
-    """
-    10.1088/0953-8984/23/33/334213
-    """
+class BaseCoupling:
 
-    def __init__(self, lmb, zeta, dist_cutoff=None, dist_taper=None):
-        self.lmb = float(lmb)
-        self.zeta = float(zeta)
-        self.dist_cutoff = dist_cutoff
-        self.dist_taper = dist_taper
-        self.use_taper = self._get_use_taper()
-        self.coupling_function = self._generate_coupling_func()
+    def __init__(self, doi: str = str(None)):
+        self.coupling_function = self.regular_coupling_function
+        self.cutoff = 0.0
+        self.taper = 0.0
+        self.doi = doi
 
-    def _get_use_taper(self):
-        use_taper = False
-        if self.dist_cutoff is not None and self.dist_taper is not None:
-            self.dist_cutoff = float(self.dist_cutoff)
-            self.dist_taper = float(self.dist_taper)
-            use_taper = True
-        elif self.dist_taper is None and self.dist_cutoff is not None:
-            raise ValueError("Cutoff specified without a taper.")
-        elif self.dist_cutoff is None and self.dist_taper is not None:
-            raise ValueError("Taper specified without a cutoff.")
-        else:
-            use_taper = False
-        return use_taper
+    def __str__(self):
+        return f"{self.__class__.__name__}. DOI = {self.doi}"
 
-    def get_coupling_value(self, Q):
+    def __repr__(self):
+        return self.__str__()
+
+    def regular_coupling_function(self, snapshot: Snapshot) -> Tuple[float, np.ndarray]:
+        cpl = 0.0
+        cpl_forces = np.zeros(shape=snapshot.forces["new"].shape)
+        return cpl, cpl_forces
+
+    def tapered_coupling_function(self, snapshot: Snapshot) -> Tuple[float, np.ndarray]:
+        cpl_val, cpl_forces = self.regular_coupling_function(snapshot)
+        h_id, y_id = snapshot.site.pair  # type: ignore
+        h_idx = snapshot.site.atoms[h_id].idx
+        y_idx = snapshot.site.atoms[y_id].idx
+        h_pos = snapshot.frame.pos[h_idx]
+        y_pos = snapshot.frame.pos[y_idx]
+        dist_xyz = utils.get_distance_xyz(h_pos, y_pos, snapshot.frame.box_vectors)
+        dist = utils.get_distances(dist_xyz)
+        mdf_taper = utils.MDF(dist, self.taper, self.cutoff)
+        cpl_val_tpr = cpl_val * mdf_taper
+        taper_derivative = 0
+        if snapshot.site.dist < self.cutoff and snapshot.site.dist > self.taper:
+            dx, dy, dz = dist_xyz
+            taper_derivative = utils.dMDF(dx, dy, dz, self.taper, self.cutoff)
+        cpl_forces *= -1
+        cpl_forces *= mdf_taper
+        cpl_forces[h_idx] += taper_derivative * cpl_val
+        cpl_forces[y_idx] -= taper_derivative * cpl_val
+        cpl_forces *= -1
+        return cpl_val_tpr, cpl_forces  # type; ignore
+
+    def add_taper(self, cutoff: float, taper: float) -> None:
+        self.cutoff = cutoff
+        self.taper = taper
+        self.coupling_function = self.tapered_coupling_function
+
+    def __call__(self, snapshot: Snapshot) -> Tuple[float, np.ndarray]:
+        return self.coupling_function(snapshot)
+
+
+class Raiteri2011(BaseCoupling):
+    DOI = "10.1088/0953-8984/23/33/334213"
+
+    def __init__(self, lmb: float, zeta: float):
+        super().__init__(__class__.DOI)
+        self.lmb = lmb
+        self.zeta = zeta
+
+    def get_coupling_value(self, Q: float) -> float:
         return self.lmb * np.exp(-self.zeta * Q**2)
 
-    def cpl_func_no_tpr(self, rxn_ids, snapshot):
-        h_idx = snapshot.atoms[rxn_ids["H"]].idx
-        x_idx = snapshot.atoms[rxn_ids["X"]].idx
-        y_idx = snapshot.atoms[rxn_ids["Y"]].idx
+    def regular_coupling_function(self, snapshot: Snapshot) -> Tuple[float, np.ndarray]:
+        x_id, h_id, y_id = snapshot.site.xhy  # type: ignore
+        h_idx = snapshot.site.atoms[h_id].idx
+        x_idx = snapshot.site.atoms[x_id].idx
+        y_idx = snapshot.site.atoms[y_id].idx
         h_pos = snapshot.frame.pos[h_idx]
         x_pos = snapshot.frame.pos[x_idx]
         y_pos = snapshot.frame.pos[y_idx]
@@ -45,7 +80,7 @@ class Raiteri2011:
         dHY = utils.get_distance_xyz(h_pos, y_pos, snapshot.frame.box_vectors)
         rHY = utils.get_distances(dHY)
         _Q = rHY - rHX
-        cpl = self.get_coupling_value(abs(_Q))
+        cpl = self.get_coupling_value(abs(float(_Q)))
         cpl_forces = np.zeros(shape=snapshot.forces["new"].shape)
         prefactor = -2 * self.zeta * cpl * _Q
         derivHY = prefactor * (dHY.flatten() / rHY)
@@ -58,90 +93,33 @@ class Raiteri2011:
         cpl_forces[x_idx] -= fHX
         return cpl, cpl_forces
 
-    def cpl_func_tpr(self, rxn_ids, snapshot):
-        h_idx = snapshot.atoms[rxn_ids["H"]].idx
-        x_idx = snapshot.atoms[rxn_ids["X"]].idx
-        y_idx = snapshot.atoms[rxn_ids["Y"]].idx
-        h_pos = snapshot.frame.pos[h_idx]
-        x_pos = snapshot.frame.pos[x_idx]
-        y_pos = snapshot.frame.pos[y_idx]
-        dHX = utils.get_distance_xyz(h_pos, x_pos, snapshot.frame.box_vectors)
-        rHX = utils.get_distances(dHX)
-        dHY = utils.get_distance_xyz(h_pos, y_pos, snapshot.frame.box_vectors)
-        rHY = utils.get_distances(dHY)
-        _Q = rHY - rHX
-        cpl = self.get_coupling_value(abs(_Q))
-        taper = utils.MDF(rHY, self.dist_taper, self.dist_cutoff)
-        cpl_forces = np.zeros(shape=snapshot.forces["new"].shape)
-        taper_derivative = 0
-        if rHY < self.dist_cutoff and rHY > self.dist_taper:  # type: ignore
-            _dHY = dHY.flatten()
-            taper_derivative = utils.dMDF(
-                _dHY[0], _dHY[1], _dHY[2], self.dist_taper, self.dist_cutoff
-            )
-        prefactor = -2 * self.zeta * cpl * _Q
-        derivHY = prefactor * (dHY.flatten() / rHY) * taper + taper_derivative * cpl
-        derivHX = prefactor * -(dHX.flatten() / rHX) * taper
-        fHY = -derivHY
-        fHX = -derivHX
-        cpl_forces[h_idx] += fHY
-        cpl_forces[y_idx] -= fHY
-        cpl_forces[h_idx] += fHX
-        cpl_forces[x_idx] -= fHX
-        return cpl * taper, cpl_forces
 
-    def _generate_coupling_func(self):
-        if self.use_taper:
-            return self.cpl_func_tpr
-        return self.cpl_func_no_tpr
+class Vuilleumier1998(BaseCoupling):
+    DOI = "https://doi.org/10.1016/S0009-2614(97)01365-1"
 
-    def __call__(self, rxn_ids, snapshot):
-        return self.coupling_function(rxn_ids, snapshot)
-
-
-class Vuilleumier1998:
-    """
-    https://doi.org/10.1016/S0009-2614(97)01365-1
-    """
-
-    def __init__(self, v12, alpha, gamma, cutoff=None, taper=None):
+    def __init__(self, v12: float, alpha: float, gamma: float):
+        super().__init__(__class__.DOI)
         self.v12 = float(v12)
         self.alpha = float(alpha)
         self.gamma = float(gamma)
-        self.cutoff = cutoff
-        self.taper = taper
-        self.use_taper = self._get_use_taper()
 
-    def _get_use_taper(self):
-        use_taper = False
-        if self.cutoff is not None and self.taper is not None:
-            self.cutoff = float(self.cutoff)
-            self.taper = float(self.taper)
-            use_taper = True
-        elif self.taper is None and self.cutoff is not None:
-            raise ValueError("Cutoff specified without a taper.")
-        elif self.cutoff is None and self.taper is not None:
-            raise ValueError("Taper specified without a cutoff.")
-        else:
-            return use_taper
-
-    def get_coupling_value(self, Q, q):
+    def get_coupling_value(self, Q: float, q: float) -> float:
         return self.v12 * np.exp(-self.alpha * Q - self.gamma * q**2)
 
-    def coupling_function(self, rxn_ids, snapshot):
-        h_idx = snapshot.atoms[rxn_ids["H"]].idx
-        x_idx = snapshot.atoms[rxn_ids["X"]].idx
-        y_idx = snapshot.atoms[rxn_ids["Y"]].idx
+    def regular_coupling_function(self, snapshot: Snapshot) -> Tuple[float, np.ndarray]:
+        x_id, h_id, y_id = snapshot.site.xhy  # type: ignore
+        h_idx = snapshot.site.atoms[h_id].idx
+        x_idx = snapshot.site.atoms[x_id].idx
+        y_idx = snapshot.site.atoms[y_id].idx
         h_pos = snapshot.frame.pos[h_idx]
         x_pos = snapshot.frame.pos[x_idx]
         y_pos = snapshot.frame.pos[y_idx]
         dQpos = utils.get_distance_xyz(x_pos, y_pos, snapshot.frame.box_vectors)
-        Q = utils.get_distances(dQpos)
+        Q = float(utils.get_distances(dQpos))
         centrexy_pos = 0.5 * (x_pos + y_pos)
         dqpos = utils.get_distance_xyz(h_pos, centrexy_pos, snapshot.frame.box_vectors)
-        q = utils.get_distances(dqpos)
+        q = float(utils.get_distances(dqpos))
         cpl = self.get_coupling_value(Q, q)
-        # taper = utils.MDF(snapshot.site.dist, self.taper, self.cutoff)
         cpl_forces = np.zeros(shape=snapshot.forces["new"].shape)
         derivOO = -self.alpha * cpl * dQpos.flatten() / Q
         derivHOO = -self.gamma * 2 * cpl * dqpos.flatten()
@@ -153,9 +131,6 @@ class Vuilleumier1998:
         cpl_forces[x_idx] += 0.5 * fHOO
         cpl_forces[y_idx] += 0.5 * fHOO
         return cpl, cpl_forces
-
-    def __call__(self, rxn_ids, snapshot):
-        return self.coupling_function(rxn_ids, snapshot)
 
 
 class Wu2008:
