@@ -213,7 +213,7 @@ class Mustard:
         self.msevb.min_system = Topology.EMPTY_SYSTEM
         self.topology.update = False
         pre = "no"
-        if self.msevb.step_count % self.system_info.top_update == 0:
+        if self.msevb.step_count % self.system_info.top_update == 0 or not self.safe:
             self.topology.update = True  # recalculates possible EVB states
         self.msevb.run = self.identify_pairs()
         self.rebuild = self.universe.global_comm.allreduce(self.rebuild, op=MPI.LOR)

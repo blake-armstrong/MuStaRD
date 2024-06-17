@@ -1,7 +1,7 @@
 import numpy as np
 import warnings
 
-from typing import Union, Tuple, Dict, ClassVar
+from typing import Union, Tuple, Dict, ClassVar, Set
 from lammps import lammps
 from itertools import combinations, product
 from dataclasses import dataclass, field
@@ -225,6 +225,8 @@ class PseudoSite:
 class System:
     index: int
     sites: list[Site]
+    parents: Union[None, Set[int]] = None
+    site_parents: Union[None, Dict[int, int]] = None
     atom_changes: dict = field(default_factory=dict)
     bond_changes: dict = field(default_factory=dict)
 
@@ -233,9 +235,22 @@ class System:
             [site.pair if site.pair is not None else [-1, -1] for site in self.sites]
         )
         self.distances = np.array([site.dist for site in self.sites])
+        self._parents = tuple(site.parent for site in self.sites)
 
     def __repr__(self):
-        return "System(" f"index={self.index}, " f"sites={self.sites}" ")"
+        return (
+            "System("
+            f"index={self.index}, "
+            f"sites={self.sites}, "
+            f"parents={self.parents}"
+            ")"
+        )
+
+    def get_parents(self):
+        if not self.site_parents:
+            self.parents = None
+            return
+        self.parents = set(p for p in self.site_parents.keys())
 
 
 @dataclass
@@ -562,7 +577,7 @@ class Topology:
         sorted_pairs_info = [pairs_info[s] for s in sort]
 
         # NOTE: This is done to group pairs by the same residue \
-        # to allow for multi-site SCF solving.
+        # to allow for multi-site solving.
         residue_info = np.array(
             [
                 [
@@ -605,6 +620,7 @@ class Topology:
                     rxn_num=None,
                     index=len(sites),
                     site=nsite,
+                    parent=-1,
                 )
             )
             for pair_idx in pair_idxs:
@@ -627,7 +643,7 @@ class Topology:
                         qs=self.qs,
                         types=self.types,
                         shell=1,
-                        parent=0,
+                        parent=index - 1,
                         site=nsite,
                     )
                 )
@@ -759,6 +775,12 @@ class Topology:
                 continue
             systems.append(system)
             num_systems += 1
+        system_parents = self.find_system_parents(
+            [system._parents for system in systems]
+        )
+        for index, site_parents in system_parents.items():
+            systems[index].site_parents = site_parents
+            systems[index].get_parents()
 
         self.sites = sites
         self.systems = systems
@@ -768,6 +790,20 @@ class Topology:
         if len(self.systems) > 1:
             return True
         return False
+
+    @staticmethod
+    def find_system_parents(site_parents: list) -> Dict[int, list]:
+        pairs = {}
+        for idx1, pair1 in enumerate(site_parents):
+            pairs[idx1] = {}
+            for idx2, pair2 in enumerate(site_parents[:idx1]):
+                diff_count = sum(1 for x, y in zip(pair1, pair2) if x != y)
+                if diff_count == 1:
+                    differing_index = next(
+                        i for i, (a, b) in enumerate(zip(pair1, pair2)) if a != b
+                    )
+                    pairs[idx1][idx2] = differing_index
+        return pairs
 
     def generate_system(
         self, sites: list[Site], system_idx: int, frame: Frame
