@@ -110,11 +110,9 @@ class MSEVB:
         self.universe.global_comm.Allreduce(sendpes, pes, op=MPI.SUM)
         pes = pes[: self.topology.num_systems]
         self.frame(lmp, pos=total_x, vel=total_v, forces=current_forces)
-        root_forces = self.universe.global_comm.bcast(current_forces, root=0)
         min_eval, min_system, mixed_forces = self.mix_states(
             pes,
             self.frame,
-            root_forces,
         )
         self.min_system = min_system
         self.min_eval = min_eval
@@ -297,7 +295,7 @@ class MSEVB:
         self,
         pes: np.ndarray,
         frame: Frame,
-        init_forces: np.ndarray,
+        all_forces: np.ndarray,
     ) -> Tuple[np.ndarray, np.ndarray]:
         matrix, dmatrix = self._mix_states(pes, frame)
         if self.universe.rank.color == 0:
@@ -309,7 +307,8 @@ class MSEVB:
         if site is None:
             raise ValueError("site is None")
         parent = site.parent
-        energies = {"new": pes[self.universe.rank.color], "initial": pes[0]}
+        energies = {"new": pes[self.universe.rank.color], "initial": pes[parent]}
+        init_forces = all_forces[parent]
         cpl_val, cpl_forces = self.get_coupling(
             site,
             frame,
@@ -328,9 +327,9 @@ class MSEVB:
         self,
         pes: np.ndarray,
         frame: Frame,
-        init_forces: np.ndarray,
     ) -> Tuple[float, System, np.ndarray]:
-        matrix, dmatrix = self._mix_states_single(pes, frame, init_forces)
+        all_forces = self.get_all_forces(frame)
+        matrix, dmatrix = self._mix_states_single(pes, frame, all_forces)
         mbuff = np.empty_like(matrix)
         self.universe.global_comm.Allreduce(matrix, mbuff, op=MPI.SUM)
         min_eval, min_evec_coeffs, amplitudes = self.get_min_EVB_state(mbuff)
@@ -340,7 +339,7 @@ class MSEVB:
         min_system = self.topology.systems[np.argmax(amplitudes)]
         return min_eval, min_system, mixed_forces
 
-    def _get_all_forces_for_scf(
+    def _get_all_forces(
         self,
         frame: Frame,
     ) -> np.ndarray:
@@ -352,8 +351,8 @@ class MSEVB:
         all_forces[self.universe.rank.color][:, :] = frame.forces
         return all_forces
 
-    def get_all_forces_for_scf(self, frame: Frame) -> np.ndarray:
-        all_forces = self._get_all_forces_for_scf(frame)
+    def get_all_forces(self, frame: Frame) -> np.ndarray:
+        all_forces = self._get_all_forces(frame)
         all_forces_buff = np.empty_like(all_forces)
         self.universe.global_comm.Allreduce(all_forces, all_forces_buff, op=MPI.SUM)
         return all_forces_buff
@@ -382,10 +381,9 @@ class MSEVB:
         self,
         pes: np.ndarray,
         frame: Frame,
-        init_forces: np.ndarray,
     ) -> Tuple[float, System, np.ndarray]:
         """Exact multi-site solution via multiple mini matrices"""
-        all_forces = self.get_all_forces_for_scf(frame)
+        all_forces = self.get_all_forces(frame)
         system_coefficients = np.ones(shape=self.topology.num_systems)
         systems_idxs = self.topology.systems_idxs
         d = defaultdict(dict)
@@ -419,6 +417,7 @@ class MSEVB:
                     if i == 0:
                         continue
                     energies = {"new": matrix[i, i], "initial": matrix[0, 0]}
+                    init_forces = dmatrix[0, 0]
                     # TODO: Also mix relevant site properties (charges...)
                     site = self.topology.sites[self.topology.systems_idxs[state_idx, n]]
                     frame.setattr("forces", all_forces[state_idx])
@@ -484,7 +483,7 @@ class MSEVB:
         frame: Frame,
     ) -> Tuple[np.ndarray, np.ndarray]:
         matrix, dmatrix = self._mix_states(pes, frame)
-        all_forces = self.get_all_forces_for_scf(frame)
+        all_forces = self.get_all_forces(frame)
         system = self.topology.current_system
         if system.parents is None:
             return matrix, dmatrix
@@ -514,7 +513,6 @@ class MSEVB:
         self,
         pes: np.ndarray,
         frame: Frame,
-        _,
     ) -> Tuple[float, System, np.ndarray]:
         """Exact multi-site solution via one large matrix"""
         matrix, dmatrix = self._mix_states_multi2(pes, frame)

@@ -612,7 +612,10 @@ class Topology:
         pairs_idxs, idx_to_pair = self.get_pairs_by_site(pairs_info, self)
         nsites = len(pairs_idxs)
         sites = []
+        shift = 0
         for nsite, pair_idxs in enumerate(pairs_idxs):
+            if nsite > 0:
+                shift += len(sites)
             sites.append(
                 Site(
                     pair=None,
@@ -643,7 +646,7 @@ class Topology:
                         qs=self.qs,
                         types=self.types,
                         shell=1,
-                        parent=index - 1,
+                        parent=shift,
                         site=nsite,
                     )
                 )
@@ -775,12 +778,16 @@ class Topology:
                 continue
             systems.append(system)
             num_systems += 1
-        system_parents = self.find_system_parents(
-            [system._parents for system in systems]
-        )
-        for index, site_parents in system_parents.items():
-            systems[index].site_parents = site_parents
-            systems[index].get_parents()
+        if self.num_sites == 1:
+            for system in systems:
+                system.parents = set(system._parents)
+        else:
+            system_parents = self.find_system_parents(
+                [system._parents for system in systems]
+            )
+            for index, site_parents in system_parents.items():
+                systems[index].site_parents = site_parents
+                systems[index].get_parents()
 
         self.sites = sites
         self.systems = systems

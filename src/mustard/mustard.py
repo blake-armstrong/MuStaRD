@@ -1,5 +1,6 @@
 import numpy as np
 
+from time import time
 from copy import copy
 from typing import Union
 from lammps import lammps
@@ -263,6 +264,16 @@ class Mustard:
             self.log("\n", level=Universe.DEBUG)
             self.msevb.step_count += 1
 
+    def run_for_seconds(self, seconds: int):
+        self.output.header()
+        t0 = t1 = time()
+        while t1 - t0 < seconds:
+            self.log(f"Step {self.msevb.step_count}", level=Universe.DEBUG)
+            self._full_step()
+            self.log("\n", level=Universe.DEBUG)
+            self.msevb.step_count += 1
+            t1 = time()
+
     def add_output(self, filename=None, properties=None, write_frequency=1000):
         if properties is None:
             properties = ["temp", "pe", "vol"]
@@ -368,7 +379,13 @@ class Mustard:
         # self.universe.global_comm.Barrier()
 
     def minimise(
-        self, traj=True, file="minimised.pdb", fix=None, bound: float = 1.0, full=True
+        self,
+        traj=True,
+        file="minimised.pdb",
+        fix=None,
+        bound: float = 1.0,
+        full=True,
+        tol=1e-8,
     ):
         if traj:
             self.add_trajectory(filename="minimise.dcd", write_frequency=1)
@@ -450,15 +467,13 @@ class Mustard:
 
         def callback(xk):
             e, _ = objective(xk)
-            self.output.log(f" step {self.cycle:>8}: {e:20.6f}")
+            self.output.log(f" step {self.cycle:>8}: {e:20.20f}")
             if self.universe.rank.color == 0 and traj:
-                self.trajectory.trajs[-1].write(
-                    1,
-                    self.lmp,
-                    frame.box_data,
-                    self.universe,
+                frame(self.lmp, pos=xk.reshape(coords_shape))
+                self.trajectory.write(
+                    self.cycle,
+                    frame,
                     self.topology,
-                    pos=xk.reshape(coords_shape),
                 )
             self.cycle += 1
 
@@ -470,7 +485,7 @@ class Mustard:
             unwrapped_starting_pos.flatten(),
             method="L-BFGS-B",
             jac=True,
-            tol=1e-6,
+            tol=tol,
             callback=callback,
             bounds=bounds,
             # options={"disp":True},

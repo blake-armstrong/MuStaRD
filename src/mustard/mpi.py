@@ -160,12 +160,19 @@ def logger(
         bold_red = "\x1b[31;1m"
         reset = "\x1b[0m"
 
+        # fmts = {
+        #     logging.DEBUG: grey + fmt + reset,
+        #     logging.INFO: white + fmt + reset,
+        #     logging.WARNING: yellow + fmt + reset,
+        #     logging.ERROR: red + fmt + reset,
+        #     logging.CRITICAL: bold_red + fmt + reset,
+        # }
         fmts = {
-            logging.DEBUG: grey + fmt + reset,
-            logging.INFO: white + fmt + reset,
-            logging.WARNING: yellow + fmt + reset,
-            logging.ERROR: red + fmt + reset,
-            logging.CRITICAL: bold_red + fmt + reset,
+            logging.DEBUG: fmt,
+            logging.INFO: fmt,
+            logging.WARNING: fmt,
+            logging.ERROR: fmt,
+            logging.CRITICAL: fmt,
         }
 
         def format(self, record):
