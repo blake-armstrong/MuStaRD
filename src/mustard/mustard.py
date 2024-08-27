@@ -228,7 +228,7 @@ class Mustard:
         self.msevb.ntimestep = self.universe.global_comm.bcast(
             self.msevb.ntimestep, root=0
         )
-        self.lmp.command(f"run {n_step} pre {pre} post no update yes")
+        self.lmp.command(f"run {n_step} pre {pre} post no")
         # self.lmp.command(f"run {n_step} pre {pre} post no update {pre}")
         if self.msevb.min_system.index != 0:
             # reaction has occured - update topology
@@ -425,7 +425,7 @@ class Mustard:
             utils.set_positions(self.lmp, current_wrapped_coords)
             self.msevb.frame(self.lmp, pos=current_wrapped_coords, imgs=current_images)
             self.msevb.run = self.identify_pairs()
-            self.lmp.command("run 0 pre yes post no update yes")
+            self.lmp.command("run 0 pre yes post no")
             self.msevb.min_eval = self.universe.global_comm.bcast(
                 self.msevb.min_eval, root=0
             )
@@ -460,7 +460,7 @@ class Mustard:
             if cycle > 100:
                 break
         self.msevb.run = self.identify_pairs()
-        self.lmp.command("run 0 pre yes post no update yes")
+        self.lmp.command("run 0 pre yes post no")
         if not full:
             exit()
         self.cycle = 0
@@ -468,14 +468,16 @@ class Mustard:
         def callback(xk):
             e, _ = objective(xk)
             self.output.log(f" step {self.cycle:>8}: {e:20.20f}")
-            if self.universe.rank.color == 0 and traj:
-                frame(self.lmp, pos=xk.reshape(coords_shape))
-                self.trajectory.write(
-                    self.cycle,
-                    frame,
-                    self.topology,
-                )
             self.cycle += 1
+            if not traj:
+                return
+            frame(self.lmp, pos=xk.reshape(coords_shape))
+            self.trajectory.write(
+                self.msevb.step_count,
+                frame,
+                self.topology,
+                pos=frame.pos,
+            )
 
         bounds = [(p - bound, p + bound) for p in unwrapped_starting_pos.flatten()]
 
@@ -512,7 +514,7 @@ class Mustard:
         utils.set_positions(self.lmp, minimised_wrapped_coords)
         self.msevb.frame(self.lmp, pos=minimised_wrapped_coords, imgs=minimised_images)
         self.msevb.run = self.identify_pairs()
-        self.lmp.command("run 0 pre yes post no update yes")
+        self.lmp.command("run 0 pre yes post no")
         if self.universe.me == 0:
             MIO.Trajectorys.save_file(
                 pos=self.msevb.frame.pos,

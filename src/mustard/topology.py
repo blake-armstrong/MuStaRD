@@ -146,14 +146,14 @@ class Site:
     xhy: Union[Tuple[Union[None, int], int, int], None]
     rxn_num: Union[int, None]
     index: int = 0
-    dist: float = 0.0
+    # dist: float = 0.0
     total_dist: float = 0.0
-    dist_xyz: np.ndarray = np.array([0.0, 0.0, 0.0])
+    # dist_xyz: np.ndarray = np.array([0.0, 0.0, 0.0])
     atoms: dict = field(default_factory=dict)
     bonds: dict = field(default_factory=dict)
     residues: dict = field(default_factory=dict)
-    qs: np.ndarray = np.array([])
-    types: np.ndarray = np.array([])
+    qs: np.ndarray = field(default_factory=lambda: np.ndarray([]))
+    types: np.ndarray = field(default_factory=lambda: np.ndarray([]))
     shell: int = 1
     parent: int = 0
     site: int = 0
@@ -234,7 +234,7 @@ class System:
         self.pairs = np.array(
             [site.pair if site.pair is not None else [-1, -1] for site in self.sites]
         )
-        self.distances = np.array([site.dist for site in self.sites])
+        # self.distances = np.array([site.dist for site in self.sites])
         self._parents = tuple(site.parent for site in self.sites)
 
     def __repr__(self):
@@ -454,7 +454,9 @@ class Topology:
         if self.update:
             dists_bool = np.array(dists < reaction.distance_cutoff)
         else:
-            dists_bool = np.ones(shape=dists.shape) == 1  # type: ignore
+            if type(dists) != np.ndarray:
+                raise RuntimeError("Dists not array.")
+            dists_bool = np.ones(shape=dists.shape) == 1
         if not dists_bool.any():
             return None
         hmask = dists_bool.nonzero()[0]
@@ -637,9 +639,9 @@ class Topology:
                         xhy=(id_x, id_h, id_y),
                         rxn_num=pair.reaction_type,
                         index=index,
-                        dist=pair.distance,
+                        # dist=pair.distance,
                         total_dist=pair.distance,
-                        dist_xyz=pair.distance_xyz,
+                        # dist_xyz=pair.distance_xyz,
                         atoms=self.atoms,
                         bonds=self.bonds,
                         residues=self.residues,
@@ -745,9 +747,9 @@ class Topology:
                             xhy=(id_x, id_h, id_y),
                             rxn_num=pair.reaction_type,
                             index=index,
-                            dist=pair.distance,
+                            # dist=pair.distance,
                             total_dist=pair.distance + sites[site.index].total_dist,
-                            dist_xyz=pair.distance_xyz,
+                            # dist_xyz=pair.distance_xyz,
                             atoms=new_atoms,
                             bonds=new_bonds,
                             residues=new_residues,
@@ -1115,17 +1117,9 @@ class Topology:
                                 f"create_bonds single/bond {bond_type} {id_0} {id_1} special no"
                             )
                             dont.add(f"{id_1}-{id_0}")
+                            dont.add(f"{id_0}-{id_1}")
                         except KeyError:
-                            try:
-                                bond_type = self.SI.bond_types[
-                                    f"{new_type_1}-{new_type_0}"
-                                ]
-                                cmd_list.append(
-                                    f"create_bonds single/bond {bond_type} {id_1} {id_0} special no"
-                                )
-                                dont.add(f"{id_0}-{id_1}")
-                            except KeyError:
-                                pass
+                            continue
 
         # angles
         if self.SI.angle_types and angles:
@@ -1151,10 +1145,9 @@ class Topology:
         if self.SI.proper_types and propers:
             dont = set()
             for id_0, id_1, id_2, id_3 in propers:
-                if (
-                    f"{id_0}-{id_1}-{id_2}-{id_3}" in dont
-                    or f"{id_3}-{id_2}-{id_1}-{id_0}" in dont
-                ):
+                p1 = f"{id_0}-{id_1}-{id_2}-{id_3}"
+                p2 = f"{id_3}-{id_2}-{id_1}-{id_0}"
+                if p1 in dont or p2 in dont:
                     continue
                 new_type_0 = types[id_0]
                 new_type_1 = types[id_1]
@@ -1165,12 +1158,10 @@ class Topology:
                     proper_type = self.SI.proper_types[
                         f"{new_type_0}-{new_type_1}-{new_type_2}-{new_type_3}"
                     ]
-                except:
-                    proper_type = self.SI.proper_types[
-                        f"{new_type_3}-{new_type_2}-{new_type_1}-{new_type_0}"
-                    ]
-                    ids.reverse()
-                dont.add(f"{ids[0]}-{ids[1]}-{ids[2]}-{ids[3]}")
+                except KeyError:
+                    continue
+                dont.add(p1)
+                dont.add(p2)
                 cmd_list.append(
                     f"create_bonds single/dihedral {proper_type} {ids[0]} {ids[1]} {ids[2]} {ids[3]} special no"
                 )

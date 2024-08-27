@@ -6,6 +6,7 @@ from time import time
 from dataclasses import dataclass
 from lammps import lammps
 from typing import Union, IO, Callable
+from itertools import permutations
 
 from .topology import Topology, Frame, TrajectoryFrame
 from .mpi import Universe, logger
@@ -161,11 +162,21 @@ class SystemInfo:
             if k is None:
                 continue
             ptypes = [str(self.atom_types[p]) for p in k.split("-")]
-            new_types["-".join(ptypes)] = v
+            if key == "improper_types":
+                for comb in permutations(ptypes[1:]):
+                    new_types[f"{ptypes[0]}-{'-'.join(comb)}"] = v
+            elif key == "proper_types" or key == "bond_types":
+                new_types["-".join(ptypes)] = v
+                new_types["-".join(list(reversed(ptypes)))] = v
+            elif key == "angle_types":
+                for comb in permutations((ptypes[0], ptypes[-1])):
+                    new_types[f"{comb[0]}-{ptypes[1]}-{comb[-1]}"] = v
+            else:
+                new_types["-".join(ptypes)] = v
+
         if new_types:
             _repr = f"{repr:>40}: {' '}\n"
-            _ws = len(repr) - 1
-            inc = 40 - _ws + 4
+            inc = 40 - 4
             for k, v in new_types.items():
                 _repr += f"{k:>{inc}}: {v:<{inc}}\n"
             li = _repr.rsplit("\n", 1)
@@ -627,9 +638,9 @@ class Trajectorys:
     def add_trajectory(self, trajectory: Trajectory):
         self.trajs.append(trajectory)
 
-    def write(self, *args):
+    def write(self, *args, **kwargs):
         for traj in self.trajs:
-            traj.write(*args)
+            traj.write(*args, **kwargs)
 
     def close(self):
         for traj in self.trajs:

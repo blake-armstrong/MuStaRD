@@ -37,7 +37,7 @@ class BaseCoupling:
         mdf_taper = utils.MDF(dist, self.taper, self.cutoff)
         cpl_val_tpr = float(cpl_val * mdf_taper)
         taper_derivative = 0
-        if snapshot.site.dist < self.cutoff and snapshot.site.dist > self.taper:
+        if dist < self.cutoff and dist > self.taper:
             dx, dy, dz = dist_xyz
             taper_derivative = utils.dMDF(dx, dy, dz, self.taper, self.cutoff)
         cpl_forces *= -1
