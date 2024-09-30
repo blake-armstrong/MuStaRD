@@ -429,6 +429,8 @@ class Mustard:
             self.msevb.min_eval = self.universe.global_comm.bcast(
                 self.msevb.min_eval, root=0
             )
+            if fix is not None:
+                self.msevb.current_mixed_forces[fix] = 0.0
             return self.msevb.min_eval, self.msevb.current_mixed_forces.flatten() * -1
 
         self.output.log("Running minimisation...")
