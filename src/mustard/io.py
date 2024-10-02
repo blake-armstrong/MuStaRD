@@ -466,6 +466,7 @@ class Output:
         self.timestep = float(str(self.lmp.extract_global("dt")))
         self.t0 = None
         self.write_header = True
+        self.universe.global_comm.Barrier()
 
     def header(self):
         if not self.write_header:
@@ -483,9 +484,6 @@ class Output:
 
     def _write(self, step: int, speed: float, pe: float, ke: float, ecpl: float):
         props = [self.lmp.get_thermo(prop) for prop in self.properties]
-        if self.universe.me != 0:
-            return
-
         self.log(self.info.format(step, pe, pe + ke, pe + ke + ecpl, *props, speed))
 
     def write(self, step: int, pe: float):
@@ -503,9 +501,8 @@ class Output:
         self.t0 = t1
 
     def log(self, info: str):
-        if self.universe.me != 0:
-            return
-        self.logger.info(info)
+        if self.universe.me == 0:
+            self.logger.info(info)
 
 
 class Outputs:

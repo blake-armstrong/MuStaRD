@@ -18,6 +18,7 @@ class Universe:
     WARN = 2
 
     def __init__(self, mpi_list: Union[None, list, np.ndarray, tuple], debug: bool):
+        # MPI.File.Set_atomicity(False)
         self.global_comm = MPI.COMM_WORLD
         self.num_procs = self.global_comm.Get_size()
         self.me = self.global_comm.Get_rank()
@@ -127,7 +128,7 @@ class Universe:
         elif level == Universe.INFO:
             logger = self.logger.info
         elif level == Universe.WARN:
-            logger = self.logger.warn
+            logger = self.logger.warning
             msg = f"\033[91m{msg}\033[0m"
         else:
             logger = self.logger.info

@@ -42,6 +42,7 @@ class Mustard:
         self._set_lmp_callback()
         self.trajectory = MIO.Trajectorys()
         self.output = MIO.Outputs()
+        self.universe.global_comm.Barrier()
         self.prev_system = self.topology.current_system
         self.safe = False
         self.rebuild = True
@@ -433,16 +434,13 @@ class Mustard:
                 self.msevb.current_mixed_forces[fix] = 0.0
             return self.msevb.min_eval, self.msevb.current_mixed_forces.flatten() * -1
 
-        self.output.log("Running minimisation...")
-        if self.universe.me == 0:
-            reg_pe = self.lmp.get_thermo("pe")
-            self.output.log(
-                f"starting non-mixed potential energy for minimisation: {reg_pe} "
-            )
+        reg_pe = self.lmp.get_thermo("pe")
         self.output.log(
-            f"starting mixed potential energy for minimisation: {self.msevb.min_eval} ",
+            "Running minimisation...\n"
+            f"starting non-mixed potential energy for minimisation: {reg_pe}\n"
+            f"starting mixed potential energy for minimisation: {self.msevb.min_eval}\n"
+            " updating initial topology..."
         )
-        self.output.log(" updating initial topology...")
         cycle = 0
         while True:
             self.output.log(f"  cycle: {cycle}")
