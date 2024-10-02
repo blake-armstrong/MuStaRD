@@ -60,8 +60,10 @@ class BaseCoupling:
 
 class Raiteri2011(BaseCoupling):
     DOI = "10.1088/0953-8984/23/33/334213"
+    LAMBDA = 0.7998
+    ZETA = 16
 
-    def __init__(self, lmb: float, zeta: float):
+    def __init__(self, lmb: float = LAMBDA, zeta: float = ZETA):
         super().__init__(__class__.DOI)
         self.lmb = lmb
         self.zeta = zeta
@@ -93,52 +95,16 @@ class Raiteri2011(BaseCoupling):
         cpl_forces[y_idx] -= fHY
         cpl_forces[h_idx] += fHX
         cpl_forces[x_idx] -= fHX
-        return cpl, cpl_forces
-
-
-class Raiteri2011_wrong(BaseCoupling):
-    DOI = "10.1088/0953-8984/23/33/334213"
-
-    def __init__(self, lmb: float, zeta: float):
-        super().__init__(__class__.DOI)
-        self.lmb = lmb
-        self.zeta = zeta
-
-    def get_coupling_value(self, Q: float) -> float:
-        return self.lmb * np.exp(-self.zeta * Q**2)
-
-    def regular_coupling_function(self, snapshot: Snapshot) -> Tuple[float, np.ndarray]:
-        x_id, h_id, y_id = snapshot.site.xhy  # type: ignore
-        h_idx = snapshot.site.atoms[h_id].idx
-        x_idx = snapshot.site.atoms[x_id].idx
-        y_idx = snapshot.site.atoms[y_id].idx
-        h_pos = snapshot.frame.pos[h_idx]
-        x_pos = snapshot.frame.pos[x_idx]
-        y_pos = snapshot.frame.pos[y_idx]
-        dHX = utils.get_distance_xyz(h_pos, x_pos, snapshot.frame.box_vectors)
-        rHX = utils.get_distances(dHX)
-        dHY = utils.get_distance_xyz(h_pos, y_pos, snapshot.frame.box_vectors)
-        rHY = utils.get_distances(dHY)
-        _Q = rHY - rHX
-        cpl = self.get_coupling_value(abs(float(_Q)))
-        cpl_forces = np.zeros(shape=snapshot.forces["new"].shape)
-        prefactor = -2 * self.zeta * cpl * _Q
-        derivHY = prefactor * (dHY.flatten() / rHY)
-        derivHX = prefactor * -(dHX.flatten() / rHX)
-        fHY = -derivHY
-        fHX = -derivHX
-        cpl_forces[h_idx] += fHY
-        cpl_forces[y_idx] -= fHY
-        cpl_forces[h_idx] += fHX
-        cpl_forces[x_idx] -= fHX
-        cpl_forces *= 0
         return cpl, cpl_forces
 
 
 class Vuilleumier1998(BaseCoupling):
     DOI = "https://doi.org/10.1016/S0009-2614(97)01365-1"
+    V12 = 3.156906788803108
+    ALPHA = 0.85
+    GAMMA = 0
 
-    def __init__(self, v12: float, alpha: float, gamma: float):
+    def __init__(self, v12: float = V12, alpha: float = ALPHA, gamma: float = GAMMA):
         super().__init__(__class__.DOI)
         self.v12 = float(v12)
         self.alpha = float(alpha)
@@ -177,21 +143,40 @@ class Vuilleumier1998(BaseCoupling):
 class Wu2008(BaseCoupling):
     DOI = "https://doi.org/10.1021/jp076658h"
 
+    VCONST = -1.00549507  # ev
+    GAMMA = 1.8302895  # a^-2
+    P = 0.2327260  # Dimless
+    K = 9.562153  # A^-2
+    DOO = 2.94  # A
+    BETA = 6.0179066  # a^-1
+    ALPHA = 10.0380922  # a^-1
+    ROO0 = 3.1  # A
+    PP = 10.8831327  # dimless (paper says a^-1, which doesn't make sense)
+    ROO02 = 1.8136426  # a
+    CF = 14.399645  # qq/r (e^2/a) -> ev
+    TYPE_TO_EXCHANGE_Q = {
+        1: -0.0895456,
+        2: 0.0252683,
+        3: -0.0895456,
+        4: 0.0252683,
+    }
+    H_EXCHANGE_Q = 0.0780180
+
     def __init__(
         self,
-        vconst: float,
-        gamma: float,
-        p: float,
-        k: float,
-        doo: float,
-        beta: float,
-        alpha: float,
-        roo0: float,
-        pp: float,
-        roo02: float,
-        type_to_exchange_q: Dict[int, float],
-        h_exchange_q: float,
-        conversion_factor: float = 14.399645,
+        vconst: float = VCONST,
+        gamma: float = GAMMA,
+        p: float = P,
+        k: float = K,
+        doo: float = DOO,
+        beta: float = BETA,
+        alpha: float = ALPHA,
+        roo0: float = ROO0,
+        pp: float = PP,
+        roo02: float = ROO02,
+        type_to_exchange_q: Dict[int, float] = TYPE_TO_EXCHANGE_Q,
+        h_exchange_q: float = H_EXCHANGE_Q,
+        conversion_factor: float = CF,
     ):
         """
         conversion_factor: qq/r -> energy
