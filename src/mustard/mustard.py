@@ -17,7 +17,27 @@ from mustard import utils
 @synchronize
 class Mustard:
     """
-    Hello
+    Main class used to run MSEVB calculations.
+
+    Parameters
+    ----------
+    user_commands : list
+        A list of LAMMPS commands to initialise your simulation.
+    reaction_parameters : dict
+        Dictionary specifying reaction parameters. See mustard.io for the options.
+    mpi_list : iterable object
+        Specifies how many possible EVB states there can be with len(mpi_list).
+        Each element in mpi_list is an integer that specifies the number of
+        processors each EVB state will have. There is no point in having a number
+        that isn't the same for each element, as the speed of your simulation
+        will be limited by the EVB state with the lowest number of processors.
+    debug: bool
+        Whether or not to print a lot of debugging information to the screen.
+
+    Returns
+    -------
+    None
+
     """
 
     def __init__(
@@ -26,7 +46,7 @@ class Mustard:
         reaction_parameters: dict,
         mpi_list: Union[None, list, tuple, np.ndarray] = None,
         debug: bool = False,
-    ):
+    ) -> None:
         self.universe = Universe(mpi_list, debug)
         self.log = self.universe.log
         self.system_info = MIO.SystemInfo(reaction_parameters)
