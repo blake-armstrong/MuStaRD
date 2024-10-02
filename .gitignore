@@ -1,6 +1,6 @@
 build
 dist
-*__pychache__/
+*__pycache__/
 *.egg-info
 *.egg-info/
 *.dcd
