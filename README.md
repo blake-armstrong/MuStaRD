@@ -1,3 +1,6 @@
+
+## Installation
+
 ```
 git clone https://github.com/blake-armstrong/MuStaRD.git
 git clone https://github.com/lammps/lammps.git
