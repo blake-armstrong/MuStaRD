@@ -29,7 +29,7 @@ The reaction parameters are passed into the main Mustard object upon its creatio
 `"atom_types"` -- dict
 The atom types key should point to a dictionary containing your atom types as strings as the keys and the values should be the corresponding number used in LAMMPS. E.g., if you had atom types "A" and "B" and in LAMMPS you set A as 1 and B as 2 the dictionary should be `{"A": 1, "B": 2}`. This is done so that you can use string representations when specifying the reaction later on. If you'd like, you can forgo the string reprsentation and pass a dictionary like: `{1:1, 2:2}`.
 
-`"bond_types"` -- dict
+`"bond_types"` -- dict\\
 `"angle_types"` -- dict
 `"proper_types"` -- dict
 `"improper_types"` -- dict
