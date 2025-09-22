@@ -1,5 +1,7 @@
 # MuStaRD - Multi-State Reactive Descriptions
 
+[![DOI](https://zenodo.org/badge/645155619.svg)](https://doi.org/10.5281/zenodo.17173978)
+
 ## Installation
 
 ```
