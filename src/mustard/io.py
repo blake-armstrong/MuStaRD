@@ -24,6 +24,7 @@ _DEFAULTS = {
     "reactions": [
         {
             "reaction": (None, None, None),
+            "toggle_bond": False,
             "type_changes0": {},
             "type_changes1": {},
             "cutoffs": {
@@ -163,8 +164,9 @@ class SystemInfo:
                 continue
             ptypes = [str(self.atom_types[p]) for p in k.split("-")]
             if key == "improper_types":
-                for comb in permutations(ptypes[1:]):
-                    new_types[f"{ptypes[0]}-{'-'.join(comb)}"] = v
+                new_types["-".join(ptypes)] = v
+                #for comb in permutations(ptypes[1:]):
+                #    new_types[f"{ptypes[0]}-{'-'.join(comb)}"] = v
             elif key == "proper_types" or key == "bond_types":
                 new_types["-".join(ptypes)] = v
                 new_types["-".join(list(reversed(ptypes)))] = v
@@ -307,6 +309,7 @@ class SystemInfo:
                 raise ValueError(
                     f"Unknown keys in reaction parameters: {_cutoffs.keys()}"
                 )
+            toggle_bond = bool(__reaction.get("toggle_bond", _DEFAULTS["reactions"][0]))
 
             reactions.append(
                 Reaction(
@@ -316,6 +319,7 @@ class SystemInfo:
                     type_changes0=type_changes0,
                     type_changes1=type_changes1,
                     cutoffs=cutoffs,
+                    toggle_bond=toggle_bond,
                 )
             )
         _repr = "\n"
@@ -558,12 +562,15 @@ class Trajectory:
     ) -> Union[None, np.ndarray]:
         if pos is not None:
             return pos
+        return utils.get_positions(self.lmp)
         na = int(str(self.lmp.extract_global("natoms")))
         z = np.zeros((na, 3))
         xu = self.lmp.numpy.extract_fix("ux", 1, 2)
         ids = self.lmp.numpy.extract_atom("id")
         if ids is None:
             raise RuntimeError("ids is None")
+        if len(ids) != len(xu):
+            raise RuntimeError("Bug in extract atoms (or extract fix)")
         if ids.size != 0:
             z[topology.id_to_idx(ids)] = xu
         if self.universe.me == 0:
@@ -593,10 +600,10 @@ class Trajectory:
                         for typ, pos in zip(topology.xyz_types, unwrapped_pos)
                     ]
                 )
-                self.io.write(f"Bonds {self._fmt(topology.top_ref['bonds'])}\n")
-                self.io.write(f"Angles {self._fmt(topology.top_ref['angles'])}\n")
-                self.io.write(f"Impropers {self._fmt(topology.top_ref['impropers'])}\n")
-                self.io.write(f"Dihedrals {self._fmt(topology.top_ref['dihedrals'])}\n")
+                # self.io.write(f"Bonds {self._fmt(topology.top_ref['bonds'])}\n")
+                # self.io.write(f"Angles {self._fmt(topology.top_ref['angles'])}\n")
+                # self.io.write(f"Impropers {self._fmt(topology.top_ref['impropers'])}\n")
+                # self.io.write(f"Dihedrals {self._fmt(topology.top_ref['dihedrals'])}\n")
                 self.io.flush()
 
             return _write_xyz
@@ -737,6 +744,7 @@ class Reaction:
     type_changes0: dict
     type_changes1: dict
     cutoffs: dict
+    toggle_bond: bool
 
     def __str__(self):
         _repr1 = "Type Changes [X-H--Y]"
@@ -752,4 +760,5 @@ class Reaction:
         repr += f"{_repr:>40}\n"
         for k, v in self.cutoffs.items():
             repr += "{:>40}: {:<40}\n".format(str(k).title(), str(v))
+        repr += "{:>40}: {:<40}\n".format("Toggle bond", self.toggle_bond)
         return repr

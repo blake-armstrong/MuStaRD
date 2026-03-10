@@ -3,7 +3,7 @@ import warnings
 
 from typing import Union, Tuple, Dict, ClassVar, Set
 from lammps import lammps
-from itertools import combinations, product
+from itertools import combinations, product, permutations
 from dataclasses import dataclass, field
 from copy import copy
 from collections import defaultdict
@@ -478,12 +478,16 @@ class Topology:
             [
                 (
                     topology.atoms[eyed].type == self.SI.reactions[reaction.num].X
-                    if eyed is not None
+                    if eyed is not None and self.SI.reactions[reaction.num].X is not None
                     else True
                 )
                 for eyed in hid
             ]
         )
+        for n, (i, j) in enumerate(rxn_pairs):
+            if i == j:
+                mask[n] = False
+
         rxn_pairs = rxn_pairs[mask]
         pair_dists = pair_dists[mask]
         pair_dists_xyz = pair_dists_xyz[mask]
@@ -832,10 +836,46 @@ class Topology:
                 for eyed in ids_for_change
                 if site.bonds.get(eyed)
             }
-            if id_h in _new_bonds:
+            if self.SI.reactions[site.rxn_num].toggle_bond:
+                    # Validate that id_h and id_y are different
+                    if id_h == id_y:
+                        raise ValueError(f"Cannot toggle bond: id_h and id_y are the same ({id_h})")
+                
+                    # Ensure both id_h and id_y are in _new_bonds
+                    if id_h not in _new_bonds:
+                        _new_bonds[id_h] = list(site.bonds.get(id_h, []))
+                    if id_y not in _new_bonds:
+                        _new_bonds[id_y] = list(site.bonds.get(id_y, []))
+                
+                    # Check bond consistency before proceeding
+                    h_has_y = id_y in _new_bonds.get(id_h, [])
+                    y_has_h = id_h in _new_bonds.get(id_y, [])
+                
+                    if h_has_y != y_has_h:
+                        raise RuntimeError(
+                            f"Inconsistent bond state: id_h={id_h} "
+                            f"{'has' if h_has_y else 'does not have'} bond to id_y={id_y}, "
+                            f"but id_y {'has' if y_has_h else 'does not have'} bond to id_h. "
+                            f"Bond graph is corrupted."
+                        )
+                
+                    # Toggle the bond
+                    if h_has_y:  # Bond exists - break it
+                        try:
+                            _new_bonds[id_h].remove(id_y)
+                            _new_bonds[id_y].remove(id_h)
+                        except ValueError as e:
+                            raise RuntimeError(
+                                f"Failed to remove bond between {id_h} and {id_y}: {e}"
+                            )
+                    else:  # Bond doesn't exist - create it
+                        _new_bonds.setdefault(id_h, []).append(id_y)
+                        _new_bonds.setdefault(id_y, []).append(id_h)
+            elif id_h in _new_bonds:
                 _new_bonds[_new_bonds[id_h][0]].remove(id_h)
                 _new_bonds[id_h][0] = id_y
                 _new_bonds.setdefault(id_y, []).append(id_h)
+
             new_bonds = {k: v for k, v in _new_bonds.items() if v}
             new_imgs, yids = self.get_new_imgs(id_h, id_y, frame, site=site)
             new_atoms = {}
@@ -1169,23 +1209,23 @@ class Topology:
         # impropers
         if self.SI.improper_types and impropers:
             dont = set()
-            for id_0, id_1, id_2, id_3 in impropers:
-                if f"{id_0}-{id_1}-{id_2}-{id_3}" in dont:
-                    continue
-                new_type_0 = types[id_0]
-                new_type_1 = types[id_1]
-                new_type_2 = types[id_2]
-                new_type_3 = types[id_3]
-                try:
-                    improper_type = self.SI.improper_types[
-                        f"{new_type_0}-{new_type_1}-{new_type_2}-{new_type_3}"
-                    ]
-                except KeyError:
-                    continue
-                dont.add(f"{id_0}-{id_1}-{id_2}-{id_3}")
-                cmd_list.append(
-                    f"create_bonds single/improper {improper_type} {id_0} {id_1} {id_2} {id_3} special no"
-                )
+            for improper in impropers:
+                for id_0, id_1, id_2, id_3 in permutations(improper):
+                    nt_0 = types[id_0] 
+                    nt_1 = types[id_1]
+                    nt_2 = types[id_2]
+                    nt_3 = types[id_3]
+                    idstr = f"{id_0}-{id_1}-{id_2}-{id_3}"
+                    improper_string = f"{nt_0}-{nt_1}-{nt_2}-{nt_3}"
+                    if improper_string in dont:
+                        continue
+                    improper_type = self.SI.improper_types.get(improper_string, None)
+                    if improper_type is None:
+                        continue
+                    dont.add(idstr)
+                    cmd_list.append(
+                        f"create_bonds single/improper {improper_type} {id_0} {id_1} {id_2} {id_3} special no"
+                    )
         return cmd_list
 
     @staticmethod
